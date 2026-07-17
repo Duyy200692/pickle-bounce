@@ -1,0 +1,6 @@
+{
+  "name": "Pickle Bounce",
+  "description": "Nền tảng đặt sân, ghép trận và kết nối cộng đồng Pickleball hàng đầu Việt Nam, với giao diện hiện đại, chuyên nghiệp và đầy đủ tính năng.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

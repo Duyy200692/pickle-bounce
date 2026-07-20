@@ -75,7 +75,12 @@ export default function AdminPanel({
     stat3Value: '',
     stat3Label: '',
     visionBadgeTitle: '',
-    visionBadgeText: ''
+    visionBadgeText: '',
+    priceTitle: '',
+    priceSection1Title: '',
+    priceRows1: [],
+    priceSection2Title: '',
+    priceRows2: []
   });
   const [isSavingLanding, setIsSavingLanding] = useState(false);
 
@@ -4247,6 +4252,205 @@ function fillZero(num) {
                             className="w-full bg-white border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-3.5 py-2.5 font-semibold text-brand-dark outline-none transition-all"
                             placeholder="Sẵn sàng cùng đồng đội nâng hạng tuần này."
                           />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bảng Giá Sân Editor Row (Full-Width / Modern Card Layout) */}
+                  <div className="bg-brand-light-gray/40 border border-brand-border/40 p-5 rounded-2xl space-y-6 text-left">
+                    <h4 className="font-display font-black text-sm text-brand-red uppercase tracking-wider flex items-center gap-2 pb-2 border-b border-brand-border/40">
+                      <DollarSign className="w-4 h-4" />
+                      Cấu Hình Bảng Giá Sân (Chỉnh Sửa Trực Tiếp)
+                    </h4>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block font-bold text-brand-dark mb-1">Tiêu đề chính của bảng giá</label>
+                        <input 
+                          type="text"
+                          value={landingForm.priceTitle || ''}
+                          onChange={e => setLandingForm({ ...landingForm, priceTitle: e.target.value })}
+                          className="w-full bg-white border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-3.5 py-2.5 font-semibold text-brand-dark outline-none transition-all"
+                          placeholder="BẢNG GIÁ SÂN"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-brand-dark mb-1">Tiêu đề phần 1</label>
+                        <input 
+                          type="text"
+                          value={landingForm.priceSection1Title || ''}
+                          onChange={e => setLandingForm({ ...landingForm, priceSection1Title: e.target.value })}
+                          className="w-full bg-white border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-3.5 py-2.5 font-semibold text-brand-dark outline-none transition-all"
+                          placeholder="Khách Vãng Lai"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-brand-dark mb-1">Tiêu đề phần 2 (Ưu đãi)</label>
+                        <input 
+                          type="text"
+                          value={landingForm.priceSection2Title || ''}
+                          onChange={e => setLandingForm({ ...landingForm, priceSection2Title: e.target.value })}
+                          className="w-full bg-white border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-3.5 py-2.5 font-semibold text-brand-dark outline-none transition-all"
+                          placeholder="Ưu đãi tháng 10"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-4 border-t border-brand-border/30">
+                      {/* Section 1 Price Rows Editor */}
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <h5 className="font-bold text-brand-dark text-xs uppercase tracking-wider text-[#0f5132]">
+                            Danh sách giá: {landingForm.priceSection1Title || "Khách Vãng Lai"}
+                          </h5>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const current = landingForm.priceRows1 || [];
+                              setLandingForm({
+                                ...landingForm,
+                                priceRows1: [...current, { day: "T2 - T6", time: "16h - 22h", price: "250.000 đ" }]
+                              });
+                            }}
+                            className="bg-[#0f5132] hover:bg-[#146c43] text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                          >
+                            <PlusCircle className="w-3 h-3" />
+                            Thêm Dòng
+                          </button>
+                        </div>
+
+                        <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                          {(landingForm.priceRows1 || []).map((row, index) => (
+                            <div key={index} className="flex items-center gap-2 bg-white p-2.5 border border-brand-border/60 rounded-xl">
+                              <div className="grid grid-cols-3 gap-2 flex-grow">
+                                <input 
+                                  type="text"
+                                  value={row.day}
+                                  onChange={e => {
+                                    const rows = [...(landingForm.priceRows1 || [])];
+                                    rows[index].day = e.target.value;
+                                    setLandingForm({ ...landingForm, priceRows1: rows });
+                                  }}
+                                  className="bg-brand-light-gray/40 border border-brand-border/60 rounded-lg px-2 py-1.5 font-semibold text-[11px] text-brand-dark outline-none focus:border-brand-red"
+                                  placeholder="Thứ"
+                                />
+                                <input 
+                                  type="text"
+                                  value={row.time}
+                                  onChange={e => {
+                                    const rows = [...(landingForm.priceRows1 || [])];
+                                    rows[index].time = e.target.value;
+                                    setLandingForm({ ...landingForm, priceRows1: rows });
+                                  }}
+                                  className="bg-brand-light-gray/40 border border-brand-border/60 rounded-lg px-2 py-1.5 font-semibold text-[11px] text-brand-dark outline-none focus:border-brand-red"
+                                  placeholder="Khung giờ"
+                                />
+                                <input 
+                                  type="text"
+                                  value={row.price}
+                                  onChange={e => {
+                                    const rows = [...(landingForm.priceRows1 || [])];
+                                    rows[index].price = e.target.value;
+                                    setLandingForm({ ...landingForm, priceRows1: rows });
+                                  }}
+                                  className="bg-brand-light-gray/40 border border-brand-border/60 rounded-lg px-2 py-1.5 font-semibold text-[11px] text-brand-dark outline-none focus:border-brand-red"
+                                  placeholder="Giá"
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const rows = (landingForm.priceRows1 || []).filter((_, i) => i !== index);
+                                  setLandingForm({ ...landingForm, priceRows1: rows });
+                                }}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition-all"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                          {(landingForm.priceRows1 || []).length === 0 && (
+                            <p className="text-center text-brand-gray/60 py-4 font-semibold italic">Chưa có dòng giá nào.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Section 2 Price Rows Editor */}
+                      <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                          <h5 className="font-bold text-brand-dark text-xs uppercase tracking-wider text-[#0f5132]">
+                            Danh sách giá: {landingForm.priceSection2Title || "Ưu đãi tháng 10"}
+                          </h5>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const current = landingForm.priceRows2 || [];
+                              setLandingForm({
+                                ...landingForm,
+                                priceRows2: [...current, { title: "Khách vãng lai", time: "Mặc định", price: "250.000 đ" }]
+                              });
+                            }}
+                            className="bg-[#0f5132] hover:bg-[#146c43] text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                          >
+                            <PlusCircle className="w-3 h-3" />
+                            Thêm Dòng
+                          </button>
+                        </div>
+
+                        <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+                          {(landingForm.priceRows2 || []).map((row, index) => (
+                            <div key={index} className="flex items-center gap-2 bg-white p-2.5 border border-brand-border/60 rounded-xl">
+                              <div className="grid grid-cols-3 gap-2 flex-grow">
+                                <input 
+                                  type="text"
+                                  value={row.title}
+                                  onChange={e => {
+                                    const rows = [...(landingForm.priceRows2 || [])];
+                                    rows[index].title = e.target.value;
+                                    setLandingForm({ ...landingForm, priceRows2: rows });
+                                  }}
+                                  className="bg-brand-light-gray/40 border border-brand-border/60 rounded-lg px-2 py-1.5 font-semibold text-[11px] text-brand-dark outline-none focus:border-brand-red"
+                                  placeholder="Nhóm khách"
+                                />
+                                <input 
+                                  type="text"
+                                  value={row.time}
+                                  onChange={e => {
+                                    const rows = [...(landingForm.priceRows2 || [])];
+                                    rows[index].time = e.target.value;
+                                    setLandingForm({ ...landingForm, priceRows2: rows });
+                                  }}
+                                  className="bg-brand-light-gray/40 border border-brand-border/60 rounded-lg px-2 py-1.5 font-semibold text-[11px] text-brand-dark outline-none focus:border-brand-red"
+                                  placeholder="Khung giờ"
+                                />
+                                <input 
+                                  type="text"
+                                  value={row.price}
+                                  onChange={e => {
+                                    const rows = [...(landingForm.priceRows2 || [])];
+                                    rows[index].price = e.target.value;
+                                    setLandingForm({ ...landingForm, priceRows2: rows });
+                                  }}
+                                  className="bg-brand-light-gray/40 border border-brand-border/60 rounded-lg px-2 py-1.5 font-semibold text-[11px] text-brand-dark outline-none focus:border-brand-red"
+                                  placeholder="Giá"
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const rows = (landingForm.priceRows2 || []).filter((_, i) => i !== index);
+                                  setLandingForm({ ...landingForm, priceRows2: rows });
+                                }}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition-all"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                          {(landingForm.priceRows2 || []).length === 0 && (
+                            <p className="text-center text-brand-gray/60 py-4 font-semibold italic">Chưa có dòng giá nào.</p>
+                          )}
                         </div>
                       </div>
                     </div>

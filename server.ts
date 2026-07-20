@@ -213,6 +213,18 @@ if (!fs.existsSync(CONFIG_PATH)) {
 // Landing Page Config System
 const LANDING_PAGE_PATH = path.join(process.cwd(), "landing_page_config.json");
 
+interface PriceRow {
+  day: string;
+  time: string;
+  price: string;
+}
+
+interface PromoRow {
+  title: string;
+  time: string;
+  price: string;
+}
+
 interface LandingPageConfig {
   heroTag: string;
   heroTitle: string;
@@ -231,6 +243,11 @@ interface LandingPageConfig {
   stat3Label: string;
   visionBadgeTitle: string;
   visionBadgeText: string;
+  priceTitle?: string;
+  priceSection1Title?: string;
+  priceRows1?: PriceRow[];
+  priceSection2Title?: string;
+  priceRows2?: PromoRow[];
 }
 
 const DEFAULT_LANDING_PAGE: LandingPageConfig = {
@@ -250,7 +267,18 @@ const DEFAULT_LANDING_PAGE: LandingPageConfig = {
   stat3Value: "180+",
   stat3Label: "Giải đấu lớn nhỏ",
   visionBadgeTitle: "Chinh phục đỉnh cao mới",
-  visionBadgeText: "Sẵn sàng cùng đồng đội nâng hạng tuần này."
+  visionBadgeText: "Sẵn sàng cùng đồng đội nâng hạng tuần này.",
+  priceTitle: "BẢNG GIÁ SÂN",
+  priceSection1Title: "Khách Vãng Lai",
+  priceRows1: [
+    { day: "T2 - T6", time: "16h - 22h", price: "250.000 đ" },
+    { day: "T2 - CN", time: "6h - 16h", price: "150.000 đ" },
+    { day: "T7 - CN", time: "16h - 22h", price: "200.000 đ" }
+  ],
+  priceSection2Title: "Ưu đãi tháng 10",
+  priceRows2: [
+    { title: "Khách vãng lai", time: "Mặc định", price: "250.000 đ" }
+  ]
 };
 
 function loadLandingPageConfig(): LandingPageConfig {

@@ -103,6 +103,18 @@ export interface MemberRegistration {
   createdAt: string;
 }
 
+export interface PriceRow {
+  day: string;
+  time: string;
+  price: string;
+}
+
+export interface PromoRow {
+  title: string;
+  time: string;
+  price: string;
+}
+
 export interface LandingPageConfig {
   heroTag: string;
   heroTitle: string;
@@ -121,6 +133,11 @@ export interface LandingPageConfig {
   stat3Label: string;
   visionBadgeTitle: string;
   visionBadgeText: string;
+  priceTitle?: string;
+  priceSection1Title?: string;
+  priceRows1?: PriceRow[];
+  priceSection2Title?: string;
+  priceRows2?: PromoRow[];
 }
 
 

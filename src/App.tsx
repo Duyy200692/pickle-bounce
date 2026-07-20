@@ -8,6 +8,7 @@ import Sponsors from './components/Sponsors';
 import Partnership from './components/Partnership';
 import AloboLiveSync from './components/AloboLiveSync';
 import WeeklySchedule from './components/WeeklySchedule';
+import CourtPricing from './components/CourtPricing';
 import Footer from './components/Footer';
 
 // Interactive modals
@@ -56,7 +57,18 @@ export default function App() {
       stat3Value: "180+",
       stat3Label: "Giải đấu lớn nhỏ",
       visionBadgeTitle: "Chinh phục đỉnh cao mới",
-      visionBadgeText: "Sẵn sàng cùng đồng đội nâng hạng tuần này."
+      visionBadgeText: "Sẵn sàng cùng đồng đội nâng hạng tuần này.",
+      priceTitle: "BẢNG GIÁ SÂN",
+      priceSection1Title: "Khách Vãng Lai",
+      priceRows1: [
+        { day: "T2 - T6", time: "16h - 22h", price: "250.000 đ" },
+        { day: "T2 - CN", time: "6h - 16h", price: "150.000 đ" },
+        { day: "T7 - CN", time: "16h - 22h", price: "200.000 đ" }
+      ],
+      priceSection2Title: "Ưu đãi tháng 10",
+      priceRows2: [
+        { title: "Khách vãng lai", time: "Mặc định", price: "250.000 đ" }
+      ]
     };
   });
 
@@ -695,6 +707,9 @@ export default function App() {
 
         {/* Real-time Visual Booking Status synced with Alobo.vn */}
         <AloboLiveSync />
+
+        {/* Court Pricing Section (New) */}
+        <CourtPricing config={landingPageConfig} />
 
         {/* 7. Weekly/Monthly Schedules Cards */}
         <WeeklySchedule 

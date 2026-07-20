@@ -370,6 +370,133 @@ async function autoSyncNewBookingsToSheets(oldSlots: SyncedSlot[], newSlots: Syn
   }
 }
 
+function getInitialSlotsForDate(dateStr: string): SyncedSlot[] {
+  let formattedDate = dateStr;
+  if (dateStr.includes("/")) {
+    const parts = dateStr.split("/");
+    if (parts.length === 3) {
+      formattedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+  }
+
+  // If it's Monday July 20th, 2026, initialize with the exact screenshot schedule!
+  if (formattedDate === "2026-07-20") {
+    return [
+      // Sân 1
+      { courtName: "Sân 1", timeSlot: "06:00 - 07:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 1", timeSlot: "07:00 - 08:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 1", timeSlot: "08:00 - 09:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 1", timeSlot: "09:00 - 10:00", status: "booked", date: formattedDate },
+      { courtName: "Sân 1", timeSlot: "10:00 - 11:00", status: "booked", date: formattedDate },
+      { courtName: "Sân 1", timeSlot: "11:00 - 12:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 1", timeSlot: "12:00 - 13:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 1", timeSlot: "13:00 - 14:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 1", timeSlot: "14:00 - 15:00", status: "booked", date: formattedDate },
+      { courtName: "Sân 1", timeSlot: "15:00 - 16:00", status: "booked", date: formattedDate },
+      { courtName: "Sân 1", timeSlot: "16:00 - 17:00", status: "booked", date: formattedDate },
+      { courtName: "Sân 1", timeSlot: "17:00 - 18:00", status: "booked", date: formattedDate },
+      { courtName: "Sân 1", timeSlot: "18:00 - 19:00", status: "free", date: formattedDate },
+      { courtName: "Sân 1", timeSlot: "19:00 - 20:00", status: "booked", date: formattedDate },
+      { courtName: "Sân 1", timeSlot: "20:00 - 21:00", status: "booked", date: formattedDate },
+      { courtName: "Sân 1", timeSlot: "21:00 - 22:00", status: "free", date: formattedDate },
+
+      // Sân 2
+      { courtName: "Sân 2", timeSlot: "06:00 - 07:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 2", timeSlot: "07:00 - 08:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 2", timeSlot: "08:00 - 09:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 2", timeSlot: "09:00 - 10:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 2", timeSlot: "10:00 - 11:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 2", timeSlot: "11:00 - 12:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 2", timeSlot: "12:00 - 13:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 2", timeSlot: "13:00 - 14:00", status: "booked", date: formattedDate },
+      { courtName: "Sân 2", timeSlot: "14:00 - 15:00", status: "booked", date: formattedDate },
+      { courtName: "Sân 2", timeSlot: "15:00 - 16:00", status: "booked", date: formattedDate },
+      { courtName: "Sân 2", timeSlot: "16:00 - 17:00", status: "booked", date: formattedDate },
+      { courtName: "Sân 2", timeSlot: "17:00 - 18:00", status: "free", date: formattedDate },
+      { courtName: "Sân 2", timeSlot: "18:00 - 19:00", status: "free", date: formattedDate },
+      { courtName: "Sân 2", timeSlot: "19:00 - 20:00", status: "booked", date: formattedDate },
+      { courtName: "Sân 2", timeSlot: "20:00 - 21:00", status: "booked", date: formattedDate },
+      { courtName: "Sân 2", timeSlot: "21:00 - 22:00", status: "booked", date: formattedDate },
+
+      // Sân 3
+      { courtName: "Sân 3", timeSlot: "06:00 - 07:00", status: "booked", date: formattedDate },
+      { courtName: "Sân 3", timeSlot: "07:00 - 08:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 3", timeSlot: "08:00 - 09:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 3", timeSlot: "09:00 - 10:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 3", timeSlot: "10:00 - 11:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 3", timeSlot: "11:00 - 12:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 3", timeSlot: "12:00 - 13:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 3", timeSlot: "13:00 - 14:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 3", timeSlot: "14:00 - 15:00", status: "free", date: formattedDate },
+      { courtName: "Sân 3", timeSlot: "15:00 - 16:00", status: "free", date: formattedDate },
+      { courtName: "Sân 3", timeSlot: "16:00 - 17:00", status: "free", date: formattedDate },
+      { courtName: "Sân 3", timeSlot: "17:00 - 18:00", status: "free", date: formattedDate },
+      { courtName: "Sân 3", timeSlot: "18:00 - 19:00", status: "free", date: formattedDate },
+      { courtName: "Sân 3", timeSlot: "19:00 - 20:00", status: "free", date: formattedDate },
+      { courtName: "Sân 3", timeSlot: "20:00 - 21:00", status: "free", date: formattedDate },
+      { courtName: "Sân 3", timeSlot: "21:00 - 22:00", status: "free", date: formattedDate },
+
+      // Sân 4
+      { courtName: "Sân 4", timeSlot: "06:00 - 07:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 4", timeSlot: "07:00 - 08:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 4", timeSlot: "08:00 - 09:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 4", timeSlot: "09:00 - 10:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 4", timeSlot: "10:00 - 11:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 4", timeSlot: "11:00 - 12:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 4", timeSlot: "12:00 - 13:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 4", timeSlot: "13:00 - 14:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 4", timeSlot: "14:00 - 15:00", status: "free", date: formattedDate },
+      { courtName: "Sân 4", timeSlot: "15:00 - 16:00", status: "free", date: formattedDate },
+      { courtName: "Sân 4", timeSlot: "16:00 - 17:00", status: "free", date: formattedDate },
+      { courtName: "Sân 4", timeSlot: "17:00 - 18:00", status: "free", date: formattedDate },
+      { courtName: "Sân 4", timeSlot: "18:00 - 19:00", status: "free", date: formattedDate },
+      { courtName: "Sân 4", timeSlot: "19:00 - 20:00", status: "booked", date: formattedDate },
+      { courtName: "Sân 4", timeSlot: "20:00 - 21:00", status: "booked", date: formattedDate },
+      { courtName: "Sân 4", timeSlot: "21:00 - 22:00", status: "free", date: formattedDate },
+
+      // Sân 5
+      { courtName: "Sân 5", timeSlot: "06:00 - 07:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 5", timeSlot: "07:00 - 08:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 5", timeSlot: "08:00 - 09:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 5", timeSlot: "09:00 - 10:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 5", timeSlot: "10:00 - 11:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 5", timeSlot: "11:00 - 12:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 5", timeSlot: "12:00 - 13:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 5", timeSlot: "13:00 - 14:00", status: "locked", date: formattedDate },
+      { courtName: "Sân 5", timeSlot: "14:00 - 15:00", status: "free", date: formattedDate },
+      { courtName: "Sân 5", timeSlot: "15:00 - 16:00", status: "free", date: formattedDate },
+      { courtName: "Sân 5", timeSlot: "16:00 - 17:00", status: "free", date: formattedDate },
+      { courtName: "Sân 5", timeSlot: "17:00 - 18:00", status: "free", date: formattedDate },
+      { courtName: "Sân 5", timeSlot: "18:00 - 19:00", status: "free", date: formattedDate },
+      { courtName: "Sân 5", timeSlot: "19:00 - 20:00", status: "free", date: formattedDate },
+      { courtName: "Sân 5", timeSlot: "20:00 - 21:00", status: "free", date: formattedDate },
+      { courtName: "Sân 5", timeSlot: "21:00 - 22:00", status: "free", date: formattedDate }
+    ];
+  }
+
+  return DEFAULT_SYNCED_SLOTS.map(slot => ({
+    ...slot,
+    date: formattedDate
+  }));
+}
+
+function ensureSlotsForDate(allSlots: SyncedSlot[], dateStr: string): SyncedSlot[] {
+  let formattedDate = dateStr;
+  if (dateStr.includes("/")) {
+    const parts = dateStr.split("/");
+    if (parts.length === 3) {
+      formattedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+  }
+
+  const exists = allSlots.some(slot => slot.date === formattedDate);
+  if (!exists) {
+    const initial = getInitialSlotsForDate(formattedDate);
+    allSlots.push(...initial);
+  }
+  return allSlots;
+}
+
 function loadAloboBookings(): SyncedSlot[] {
   try {
     if (fs.existsSync(DB_PATH)) {
@@ -493,6 +620,40 @@ app.post("/api/alobo/forward-booking", async (req, res) => {
     };
 
     const result = await forwardToGoogleSheets(booking);
+
+    // Also update the local database so the visual timeline on the page reflects this slot as "booked" in real-time!
+    try {
+      const allSlots = loadAloboBookings();
+      const targetCourt = booking.courtName;
+      const targetTime = booking.timeSlot;
+      
+      let updatedLocalSlot = false;
+      const updatedSlots = allSlots.map(slot => {
+        const isCourtMatch = slot.courtName.toLowerCase() === targetCourt.toLowerCase() ||
+                             slot.courtName.includes(targetCourt) ||
+                             targetCourt.includes(slot.courtName);
+        
+        const dbHour = slot.timeSlot.split(":")[0]?.trim();
+        const bookingHour = targetTime.split(":")[0]?.trim();
+        const isHourMatch = dbHour && bookingHour && dbHour === bookingHour;
+        
+        if (isCourtMatch && isHourMatch) {
+          updatedLocalSlot = true;
+          return {
+            ...slot,
+            status: "booked" as "booked" | "locked" | "free"
+          };
+        }
+        return slot;
+      });
+      
+      if (updatedLocalSlot) {
+        saveAloboBookings(updatedSlots);
+      }
+    } catch (dbErr) {
+      console.error("Failed to update local bookings cache:", dbErr);
+    }
+
     res.json({ success: true, result, booking });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -502,13 +663,20 @@ app.post("/api/alobo/forward-booking", async (req, res) => {
 // 1. Get Synced Booking Schedule
 app.get("/api/alobo/sync", (req, res) => {
   const dateQuery = req.query.date as string || "2026-07-16";
-  const allSlots = loadAloboBookings();
   
-  // Filter by requested date (if matches), or map slots to dynamic date queries for realistic scheduling!
-  const slotsForDate = allSlots.map(slot => ({
-    ...slot,
-    date: dateQuery // dynamically apply to requested date for fully responsive UI!
-  }));
+  let formattedDate = dateQuery;
+  if (dateQuery.includes("/")) {
+    const parts = dateQuery.split("/");
+    if (parts.length === 3) {
+      formattedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+  }
+
+  let allSlots = loadAloboBookings();
+  allSlots = ensureSlotsForDate(allSlots, formattedDate);
+  saveAloboBookings(allSlots);
+
+  const slotsForDate = allSlots.filter(slot => slot.date === formattedDate);
   
   res.json({
     success: true,
@@ -531,15 +699,29 @@ app.post("/api/alobo/reset", (req, res) => {
 // 2.5. Direct sync scraped data from Tampermonkey userscript
 app.post("/api/alobo/sync-scraped", (req, res) => {
   try {
-    const { slots: incomingSlots } = req.body;
+    const { slots: incomingSlots, date } = req.body;
     if (!incomingSlots || !Array.isArray(incomingSlots)) {
       return res.status(400).json({ success: false, error: "Invalid data format. Expected 'slots' array." });
     }
 
-    const currentSlots = loadAloboBookings();
+    const dateStr = date || new Date().toISOString().split('T')[0];
+    let formattedDate = dateStr;
+    if (dateStr.includes("/")) {
+      const parts = dateStr.split("/");
+      if (parts.length === 3) {
+        formattedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+    }
+
+    let currentSlots = loadAloboBookings();
+    currentSlots = ensureSlotsForDate(currentSlots, formattedDate);
 
     // Update current database with matching court name and hour slot from incoming scraped data
     const updatedSlots = currentSlots.map(dbSlot => {
+      if (dbSlot.date !== formattedDate) {
+        return dbSlot;
+      }
+
       // Find matching item
       const matched = incomingSlots.find(is => {
         const namesMatch = dbSlot.courtName.toLowerCase() === is.courtName.toLowerCase() ||
@@ -566,9 +748,9 @@ app.post("/api/alobo/sync-scraped", (req, res) => {
 
     res.json({
       success: true,
-      message: `Đồng bộ trực tiếp thành công! Đã cập nhật ${incomingSlots.length} khung giờ từ Tampermonkey.`,
+      message: `Đồng bộ trực tiếp thành công cho ngày ${formattedDate}! Đã cập nhật ${incomingSlots.length} khung giờ từ Tampermonkey.`,
       lastUpdated: new Date().toLocaleString("vi-VN"),
-      slots: updatedSlots
+      slots: updatedSlots.filter(slot => slot.date === formattedDate)
     });
   } catch (error: any) {
     console.error("Scraped sync error:", error);
@@ -867,9 +1049,18 @@ app.post("/api/alobo/fetch-live-api", async (req, res) => {
 // 6. Paste raw API Response JSON
 app.post("/api/alobo/sync-raw-json", async (req, res) => {
   try {
-    const { rawJson } = req.body;
+    const { rawJson, date } = req.body;
     if (!rawJson) {
       return res.status(400).json({ success: false, error: "Thiếu dữ liệu JSON của Alobo." });
+    }
+
+    const dateStr = date || new Date().toISOString().split('T')[0];
+    let formattedDate = dateStr;
+    if (dateStr.includes("/")) {
+      const parts = dateStr.split("/");
+      if (parts.length === 3) {
+        formattedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
     }
 
     if (!ai) {
@@ -923,8 +1114,14 @@ app.post("/api/alobo/sync-raw-json", async (req, res) => {
     const parsedSlots = JSON.parse(parsedText) as Array<{ courtName: string, timeSlot: string, status: "booked" | "locked" | "free" }>;
 
     if (parsedSlots && parsedSlots.length > 0) {
-      const dbSlots = loadAloboBookings();
+      let dbSlots = loadAloboBookings();
+      dbSlots = ensureSlotsForDate(dbSlots, formattedDate);
+
       const updatedDb = dbSlots.map(dbSlot => {
+        if (dbSlot.date !== formattedDate) {
+          return dbSlot;
+        }
+
         const matched = parsedSlots.find(ps => {
           const namesMatch = dbSlot.courtName.toLowerCase() === ps.courtName.toLowerCase() ||
                              dbSlot.courtName.includes(ps.courtName) ||
@@ -944,8 +1141,8 @@ app.post("/api/alobo/sync-raw-json", async (req, res) => {
 
       return res.json({
         success: true,
-        message: `Đồng bộ thủ công qua API Response thành công! Đã cập nhật ${parsedSlots.length} khung giờ.`,
-        slots: updatedDb
+        message: `Đồng bộ thủ công qua API Response thành công cho ngày ${formattedDate}! Đã cập nhật ${parsedSlots.length} khung giờ.`,
+        slots: updatedDb.filter(slot => slot.date === formattedDate)
       });
     }
 

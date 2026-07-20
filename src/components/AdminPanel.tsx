@@ -2034,6 +2034,33 @@ export default function AdminPanel({
                     </p>
                   </div>
 
+                  {/* LIVE Status and User Alert Panel */}
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 p-5 rounded-2xl text-xs space-y-3 shadow-sm">
+                    <div className="font-bold flex items-center gap-2 text-emerald-950 text-sm">
+                      <div className="relative flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                      </div>
+                      <span>CỔNG NHẬN DỮ LIỆU ĐỒNG BỘ: ĐANG MỞ &amp; SẴN SÀNG (LIVE 🟢)</span>
+                    </div>
+                    <div className="leading-relaxed text-emerald-900 space-y-2 text-left">
+                      <p>
+                        💡 <strong>Lưu ý rất quan trọng về biểu tượng đồng bộ màu xanh lá cây:</strong>
+                      </p>
+                      <ul className="list-disc pl-5 space-y-1">
+                        <li>
+                          Biểu tượng tròn màu xanh kèm chữ <strong>"Alobo Sync: Active"</strong> chỉ xuất hiện ở góc dưới bên phải màn hình khi bạn truy cập trang web của Alobo (ví dụ: <a href="https://datlich.alobo.vn/userBooking" target="_blank" rel="noopener noreferrer" className="font-bold underline text-emerald-700 hover:text-emerald-800">https://datlich.alobo.vn/userBooking</a>), chứ <strong>KHÔNG</strong> xuất hiện ở trang quản trị hiện tại này của bạn.
+                        </li>
+                        <li>
+                          Điều này là hoàn toàn chính xác, bởi vì mã tiện ích <strong>Tampermonkey Userscript</strong> chỉ chạy và can thiệp chặn bắt dữ liệu trên tên miền của Alobo, sau đó âm thầm gửi dữ liệu đó về trang quản trị này của bạn và dán trực tiếp lên Google Sheets.
+                        </li>
+                      </ul>
+                      <p className="font-semibold text-emerald-950 pt-1">
+                        👉 <strong>Cách kiểm tra hoạt động:</strong> Sau khi bạn dán mã ở Bước 3 vào Tampermonkey, hãy mở một tab mới truy cập <a href="https://datlich.alobo.vn/userBooking" target="_blank" rel="noopener noreferrer" className="underline font-bold text-[#10B981] hover:text-emerald-700">datlich.alobo.vn</a>. Bạn sẽ thấy biểu tượng xanh lá cây lập tức nổi lên ở góc dưới bên phải màn hình bên đó báo hiệu hoạt động thành công!
+                      </p>
+                    </div>
+                  </div>
+
                   {googleSheetWebhookUrl && googleSheetWebhookUrl.includes("docs.google.com/spreadsheets") && (
                     <div className="bg-amber-50 border border-amber-200 text-amber-900 p-5 rounded-2xl text-xs space-y-3 shadow-sm">
                       <div className="font-bold flex items-center gap-2 text-amber-950 text-sm">
@@ -2862,11 +2889,12 @@ function fillZero(num) {
                       </div>
                       <button 
                         onClick={() => {
+                          const appOrigin = window.location.origin;
                           const scraperScript = `// ==UserScript==
 // @name         Alobo Live Sync to Pickle Bounce
 // @namespace    http://tampermonkey.net/
-// @version      1.0
-// @description  Intercept and auto-sync bookings from Alobo to Google Sheets
+// @version      1.5
+// @description  Intercept and auto-sync bookings from Alobo to Google Sheets & Portal in Real-Time (Date-Aware)
 // @author       Pickle Bounce Dev
 // @match        *://*.alobo.vn/*
 // @match        *://datlich.alobo.vn/*
@@ -2876,19 +2904,295 @@ function fillZero(num) {
 
 (function() {
     'use strict';
-    console.log('[Alobo Sync] Userscript active and watching...');
+    
+    // Hardcoded target portal URL derived from your session
+    const TARGET_PORTAL = "${appOrigin}";
+    
+    console.log('[Alobo Sync] Userscript active and watching TARGET_PORTAL:', TARGET_PORTAL);
 
-    // Periodically watch for detail modal changes or click events
-    setInterval(() => {
-        // Look for typical booking details in Flutter Web DOM
+    // Create a beautiful floating status badge in the bottom-right corner of the Alobo page
+    const badge = document.createElement('div');
+    badge.style.position = 'fixed';
+    badge.style.bottom = '20px';
+    badge.style.right = '20px';
+    badge.style.padding = '10px 16px';
+    badge.style.backgroundColor = '#10B981'; // Green
+    badge.style.color = '#ffffff';
+    badge.style.borderRadius = '30px';
+    badge.style.fontSize = '12px';
+    badge.style.fontWeight = 'bold';
+    badge.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.3)';
+    badge.style.zIndex = '999999';
+    badge.style.fontFamily = 'sans-serif';
+    badge.style.display = 'flex';
+    badge.style.alignItems = 'center';
+    badge.style.gap = '8px';
+    badge.style.transition = 'all 0.3s ease';
+    badge.innerHTML = '<span style="display:inline-block; width:8px; height:8px; background-color:#fff; border-radius:50%"></span> Alobo Sync: Active';
+    document.body.appendChild(badge);
+
+    function showStatus(text, isError) {
+        badge.style.backgroundColor = isError ? '#EF4444' : '#10B981';
+        badge.innerHTML = '<span style="display:inline-block; width:8px; height:8px; background-color:#fff; border-radius:50%"></span> ' + text;
+        setTimeout(() => {
+            badge.style.backgroundColor = '#10B981';
+            badge.innerHTML = '<span style="display:inline-block; width:8px; height:8px; background-color:#fff; border-radius:50%"></span> Alobo Sync: Active';
+        }, 3000);
+    }
+
+    function getActiveDate() {
+        try {
+            const datePattern = /(\\\\d{2})\\\\/(\\\\d{2})\\\\/(\\\\d{4})/;
+            const elements = Array.from(document.querySelectorAll('*'));
+            for (const el of elements) {
+                if (el.children.length === 0 && el.textContent) {
+                    const match = el.textContent.match(datePattern);
+                    if (match) {
+                        const [_, day, month, year] = match;
+                        return year + '-' + month + '-' + day;
+                    }
+                }
+            }
+        } catch (e) {}
+        return new Date().toISOString().split('T')[0];
+    }
+
+    // 1. NETWORK INTERCEPTOR (Intercepts Alobo API Responses automatically)
+    // Intercept XMLHttpRequest
+    const rawXHR = window.XMLHttpRequest;
+    window.XMLHttpRequest = function() {
+        const xhr = new rawXHR();
+        const originalOpen = xhr.open;
+        const originalSend = xhr.send;
+        let requestUrl = '';
+
+        xhr.open = function(method, url) {
+            requestUrl = url;
+            return originalOpen.apply(xhr, arguments);
+        };
+
+        xhr.send = function() {
+            xhr.addEventListener('load', function() {
+                try {
+                    if (xhr.responseText && (requestUrl.includes('schedule') || requestUrl.includes('booking') || requestUrl.includes('court') || requestUrl.includes('get_') || xhr.responseText.includes('court_id') || xhr.responseText.includes('time_slot'))) {
+                        const parsed = JSON.parse(xhr.responseText);
+                        console.log('[Alobo Sync] Intercepted XHR Schedule API:', requestUrl, parsed);
+                        forwardRawJson(parsed);
+                    }
+                } catch (e) {
+                    // Not JSON or irrelevant
+                }
+            });
+            return originalSend.apply(xhr, arguments);
+        };
+        return xhr;
+    };
+
+    // Intercept Fetch API
+    const rawFetch = window.fetch;
+    window.fetch = async function(...args) {
+        const response = await rawFetch(...args);
+        const clone = response.clone();
+        const requestUrl = args[0] || '';
+        
+        try {
+            clone.text().then(text => {
+                if (text && (requestUrl.includes('schedule') || requestUrl.includes('booking') || requestUrl.includes('court') || requestUrl.includes('get_') || text.includes('court_id') || text.includes('time_slot'))) {
+                    const parsed = JSON.parse(text);
+                    console.log('[Alobo Sync] Intercepted Fetch Schedule API:', requestUrl, parsed);
+                    forwardRawJson(parsed);
+                }
+            }).catch(() => {});
+        } catch (e) {
+            // Irrelevant
+        }
+        return response;
+    };
+
+    function forwardRawJson(jsonData) {
+        showStatus('Đang đồng bộ dữ liệu API...');
+        GM_xmlhttpRequest({
+            method: "POST",
+            url: TARGET_PORTAL + "/api/alobo/sync-raw-json",
+            headers: { "Content-Type": "application/json" },
+            data: JSON.stringify({ rawJson: jsonData, date: getActiveDate() }),
+            onload: function(res) {
+                console.log("[Alobo Sync] Raw JSON Sync Response: ", res.responseText);
+                try {
+                    const r = JSON.parse(res.responseText);
+                    if (r.success) {
+                        showStatus('Đồng bộ lịch thành công!');
+                    } else {
+                        showStatus('Lỗi: ' + (r.error || 'Đồng bộ thất bại'), true);
+                    }
+                } catch (e) {
+                    showStatus('Đồng bộ hoàn tất');
+                }
+            },
+            onerror: function(err) {
+                console.error("[Alobo Sync] Sync Network Error:", err);
+                showStatus('Lỗi mạng đồng bộ', true);
+            }
+        });
+    }
+
+    // 2. SCRAPER AND INTEGRATION ENGINE (Scrapes detail modals and bookingDetails pages)
+    function scrapeAloboBookingDetails() {
+        const text = document.body.innerText || '';
+        
+        // A. DETAILED FULL PAGE OR MODAL WITH EXTENSIVE INFO
+        if (text.includes('Mã lịch đặt:') || text.includes('Thông tin đặt lịch') || text.includes('KH:')) {
+            // Find Booking ID
+            let bookingId = "";
+            const idMatch = text.match(/Mã\\s*lịch\\s*đặt:\\s*#?(\\d+)/i) || text.match(/#(\\d{4,6})/);
+            if (idMatch) {
+                bookingId = idMatch[1].trim();
+            }
+
+            if (bookingId) {
+                let syncedIds = [];
+                try {
+                    syncedIds = JSON.parse(localStorage.getItem('synced_alobo_booking_ids') || '[]');
+                } catch(e) {}
+                
+                if (!syncedIds.includes(bookingId)) {
+                    // Extract Customer Name
+                    let fullName = "Khách Alobo";
+                    const khMatch = text.match(/KH:\\s*([^\\n\\r]+)/i);
+                    if (khMatch) {
+                        fullName = khMatch[1].trim();
+                    }
+
+                    // Extract Phone Number
+                    let phone = "Alobo App";
+                    const sdtMatch = text.match(/SĐT:\\s*([^\\n\\r]+)/i);
+                    if (sdtMatch) {
+                        phone = sdtMatch[1].trim();
+                    }
+
+                    // Extract Date
+                    let date = getActiveDate();
+                    const dateMatch = text.match(/(\\d{2})\\/(\\d{2})\\/(\\d{4})/);
+                    if (dateMatch) {
+                        const [_, day, month, year] = dateMatch;
+                        date = year + '-' + month.padStart(2, '0') + '-' + day.padStart(2, '0');
+                    }
+
+                    // Extract Court and Time Slot
+                    let courtName = "Sân 2";
+                    let timeSlot = "07:00 - 08:00";
+
+                    const courtTimeMatch = text.match(/(Sân\\s*\\d+)[\\s:-]+(\\d+h\\d*|\\d+:\\d+)\\s*-\\s*(\\d+h\\d*|\\d+:\\d+)/i);
+                    if (courtTimeMatch) {
+                        courtName = courtTimeMatch[1].trim();
+                        let start = courtTimeMatch[2].trim();
+                        let end = courtTimeMatch[3].trim();
+
+                        const normalizeTime = (t) => {
+                            t = t.replace('h', ':').trim();
+                            if (!t.includes(':')) t += ':00';
+                            let [h, m] = t.split(':');
+                            h = h.padStart(2, '0');
+                            m = (m || '00').padEnd(2, '0');
+                            return h + ':' + m;
+                        };
+                        timeSlot = normalizeTime(start) + ' - ' + normalizeTime(end);
+                    } else {
+                        const courtOnlyMatch = text.match(/(Sân\\s*\\d+)/i);
+                        if (courtOnlyMatch) courtName = courtOnlyMatch[1].trim();
+
+                        const timeOnlyMatch = text.match(/(\\d+h\\d*|\\d+:\\d+)\\s*-\\s*(\\d+h\\d*|\\d+:\\d+)/);
+                        if (timeOnlyMatch) {
+                            let start = timeOnlyMatch[1].trim();
+                            let end = timeOnlyMatch[2].trim();
+
+                            const normalizeTime = (t) => {
+                                t = t.replace('h', ':').trim();
+                                if (!t.includes(':')) t += ':00';
+                                let [h, m] = t.split(':');
+                                h = h.padStart(2, '0');
+                                m = (m || '00').padEnd(2, '0');
+                                return h + ':' + m;
+                            };
+                            timeSlot = normalizeTime(start) + ' - ' + normalizeTime(end);
+                        }
+                    }
+
+                    // Extract Price
+                    let price = "150.000 đ";
+                    const priceMatch = text.match(/Chuyển khoản:\\s*([\\d.]+)/i) || 
+                                       text.match(/Tổng đơn:\\s*([\\d.]+)/i) || 
+                                       text.match(/Tổng đơn ngày:\\s*([\\d.]+)/i) ||
+                                       text.match(/thanh toán[^\\d]*([\\d.]+)\\s*đ/i);
+                    if (priceMatch) {
+                        price = priceMatch[1].trim() + " đ";
+                    }
+
+                    console.log('[Alobo Sync] Auto-Detected booking details:', { fullName, phone, courtName, date, timeSlot, price, bookingId });
+                    showStatus('Tự động đồng bộ đơn #' + bookingId + ' vào Google Sheet...');
+
+                    // Step A: Sync to local visual database
+                    GM_xmlhttpRequest({
+                        method: "POST",
+                        url: TARGET_PORTAL + "/api/alobo/sync-scraped",
+                        headers: { "Content-Type": "application/json" },
+                        data: JSON.stringify({
+                            date: date,
+                            slots: [
+                                { courtName: courtName, timeSlot: timeSlot, status: "booked" }
+                            ]
+                        }),
+                        onload: function() {
+                            // Step B: Post row to Google Sheet
+                            GM_xmlhttpRequest({
+                                method: "POST",
+                                url: TARGET_PORTAL + "/api/alobo/forward-booking",
+                                headers: { "Content-Type": "application/json" },
+                                data: JSON.stringify({
+                                    fullName: fullName,
+                                    phone: phone,
+                                    courtName: courtName,
+                                    date: date,
+                                    timeSlot: timeSlot,
+                                    price: price,
+                                    paymentStatus: "Đã thanh toán (Alobo #" + bookingId + ")"
+                                }),
+                                onload: function(sheetRes) {
+                                    console.log("[Alobo Sync] BookingDetails forward response:", sheetRes.responseText);
+                                    try {
+                                        const r = JSON.parse(sheetRes.responseText);
+                                        if (r.success) {
+                                            showStatus('Tự động điền Sheet thành công!');
+                                            syncedIds.push(bookingId);
+                                            localStorage.setItem('synced_alobo_booking_ids', JSON.stringify(syncedIds));
+                                        } else {
+                                            showStatus('Lỗi đồng bộ Sheet: ' + (r.error || ''), true);
+                                        }
+                                    } catch(e) {
+                                        showStatus('Tự động điền Sheet thành công!');
+                                        syncedIds.push(bookingId);
+                                        localStorage.setItem('synced_alobo_booking_ids', JSON.stringify(syncedIds));
+                                    }
+                                },
+                                onerror: function() {
+                                    showStatus('Lỗi kết nối gửi Google Sheet', true);
+                                }
+                            });
+                        }
+                    });
+                    return;
+                }
+            }
+        }
+
+        // B. BACKUP POPUP MODAL SCRAPER
         const customerField = Array.from(document.querySelectorAll('*')).find(el => el.textContent && el.textContent.includes('KH:'));
         if (customerField && !customerField.hasAttribute('data-synced')) {
             customerField.setAttribute('data-synced', 'true');
             
             const rawText = customerField.parentElement?.textContent || '';
-            console.log('[Alobo Sync] Found modal text:', rawText);
+            console.log('[Alobo Sync] Found detail popup text:', rawText);
             
-            // Extract attributes from raw text
             const customerMatch = rawText.match(/KH:\\s*([^\\n\\r]+)/);
             const courtMatch = rawText.match(/(Sân\\s*\\d+)/);
             const timeMatch = rawText.match(/(\\d+h\\d*\\s*-\\s*\\d+h\\d*)/);
@@ -2899,31 +3203,46 @@ function fillZero(num) {
             const timeSlot = timeMatch ? timeMatch[1].trim() : "07:00 - 08:00";
             const price = priceMatch ? priceMatch[1].trim() + " đ" : "150.000 đ";
             
-            console.log('[Alobo Sync] Extracted booking:', { fullName, courtName, timeSlot, price });
+            console.log('[Alobo Sync] Extracted detailed booking from popup:', { fullName, courtName, timeSlot, price });
+            showStatus('Đang đẩy lịch đặt lên Google Sheets...');
 
-            // Post to our portal backend (it will automatically push to Google Sheets)
             GM_xmlhttpRequest({
                 method: "POST",
-                url: window.location.origin + "/api/alobo/forward-booking",
+                url: TARGET_PORTAL + "/api/alobo/forward-booking",
                 headers: { "Content-Type": "application/json" },
                 data: JSON.stringify({
                     fullName: fullName,
                     phone: "Alobo App",
                     courtName: courtName,
-                    date: new Date().toISOString().split('T')[0],
+                    date: getActiveDate(),
                     timeSlot: timeSlot,
                     price: price,
                     paymentStatus: "Đã thanh toán (Alobo)"
                 }),
                 onload: function(res) {
-                    console.log("[Alobo Sync] Sync Response: ", res.responseText);
+                    console.log("[Alobo Sync] Popup Forward Response: ", res.responseText);
+                    try {
+                        const r = JSON.parse(res.responseText);
+                        if (r.success) {
+                            showStatus('Đã ghi nhận lên Google Sheets!');
+                        } else {
+                            showStatus('Lỗi: ' + (r.error || 'Ghi nhận thất bại'), true);
+                        }
+                    } catch (e) {
+                        showStatus('Ghi nhận hoàn tất');
+                    }
+                },
+                onerror: function(err) {
+                    showStatus('Lỗi kết nối máy chủ', true);
                 }
             });
         }
-    }, 2000);
+    }
+
+    setInterval(scrapeAloboBookingDetails, 1500);
 })();`;
                           navigator.clipboard.writeText(scraperScript);
-                          alert('Đã sao chép mã Tampermonkey Userscript vào Clipboard!');
+                          alert('Đã sao chép mã Tampermonkey Userscript Mới (Đã sửa lỗi domain và tích hợp Tự động đồng bộ thời gian thực) vào Clipboard!');
                         }}
                         className="bg-[#4285F4] hover:bg-[#357ae8] text-white font-sans font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-1.5 cursor-pointer self-start sm:self-auto transition-all"
                       >

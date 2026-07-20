@@ -338,22 +338,13 @@ async function autoSyncNewBookingsToSheets(oldSlots: SyncedSlot[], newSlots: Syn
         );
 
         if (!oldSlot || oldSlot.status !== "booked") {
-          console.log(`[Google Sheets Auto-Sync] Syncing newly booked slot: ${slotKey}`);
+          console.log(`[Google Sheets Auto-Sync] Synced newly booked slot locally: ${slotKey}`);
           
-          const booking = {
-            fullName: `Khách Alobo (${newSlot.courtName})`,
-            phone: "Sân đặt từ xa",
-            courtName: newSlot.courtName,
-            date: newSlot.date,
-            timeSlot: newSlot.timeSlot,
-            price: "150.000 đ",
-            paymentStatus: "Đã đặt (Alobo.vn)"
-          };
-
-          // Async forward to Google Sheets (letting it process in background)
-          forwardToGoogleSheets(booking).catch(err => {
-            console.error(`[Google Sheets Auto-Sync] Error forwarding slot ${slotKey}:`, err);
-          });
+          // NOTE: As per user request, we do NOT automatically forward placeholder "Khách Alobo" 
+          // background-synced bookings to Google Sheets. This prevents the spreadsheet from being 
+          // spammed with anonymous "Khách Alobo (Sân X)" rows. 
+          // We only write to Google Sheets when a customer places a booking directly on our website 
+          // (Pickle Bounce portal), or when the user manually scrapes/saves detailed bookings from the Alobo dashboard.
           
           config.googleSheetSyncedSlots.push(slotKey);
           updated = true;
@@ -917,6 +908,104 @@ Only output the valid JSON array without any markdown wrappers or backticks.
   }
 });
 
+// Helper function to update local DB and automatically forward actual customer bookings to Google Sheets
+async function processParsedSlotsAndForwardToSheets(
+  parsedSlots: Array<{
+    courtName: string;
+    timeSlot: string;
+    status: string;
+    fullName?: string;
+    phone?: string;
+    price?: string;
+    paymentStatus?: string;
+  }>,
+  formattedDate: string
+) {
+  if (!parsedSlots || parsedSlots.length === 0) return;
+
+  console.log(`[processParsedSlotsAndForwardToSheets] Received ${parsedSlots.length} slots for ${formattedDate}`);
+
+  // 1. Update the local database
+  let dbSlots = loadAloboBookings();
+  dbSlots = ensureSlotsForDate(dbSlots, formattedDate);
+
+  const updatedDb = dbSlots.map(dbSlot => {
+    if (dbSlot.date !== formattedDate) {
+      return dbSlot;
+    }
+
+    const matched = parsedSlots.find(ps => {
+      const namesMatch = dbSlot.courtName.toLowerCase() === ps.courtName.toLowerCase() ||
+                         dbSlot.courtName.includes(ps.courtName) ||
+                         ps.courtName.includes(dbSlot.courtName);
+      
+      const dbHour = dbSlot.timeSlot.split(":")[0]?.trim();
+      const psHour = ps.timeSlot.split(":")[0]?.trim();
+      return namesMatch && dbHour && psHour && dbHour === psHour;
+    });
+
+    if (matched) {
+      return { ...dbSlot, status: matched.status as "booked" | "locked" | "free" };
+    }
+    return dbSlot;
+  });
+
+  saveAloboBookings(updatedDb);
+
+  // 2. Automatically forward bookings with actual customer details to Google Sheets
+  const config = loadConfig();
+  if (!config.googleSheetSyncedSlots) {
+    config.googleSheetSyncedSlots = [];
+  }
+
+  let sheetUpdated = false;
+
+  for (const slot of parsedSlots) {
+    if (slot.status === "booked") {
+      const fullName = (slot.fullName || "Khách Alobo").trim();
+      const phone = (slot.phone || "Alobo App").trim();
+
+      // Only forward if there is an actual customer detail (either custom name or a real phone number)
+      const hasRealName = fullName !== "Khách Alobo" && fullName !== "" && !fullName.toLowerCase().includes("locked") && !fullName.toLowerCase().includes("khoá");
+      const hasRealPhone = phone !== "Alobo App" && phone !== "";
+
+      if (hasRealName || hasRealPhone) {
+        const slotKey = `${formattedDate}|${slot.courtName}|${slot.timeSlot}`;
+        
+        // Check if already synced to avoid duplicate rows
+        if (!config.googleSheetSyncedSlots.includes(slotKey)) {
+          console.log(`[Google Sheets Auto-Sync] Auto-forwarding detailed booking: ${fullName} (${phone}) on ${slot.courtName} at ${slot.timeSlot}`);
+          
+          const booking = {
+            fullName: fullName,
+            phone: phone,
+            courtName: slot.courtName,
+            date: formattedDate,
+            timeSlot: slot.timeSlot,
+            price: slot.price || "150.000 đ",
+            paymentStatus: slot.paymentStatus || "Đã thanh toán (Alobo API)"
+          };
+
+          try {
+            await forwardToGoogleSheets(booking);
+            config.googleSheetSyncedSlots.push(slotKey);
+            sheetUpdated = true;
+          } catch (err) {
+            console.error(`[Google Sheets Auto-Sync] Error forwarding detailed booking ${slotKey}:`, err);
+          }
+        }
+      }
+    }
+  }
+
+  if (sheetUpdated) {
+    if (config.googleSheetSyncedSlots.length > 1000) {
+      config.googleSheetSyncedSlots = config.googleSheetSyncedSlots.slice(-1000);
+    }
+    saveConfig(config);
+  }
+}
+
 // 5. Fetch directly from Alobo API (Bypassing CORS on server-side)
 app.post("/api/alobo/fetch-live-api", async (req, res) => {
   try {
@@ -963,19 +1052,19 @@ app.post("/api/alobo/fetch-live-api", async (req, res) => {
     // Use Gemini to intelligently parse the API JSON response
     const parsePrompt = `
       You are an expert sports booking JSON parser. Analyze this raw JSON data retrieved from alobo.vn's internal API.
-      Extract the court bookings / slot statuses for the pickleball facility (e.g. sport_pickle_bounce) and match them to our standard format.
-      We are interested in booking slots between 06:00 and 22:00 for the courts (Sân 1, Sân 2, Sân 3, Sân 4, Sân 5).
-      Identify which slots are booked (occupied/reserved), locked (blocked by admin), or free (available).
-      Convert this raw API response into a structured JSON array matching this exact schema:
-      [
-        {
-          "courtName": "Sân 1",
-          "timeSlot": "09:00 - 10:00",
-          "status": "booked"
-        }
-      ]
-      Ensure statuses are strictly "booked", "locked", or "free".
-      Only output the valid JSON array without any markdown wrappers.
+      Extract the court bookings / slot statuses for the pickleball facility (e.g. sport_pickle_bounce or courts Sân 1, Sân 2, Sân 3, Sân 4, Sân 5).
+      We are interested in booking slots between 06:00 and 22:00.
+      For each slot, determine:
+      - courtName: Name of the court, e.g. "Sân 1", "Sân 2", etc.
+      - timeSlot: The hourly time slot, e.g. "09:00 - 10:00", "07:00 - 08:00".
+      - status: Must be strictly "booked" (occupied/reserved), "locked" (blocked by admin), or "free" (available).
+      - fullName: Look deep into the JSON for user details, customer name, reservation name, or note associated with this slot. E.g., "Anh Khanh", "Anh Luân", "A Toàn". If no name is found, output "Khách Alobo".
+      - phone: Search for a phone number associated with this customer or slot (usually starts with 0 or has 9-11 digits). If no phone number is found, output "Alobo App".
+      - price: Search for price or amount. E.g. "150.000 đ". If not found, default to "150.000 đ".
+      - paymentStatus: Search for payment status or payment method. E.g., "Đã thanh toán" or "Chưa thanh toán". Default to "Đã thanh toán (Alobo API)".
+
+      Convert this raw API response into a structured JSON array matching this exact schema.
+      Ensure the output is STRICTLY a JSON array, no markdown code blocks, no trailing comments.
     `;
 
     const modelResponse = await ai.models.generateContent({
@@ -996,7 +1085,11 @@ app.post("/api/alobo/fetch-live-api", async (req, res) => {
               status: { 
                 type: Type.STRING,
                 description: "Must be 'booked', 'locked', or 'free'" 
-              }
+              },
+              fullName: { type: Type.STRING },
+              phone: { type: Type.STRING },
+              price: { type: Type.STRING },
+              paymentStatus: { type: Type.STRING }
             },
             required: ["courtName", "timeSlot", "status"]
           }
@@ -1005,34 +1098,17 @@ app.post("/api/alobo/fetch-live-api", async (req, res) => {
     });
 
     const parsedText = modelResponse.text?.trim() || "[]";
-    const parsedSlots = JSON.parse(parsedText) as Array<{ courtName: string, timeSlot: string, status: "booked" | "locked" | "free" }>;
+    const parsedSlots = JSON.parse(parsedText) as Array<{ courtName: string; timeSlot: string; status: "booked" | "locked" | "free"; fullName?: string; phone?: string; price?: string; paymentStatus?: string }>;
 
-    if (parsedSlots && parsedSlots.length > 0) {
-      const dbSlots = loadAloboBookings();
-      const updatedDb = dbSlots.map(dbSlot => {
-        const matched = parsedSlots.find(ps => {
-          const namesMatch = dbSlot.courtName.toLowerCase() === ps.courtName.toLowerCase() ||
-                             dbSlot.courtName.includes(ps.courtName) ||
-                             ps.courtName.includes(dbSlot.courtName);
-          const dbHour = dbSlot.timeSlot.split(":")[0];
-          const psHour = ps.timeSlot.split(":")[0];
-          return namesMatch && dbHour === psHour;
-        });
+    const formattedDate = new Date().toISOString().split('T')[0];
+    
+    await processParsedSlotsAndForwardToSheets(parsedSlots, formattedDate);
 
-        if (matched) {
-          return { ...dbSlot, status: matched.status };
-        }
-        return dbSlot;
-      });
-
-      saveAloboBookings(updatedDb);
-
-      return res.json({
-        success: true,
-        message: `Đồng bộ trực tiếp qua Alobo API thành công! Đã phát hiện và cập nhật ${parsedSlots.length} khung giờ.`,
-        slots: updatedDb
-      });
-    }
+    return res.json({
+      success: true,
+      message: `Đồng bộ trực tiếp qua Alobo API và đẩy Google Sheets thành công! Đã phát hiện và đồng bộ ${parsedSlots.length} khung giờ.`,
+      slots: parsedSlots
+    });
 
     return res.json({
       success: true,
@@ -1069,19 +1145,19 @@ app.post("/api/alobo/sync-raw-json", async (req, res) => {
 
     const parsePrompt = `
       You are an expert sports booking JSON parser. Analyze this raw JSON data retrieved from alobo.vn's internal API.
-      Extract the court bookings / slot statuses for the pickleball facility (e.g. sport_pickle_bounce) and match them to our standard format.
-      We are interested in booking slots between 06:00 and 22:00 for the courts (Sân 1, Sân 2, Sân 3, Sân 4, Sân 5).
-      Identify which slots are booked (occupied/reserved), locked (blocked by admin), or free (available).
-      Convert this raw API response into a structured JSON array matching this exact schema:
-      [
-        {
-          "courtName": "Sân 1",
-          "timeSlot": "09:00 - 10:00",
-          "status": "booked"
-        }
-      ]
-      Ensure statuses are strictly "booked", "locked", or "free".
-      Only output the valid JSON array without any markdown wrappers.
+      Extract the court bookings / slot statuses for the pickleball facility (e.g. sport_pickle_bounce or courts Sân 1, Sân 2, Sân 3, Sân 4, Sân 5).
+      We are interested in booking slots between 06:00 and 22:00.
+      For each slot, determine:
+      - courtName: Name of the court, e.g. "Sân 1", "Sân 2", etc.
+      - timeSlot: The hourly time slot, e.g. "09:00 - 10:00", "07:00 - 08:00".
+      - status: Must be strictly "booked" (occupied/reserved), "locked" (blocked by admin), or "free" (available).
+      - fullName: Look deep into the JSON for user details, customer name, reservation name, or note associated with this slot. E.g., "Anh Khanh", "Anh Luân", "A Toàn". If no name is found, output "Khách Alobo".
+      - phone: Search for a phone number associated with this customer or slot (usually starts with 0 or has 9-11 digits). If no phone number is found, output "Alobo App".
+      - price: Search for price or amount. E.g. "150.000 đ". If not found, default to "150.000 đ".
+      - paymentStatus: Search for payment status or payment method. E.g., "Đã thanh toán" or "Chưa thanh toán". Default to "Đã thanh toán (Alobo API)".
+
+      Convert this raw API response into a structured JSON array matching this exact schema.
+      Ensure the output is STRICTLY a JSON array, no markdown code blocks, no trailing comments.
     `;
 
     const modelResponse = await ai.models.generateContent({
@@ -1102,7 +1178,11 @@ app.post("/api/alobo/sync-raw-json", async (req, res) => {
               status: { 
                 type: Type.STRING,
                 description: "Must be 'booked', 'locked', or 'free'" 
-              }
+              },
+              fullName: { type: Type.STRING },
+              phone: { type: Type.STRING },
+              price: { type: Type.STRING },
+              paymentStatus: { type: Type.STRING }
             },
             required: ["courtName", "timeSlot", "status"]
           }
@@ -1111,38 +1191,16 @@ app.post("/api/alobo/sync-raw-json", async (req, res) => {
     });
 
     const parsedText = modelResponse.text?.trim() || "[]";
-    const parsedSlots = JSON.parse(parsedText) as Array<{ courtName: string, timeSlot: string, status: "booked" | "locked" | "free" }>;
+    const parsedSlots = JSON.parse(parsedText) as Array<{ courtName: string; timeSlot: string; status: "booked" | "locked" | "free"; fullName?: string; phone?: string; price?: string; paymentStatus?: string }>;
 
     if (parsedSlots && parsedSlots.length > 0) {
-      let dbSlots = loadAloboBookings();
-      dbSlots = ensureSlotsForDate(dbSlots, formattedDate);
+      await processParsedSlotsAndForwardToSheets(parsedSlots, formattedDate);
 
-      const updatedDb = dbSlots.map(dbSlot => {
-        if (dbSlot.date !== formattedDate) {
-          return dbSlot;
-        }
-
-        const matched = parsedSlots.find(ps => {
-          const namesMatch = dbSlot.courtName.toLowerCase() === ps.courtName.toLowerCase() ||
-                             dbSlot.courtName.includes(ps.courtName) ||
-                             ps.courtName.includes(dbSlot.courtName);
-          const dbHour = dbSlot.timeSlot.split(":")[0];
-          const psHour = ps.timeSlot.split(":")[0];
-          return namesMatch && dbHour === psHour;
-        });
-
-        if (matched) {
-          return { ...dbSlot, status: matched.status };
-        }
-        return dbSlot;
-      });
-
-      saveAloboBookings(updatedDb);
-
+      const dbSlots = loadAloboBookings();
       return res.json({
         success: true,
-        message: `Đồng bộ thủ công qua API Response thành công cho ngày ${formattedDate}! Đã cập nhật ${parsedSlots.length} khung giờ.`,
-        slots: updatedDb.filter(slot => slot.date === formattedDate)
+        message: `Đồng bộ trực tiếp và tự động ghi nhận Google Sheets thành công cho ngày ${formattedDate}! Đã cập nhật ${parsedSlots.length} khung giờ.`,
+        slots: dbSlots.filter(slot => slot.date === formattedDate)
       });
     }
 
@@ -1151,6 +1209,137 @@ app.post("/api/alobo/sync-raw-json", async (req, res) => {
   } catch (err: any) {
     console.error("Raw JSON sync error:", err);
     res.status(500).json({ success: false, error: err.message || "Lỗi khi xử lý JSON thô." });
+  }
+});
+
+// 7. Paste raw copied text or HTML from Alobo detail page for AI-powered extraction
+app.post("/api/alobo/parse-text-sync", async (req, res) => {
+  try {
+    const { rawText, date } = req.body;
+    if (!rawText) {
+      return res.status(400).json({ success: false, error: "Thiếu dữ liệu văn bản để trích xuất." });
+    }
+
+    const dateStr = date || new Date().toISOString().split('T')[0];
+    let formattedDate = dateStr;
+    if (dateStr.includes("/")) {
+      const parts = dateStr.split("/");
+      if (parts.length === 3) {
+        formattedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+    }
+
+    if (!ai) {
+      return res.status(500).json({ success: false, error: "GEMINI_API_KEY chưa cấu hình." });
+    }
+
+    const parsePrompt = `
+      You are an expert AI booking detail scraper. Analyze this raw text or HTML copied from a booking details page on app.alobo.vn or datlich.alobo.vn.
+      Extract the customer name, phone number, court name, timeslot, and price.
+      
+      Look for patterns like:
+      - Customer Name (KH, Tên khách hàng, Họ tên, Tên, Người đặt): E.g., "Anh Khanh", "Chị Hà", "A Toàn"
+      - Phone Number (SĐT, Điện thoại, Số điện thoại, Sdt): usually starts with 0 and has 9-11 digits
+      - Court Name (Sân, Sân số, Court): E.g., "Sân 1", "Sân 2", etc.
+      - Time Slot (Thời gian, Giờ, Giờ chơi, Khung giờ): E.g., "17:00 - 18:00", "08:00 - 09:00", etc. Format should be HH:mm - HH:mm
+      - Price (Tiền, Tổng đơn, Chuyển khoản, Đơn giá, Đơn giá/giờ): E.g., "150.000", "300.000 đ".
+
+      Convert this raw text into a single structured JSON object matching this exact schema:
+      {
+        "fullName": "Name of customer",
+        "phone": "Phone number",
+        "courtName": "Sân 1",
+        "timeSlot": "17:00 - 18:00",
+        "price": "150.000 đ",
+        "paymentStatus": "Đã thanh toán (AI Copy-Paste)"
+      }
+      
+      Ensure your outputs are completely accurate to the text. If any field is not found, use a reasonable default.
+      Ensure the output is STRICTLY a JSON object, no markdown code blocks, no trailing comments.
+    `;
+
+    const modelResponse = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: [
+        { text: parsePrompt },
+        { text: rawText }
+      ],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            fullName: { type: Type.STRING },
+            phone: { type: Type.STRING },
+            courtName: { type: Type.STRING },
+            timeSlot: { type: Type.STRING },
+            price: { type: Type.STRING },
+            paymentStatus: { type: Type.STRING }
+          },
+          required: ["fullName", "phone", "courtName", "timeSlot", "price"]
+        }
+      }
+    });
+
+    const parsedText = modelResponse.text?.trim() || "{}";
+    const booking = JSON.parse(parsedText);
+
+    if (booking && booking.fullName) {
+      booking.date = formattedDate;
+      if (!booking.paymentStatus) {
+        booking.paymentStatus = "Đã thanh toán (AI Copy-Paste)";
+      }
+
+      const result = await forwardToGoogleSheets(booking);
+
+      // Also update local database cache for this court and hour slot as booked
+      try {
+        const allSlots = loadAloboBookings();
+        const targetCourt = booking.courtName;
+        const targetTime = booking.timeSlot;
+        
+        let updatedLocalSlot = false;
+        const updatedSlots = allSlots.map(slot => {
+          if (slot.date !== formattedDate) return slot;
+
+          const isCourtMatch = slot.courtName.toLowerCase() === targetCourt.toLowerCase() ||
+                               slot.courtName.includes(targetCourt) ||
+                               targetCourt.includes(slot.courtName);
+          
+          const dbHour = slot.timeSlot.split(":")[0]?.trim();
+          const bookingHour = targetTime.split(":")[0]?.trim();
+          const isHourMatch = dbHour && bookingHour && dbHour === bookingHour;
+          
+          if (isCourtMatch && isHourMatch) {
+            updatedLocalSlot = true;
+            return {
+              ...slot,
+              status: "booked" as "booked" | "locked" | "free"
+            };
+          }
+          return slot;
+        });
+        
+        if (updatedLocalSlot) {
+          saveAloboBookings(updatedSlots);
+        }
+      } catch (dbErr) {
+        console.error("Failed to update local bookings cache:", dbErr);
+      }
+
+      return res.json({
+        success: true,
+        message: `Trích xuất AI và đồng bộ Google Sheets thành công cho ${booking.fullName}!`,
+        booking: booking,
+        result: result
+      });
+    }
+
+    return res.status(400).json({ success: false, error: "Không tìm thấy dữ liệu đặt sân phù hợp trong văn bản được gửi." });
+
+  } catch (err: any) {
+    console.error("Parse text sync error:", err);
+    res.status(500).json({ success: false, error: err.message || "Lỗi khi xử lý trích xuất văn bản AI." });
   }
 });
 

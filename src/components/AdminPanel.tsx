@@ -144,6 +144,11 @@ export default function AdminPanel({
   const [isManualSending, setIsManualSending] = useState(false);
   const [manualSendResult, setManualSendResult] = useState<{ success?: boolean; error?: string } | null>(null);
 
+  // AI Copy-Paste Sync State
+  const [aiPasteText, setAiPasteText] = useState('');
+  const [isParsingPaste, setIsParsingPaste] = useState(false);
+  const [aiPasteResult, setAiPasteResult] = useState<{ success?: boolean; error?: string; booking?: any } | null>(null);
+
   const getSheetId = () => {
     const match = googleSheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
     return match ? match[1] : '1-Hw978q5B4krlwS_PemsnmV6axata5wyQVFVuWdpo38';
@@ -248,6 +253,44 @@ export default function AdminPanel({
       setManualSendResult({ error: err.message || 'Lỗi kết nối mạng.' });
     } finally {
       setIsManualSending(false);
+    }
+  };
+
+  const handleAIPasteSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!aiPasteText.trim()) return;
+    setIsParsingPaste(true);
+    setAiPasteResult(null);
+    try {
+      const res = await fetch('/api/alobo/parse-text-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          rawText: aiPasteText,
+          date: new Date().toISOString().split('T')[0] // or current view date
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAiPasteResult({
+          success: true,
+          booking: data.booking
+        });
+        setAiPasteText('');
+        fetchConfig(); // Reload sync logs
+      } else {
+        setAiPasteResult({
+          success: false,
+          error: data.error || 'Trích xuất AI thất bại.'
+        });
+      }
+    } catch (err: any) {
+      setAiPasteResult({
+        success: false,
+        error: err.message || 'Lỗi kết nối mạng khi gửi dữ liệu lên AI.'
+      });
+    } finally {
+      setIsParsingPaste(false);
     }
   };
 
@@ -2316,6 +2359,78 @@ export default function AdminPanel({
                               '✓ Đã gửi dữ liệu đặt sân lên Google Sheets thành công!'
                             ) : (
                               `✗ Gửi thất bại: ${manualSendResult.error || 'Vui lòng kiểm tra lại kết nối.'}`
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* AI Copy-Paste Scraper Card */}
+                      <div className="bg-white border border-brand-border/40 p-5 rounded-2xl shadow-sm space-y-4 text-xs">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-display font-bold text-sm text-brand-dark flex items-center gap-1.5">
+                            <Sparkles className="w-4.5 h-4.5 text-amber-500 animate-pulse" />
+                            <span>3. Nạp dữ liệu nhanh bằng AI (Copy - Dán từ Alobo)</span>
+                          </h4>
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 animate-pulse">
+                            Bảo mật &amp; Không cần tài khoản
+                          </span>
+                        </div>
+                        <p className="font-sans text-[11px] text-brand-gray mt-0.5 text-left leading-relaxed">
+                          Dành cho nhân viên khi kết ca hoặc đồng bộ nhanh: Bạn chỉ cần vào trang chi tiết lịch đặt <code className="bg-brand-light-gray px-1 py-0.5 rounded text-brand-dark">app.alobo.vn/bookingDetails</code> trên trình duyệt (nơi bạn đã đăng nhập tài khoản Alobo), nhấn <kbd className="bg-brand-light-gray px-1 border rounded shadow-sm font-semibold">Ctrl + A</kbd> (chọn tất cả) rồi <kbd className="bg-brand-light-gray px-1 border rounded shadow-sm font-semibold">Ctrl + C</kbd> (sao chép), sau đó <strong>Dán trực tiếp</strong> vào ô dưới đây. Trí tuệ nhân tạo Gemini sẽ tự động bóc tách thông tin khách hàng và ghi thẳng vào Google Sheet!
+                        </p>
+
+                        <form onSubmit={handleAIPasteSend} className="space-y-4">
+                          <div>
+                            <textarea
+                              rows={4}
+                              value={aiPasteText}
+                              onChange={(e) => setAiPasteText(e.target.value)}
+                              placeholder="Dán toàn bộ văn bản hoặc mã nguồn trang chi tiết đặt lịch Alobo tại đây..."
+                              className="w-full bg-brand-light-gray border border-brand-border/60 rounded-xl p-3 text-xs font-medium text-brand-dark outline-none focus:border-[#4285F4] transition-all placeholder:text-brand-gray/50 font-sans"
+                            />
+                          </div>
+
+                          <button 
+                            type="submit"
+                            disabled={isParsingPaste || !aiPasteText.trim() || !googleSheetWebhookUrl}
+                            className="w-full bg-[#4285F4] hover:bg-[#357ae8] text-white font-sans font-bold text-xs py-3 rounded-xl transition-all cursor-pointer disabled:opacity-40 flex items-center justify-center gap-2"
+                          >
+                            {isParsingPaste ? (
+                              <>
+                                <RefreshCw className="w-4 h-4 animate-spin" />
+                                <span>Trí Tuệ Nhân Tạo (Gemini) Đang Trích Xuất Dữ Liệu...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="w-4 h-4" />
+                                <span>Phân Tích AI &amp; Ghi Vào Google Sheets</span>
+                              </>
+                            )}
+                          </button>
+                        </form>
+
+                        {aiPasteResult && (
+                          <div className={`p-4 rounded-xl text-xs space-y-2 ${
+                            aiPasteResult.success ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-brand-red border border-brand-red-light/30'
+                          }`}>
+                            {aiPasteResult.success ? (
+                              <div className="text-left space-y-1">
+                                <div className="font-bold text-green-950 flex items-center gap-1.5">
+                                  ✓ Trích xuất &amp; Đồng bộ Google Sheets thành công!
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 mt-2 bg-white/60 p-2.5 rounded-lg border border-green-100 font-sans text-[11px]">
+                                  <div><span className="text-brand-gray">Khách hàng:</span> <strong className="text-brand-dark">{aiPasteResult.booking?.fullName}</strong></div>
+                                  <div><span className="text-brand-gray">Số điện thoại:</span> <strong className="text-brand-dark">{aiPasteResult.booking?.phone}</strong></div>
+                                  <div><span className="text-brand-gray">Sân đấu:</span> <strong className="text-brand-dark">{aiPasteResult.booking?.courtName}</strong></div>
+                                  <div><span className="text-brand-gray">Khung giờ:</span> <strong className="text-brand-dark">{aiPasteResult.booking?.timeSlot}</strong></div>
+                                  <div><span className="text-brand-gray">Thành tiền:</span> <strong className="text-brand-dark text-[#0F9D58]">{aiPasteResult.booking?.price}</strong></div>
+                                  <div><span className="text-brand-gray">Ghi chú:</span> <strong className="text-brand-dark">{aiPasteResult.booking?.paymentStatus}</strong></div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="font-semibold">
+                                ✗ Thất bại: {aiPasteResult.error || 'Vui lòng kiểm tra lại cấu hình webhook hoặc định dạng dán.'}
+                              </div>
                             )}
                           </div>
                         )}

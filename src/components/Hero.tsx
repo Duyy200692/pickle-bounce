@@ -5,9 +5,20 @@ import { motion } from 'motion/react';
 interface HeroProps {
   onOpenBooking: () => void;
   onOpenMatchLobby: () => void;
+  config?: {
+    heroTag: string;
+    heroTitle: string;
+    heroSubtitle: string;
+    heroImage: string;
+  };
 }
 
-export default function Hero({ onOpenBooking, onOpenMatchLobby }: HeroProps) {
+export default function Hero({ onOpenBooking, onOpenMatchLobby, config }: HeroProps) {
+  const tag = config?.heroTag || "SPORT PICKLE BOUNCE";
+  const title = config?.heroTitle || "Khám phá tính năng";
+  const subtitle = config?.heroSubtitle || "Tổ chức buổi chơi chuyên nghiệp. Miễn phí 100%. Đặt sân nhanh chóng, tìm bạn cùng trình, tổ chức giải đấu bùng nổ.";
+  const image = config?.heroImage || "https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&q=80&w=1600";
+
   return (
     <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-12">
       {/* Tall rounded card for hero section - Match the mockup image's exact structure */}
@@ -16,7 +27,7 @@ export default function Hero({ onOpenBooking, onOpenMatchLobby }: HeroProps) {
         {/* Background Image with elegant gradient overlays */}
         <div className="absolute inset-0">
           <img 
-            src="https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&q=80&w=1600" 
+            src={image} 
             alt="Pickleball Court and Player" 
             className="w-full h-full object-cover object-center scale-105 transform hover:scale-100 transition-transform duration-10000"
           />
@@ -40,7 +51,7 @@ export default function Hero({ onOpenBooking, onOpenMatchLobby }: HeroProps) {
             >
               <div className="w-2 h-2 bg-brand-red rounded-full animate-ping"></div>
               <span className="font-display font-bold text-xs sm:text-sm tracking-widest text-white uppercase opacity-95">
-                SPORT PICKLE BOUNCE
+                {tag}
               </span>
             </motion.div>
 
@@ -51,7 +62,7 @@ export default function Hero({ onOpenBooking, onOpenMatchLobby }: HeroProps) {
               transition={{ duration: 0.6, delay: 0.15 }}
               className="font-display font-black text-4xl sm:text-5xl md:text-6xl tracking-tight leading-none mb-4"
             >
-              Khám phá tính năng
+              {title}
             </motion.h1>
 
             {/* Subtitle */}
@@ -61,7 +72,7 @@ export default function Hero({ onOpenBooking, onOpenMatchLobby }: HeroProps) {
               transition={{ duration: 0.6, delay: 0.3 }}
               className="font-sans font-medium text-base sm:text-lg md:text-xl text-white/80 max-w-lg mb-8 leading-relaxed"
             >
-              Tổ chức buổi chơi chuyên nghiệp. Miễn phí 100%. Đặt sân nhanh chóng, tìm bạn cùng trình, tổ chức giải đấu bùng nổ.
+              {subtitle}
             </motion.p>
 
             {/* Call To Actions */}

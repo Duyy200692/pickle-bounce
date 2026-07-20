@@ -210,6 +210,103 @@ if (!fs.existsSync(CONFIG_PATH)) {
   saveConfig(DEFAULT_CONFIG);
 }
 
+// Landing Page Config System
+const LANDING_PAGE_PATH = path.join(process.cwd(), "landing_page_config.json");
+
+interface LandingPageConfig {
+  heroTag: string;
+  heroTitle: string;
+  heroSubtitle: string;
+  heroImage: string;
+  visionTag: string;
+  visionTitle: string;
+  visionParagraph1: string;
+  visionParagraph2: string;
+  visionImage: string;
+  stat1Value: string;
+  stat1Label: string;
+  stat2Value: string;
+  stat2Label: string;
+  stat3Value: string;
+  stat3Label: string;
+  visionBadgeTitle: string;
+  visionBadgeText: string;
+}
+
+const DEFAULT_LANDING_PAGE: LandingPageConfig = {
+  heroTag: "SPORT PICKLE BOUNCE",
+  heroTitle: "Khám phá tính năng",
+  heroSubtitle: "Tổ chức buổi chơi chuyên nghiệp. Miễn phí 100%. Đặt sân nhanh chóng, tìm bạn cùng trình, tổ chức giải đấu bùng nổ.",
+  heroImage: "https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&q=80&w=1600",
+  visionTag: "Tầm nhìn cộng đồng",
+  visionTitle: "Chơi cùng nhau. Tiến bộ cùng nhau. Vươn tầm cùng nhau.",
+  visionParagraph1: "Pickleball Bounce được tạo ra như một sân chơi mới cho cộng đồng đam mê pickleball. Từ người mới bắt đầu cầm vợt đến các vận động viên phong trào hay chuyên nghiệp, ai cũng có chỗ đứng và lộ trình phát triển rõ ràng.",
+  visionParagraph2: "Chúng tôi kết nối hệ thống giải đấu kịch tính, các hoạt động truyền thông sôi nổi và mạng lưới sân bãi đối tác rộng lớn thành một hệ sinh thái chung, mang lại sự tiện nghi và hứng khởi tuyệt đối cho người chơi.",
+  visionImage: "https://images.unsplash.com/photo-1541252260730-0412e8e2108e?auto=format&fit=crop&q=80&w=800",
+  stat1Value: "12k+",
+  stat1Label: "Hội viên active",
+  stat2Value: "50+",
+  stat2Label: "Sân đối tác",
+  stat3Value: "180+",
+  stat3Label: "Giải đấu lớn nhỏ",
+  visionBadgeTitle: "Chinh phục đỉnh cao mới",
+  visionBadgeText: "Sẵn sàng cùng đồng đội nâng hạng tuần này."
+};
+
+function loadLandingPageConfig(): LandingPageConfig {
+  try {
+    if (fs.existsSync(LANDING_PAGE_PATH)) {
+      return JSON.parse(fs.readFileSync(LANDING_PAGE_PATH, "utf-8"));
+    }
+  } catch (err) {
+    console.error("Error reading landing page config", err);
+  }
+  return DEFAULT_LANDING_PAGE;
+}
+
+function saveLandingPageConfig(config: LandingPageConfig) {
+  try {
+    fs.writeFileSync(LANDING_PAGE_PATH, JSON.stringify(config, null, 2), "utf-8");
+  } catch (err) {
+    console.error("Error saving landing page config", err);
+  }
+}
+
+async function getFirebaseLandingPageConfig(): Promise<LandingPageConfig> {
+  if (isFirebaseActive && firestoreDb) {
+    try {
+      const docRef = doc(firestoreDb, "settings", "landing_page_config");
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data() as LandingPageConfig;
+        saveLandingPageConfig(data);
+        return data;
+      }
+    } catch (err) {
+      console.error("[Firebase] Error fetching landing page config:", err);
+    }
+  }
+  return loadLandingPageConfig();
+}
+
+async function saveFirebaseLandingPageConfig(config: LandingPageConfig) {
+  saveLandingPageConfig(config);
+  if (isFirebaseActive && firestoreDb) {
+    try {
+      const docRef = doc(firestoreDb, "settings", "landing_page_config");
+      await setDoc(docRef, config);
+      console.log("[Firebase] Saved landing page config to Firestore.");
+    } catch (err) {
+      console.error("[Firebase] Error saving landing page config to Firestore:", err);
+    }
+  }
+}
+
+// Ensure landing page config is initialized on startup
+if (!fs.existsSync(LANDING_PAGE_PATH)) {
+  saveLandingPageConfig(DEFAULT_LANDING_PAGE);
+}
+
 // Firebase Config Helpers
 async function getFirebaseConfig(): Promise<AloboConfig> {
   if (isFirebaseActive && firestoreDb) {
@@ -1701,6 +1798,26 @@ app.get("/api/firebase/status", (req, res) => {
     isFirebaseActive,
     projectId: isFirebaseActive ? (JSON.parse(fs.readFileSync(FIREBASE_CONFIG_PATH, "utf-8")).projectId) : null
   });
+});
+
+// Landing Page endpoints
+app.get("/api/landing-page", async (req, res) => {
+  try {
+    const config = await getFirebaseLandingPageConfig();
+    res.json({ success: true, config, isFirebaseActive });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post("/api/landing-page", async (req, res) => {
+  try {
+    const config = req.body;
+    await saveFirebaseLandingPageConfig(config);
+    res.json({ success: true, config, isFirebaseActive });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // -------------------------------------------------------------

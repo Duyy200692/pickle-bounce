@@ -103,3 +103,24 @@ export interface MemberRegistration {
   createdAt: string;
 }
 
+export interface LandingPageConfig {
+  heroTag: string;
+  heroTitle: string;
+  heroSubtitle: string;
+  heroImage: string;
+  visionTag: string;
+  visionTitle: string;
+  visionParagraph1: string;
+  visionParagraph2: string;
+  visionImage: string;
+  stat1Value: string;
+  stat1Label: string;
+  stat2Value: string;
+  stat2Label: string;
+  stat3Value: string;
+  stat3Label: string;
+  visionBadgeTitle: string;
+  visionBadgeText: string;
+}
+
+

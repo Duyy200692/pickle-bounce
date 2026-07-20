@@ -6,7 +6,7 @@ import {
   DollarSign, TrendingUp, BarChart3, PieChart, PlusCircle, CalendarDays,
   Copy, ExternalLink, Database, AlertTriangle, Search, Award, UserCheck, CreditCard
 } from 'lucide-react';
-import { Court, Booking, OpenPlay, Tournament, TeamRegistration, SocialRevenue, MemberRegistration } from '../types';
+import { Court, Booking, OpenPlay, Tournament, TeamRegistration, SocialRevenue, MemberRegistration, LandingPageConfig } from '../types';
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -25,9 +25,11 @@ interface AdminPanelProps {
   onSaveSocialRevenues: (socials: SocialRevenue[]) => void;
   memberRegistrations: MemberRegistration[];
   onSaveMemberRegistrations: (regs: MemberRegistration[]) => void;
+  landingPageConfig?: LandingPageConfig;
+  onSaveLandingPageConfig?: (config: LandingPageConfig) => void;
 }
 
-type AdminTab = 'dashboard' | 'courts' | 'bookings' | 'openplays' | 'tournaments' | 'registrations' | 'revenue' | 'alobo_sync' | 'customer_lookup';
+type AdminTab = 'dashboard' | 'courts' | 'bookings' | 'openplays' | 'tournaments' | 'registrations' | 'revenue' | 'alobo_sync' | 'customer_lookup' | 'landing_page';
 
 export default function AdminPanel({
   isOpen,
@@ -45,13 +47,43 @@ export default function AdminPanel({
   socialRevenues,
   onSaveSocialRevenues,
   memberRegistrations = [],
-  onSaveMemberRegistrations
+  onSaveMemberRegistrations,
+  landingPageConfig,
+  onSaveLandingPageConfig
 }: AdminPanelProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [regSubTab, setRegSubTab] = useState<'tournament' | 'training'>('training');
   const [authError, setAuthError] = useState('');
+
+  // Landing Page Edit State
+  const [landingForm, setLandingForm] = useState<LandingPageConfig>({
+    heroTag: '',
+    heroTitle: '',
+    heroSubtitle: '',
+    heroImage: '',
+    visionTag: '',
+    visionTitle: '',
+    visionParagraph1: '',
+    visionParagraph2: '',
+    visionImage: '',
+    stat1Value: '',
+    stat1Label: '',
+    stat2Value: '',
+    stat2Label: '',
+    stat3Value: '',
+    stat3Label: '',
+    visionBadgeTitle: '',
+    visionBadgeText: ''
+  });
+  const [isSavingLanding, setIsSavingLanding] = useState(false);
+
+  React.useEffect(() => {
+    if (landingPageConfig) {
+      setLandingForm(landingPageConfig);
+    }
+  }, [landingPageConfig, activeTab]);
 
   // Customer search states
   const [customerSearchKeyword, setCustomerSearchKeyword] = useState('');
@@ -759,6 +791,21 @@ export default function AdminPanel({
                 <span>Tra Cứu Khách Hàng</span>
                 <span className="bg-green-600 text-white text-[9px] px-1.5 py-0.5 rounded ml-auto font-black font-sans uppercase font-sans">
                   TÌM
+                </span>
+              </button>
+
+              <button 
+                onClick={() => { setActiveTab('landing_page'); setEditingCourtId(null); setEditingTournamentId(null); setEditingOpenPlayId(null); }}
+                className={`w-full text-left px-3 py-2.5 rounded-xl font-sans font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
+                  activeTab === 'landing_page' 
+                    ? 'bg-brand-red text-white shadow-sm' 
+                    : 'text-brand-dark/80 hover:bg-white hover:text-brand-red'
+                }`}
+              >
+                <Sparkles className="w-4 h-4 flex-shrink-0" />
+                <span>Nội Dung Landing Page</span>
+                <span className="bg-brand-red text-white text-[9px] px-1.5 py-0.5 rounded ml-auto font-black font-sans uppercase">
+                  SỬA
                 </span>
               </button>
             </div>
@@ -3934,6 +3981,278 @@ function fillZero(num) {
                   </div>
                 );
               })()}
+
+              {/* Landing Page Content Tab */}
+              {activeTab === 'landing_page' && (
+                <div className="space-y-6 text-xs">
+                  <div className="flex justify-between items-center border-b border-brand-border/40 pb-4">
+                    <div>
+                      <h3 className="font-display font-black text-xl text-brand-dark">Cấu Hình Nội Dung Landing Page</h3>
+                      <p className="font-sans text-xs text-brand-gray mt-1">Điều chỉnh trực tiếp nội dung phần Hero (Đầu trang) và Vision (Tầm nhìn cộng đồng) hiển thị ngoài trang chủ.</p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        setIsSavingLanding(true);
+                        try {
+                          const res = await fetch('/api/landing-page', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(landingForm)
+                          });
+                          const data = await res.json();
+                          if (data.success) {
+                            alert('Cập nhật thông tin Landing Page thành công!');
+                            if (onSaveLandingPageConfig) {
+                              onSaveLandingPageConfig(landingForm);
+                            }
+                          } else {
+                            alert('Lỗi: ' + (data.error || 'Không thể lưu.'));
+                          }
+                        } catch (err: any) {
+                          alert('Lỗi kết nối máy chủ: ' + err.message);
+                        } finally {
+                          setIsSavingLanding(false);
+                        }
+                      }}
+                      disabled={isSavingLanding}
+                      className="bg-brand-red hover:bg-brand-red-hover disabled:bg-brand-red/50 text-white font-sans font-bold text-xs px-6 py-3 rounded-full shadow-lg shadow-brand-red/10 flex items-center gap-2 cursor-pointer transition-colors"
+                    >
+                      {isSavingLanding ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          Đang lưu...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-4 h-4" />
+                          Lưu Cấu Hình
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 text-xs text-left">
+                    {/* Hero Section Config Card */}
+                    <div className="space-y-4 bg-brand-light-gray/40 border border-brand-border/40 p-5 rounded-2xl">
+                      <h4 className="font-display font-black text-sm text-brand-red uppercase tracking-wider flex items-center gap-2 pb-2 border-b border-brand-border/40">
+                        <Sparkles className="w-4 h-4" />
+                        Phần Hero (Đầu trang)
+                      </h4>
+                      
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block font-bold text-brand-dark mb-1">Tag tiêu đề phụ (Hero Tag)</label>
+                          <input 
+                            type="text"
+                            value={landingForm.heroTag}
+                            onChange={e => setLandingForm({ ...landingForm, heroTag: e.target.value })}
+                            className="w-full bg-white border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-3.5 py-2.5 font-semibold text-brand-dark outline-none transition-all"
+                            placeholder="SPORT PICKLE BOUNCE"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-bold text-brand-dark mb-1">Tiêu đề chính (Hero Title)</label>
+                          <input 
+                            type="text"
+                            value={landingForm.heroTitle}
+                            onChange={e => setLandingForm({ ...landingForm, heroTitle: e.target.value })}
+                            className="w-full bg-white border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-3.5 py-2.5 font-semibold text-brand-dark outline-none transition-all"
+                            placeholder="Khám phá tính năng"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-bold text-brand-dark mb-1">Mô tả ngắn (Hero Subtitle)</label>
+                          <textarea 
+                            value={landingForm.heroSubtitle}
+                            onChange={e => setLandingForm({ ...landingForm, heroSubtitle: e.target.value })}
+                            rows={3}
+                            className="w-full bg-white border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-3.5 py-2.5 font-semibold text-brand-dark outline-none transition-all resize-none"
+                            placeholder="Mô tả chính xuất hiện dưới tiêu đề"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-bold text-brand-dark mb-1">Ảnh nền Hero (Hero Image URL)</label>
+                          <input 
+                            type="text"
+                            value={landingForm.heroImage}
+                            onChange={e => setLandingForm({ ...landingForm, heroImage: e.target.value })}
+                            className="w-full bg-white border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-3.5 py-2.5 font-semibold text-brand-dark outline-none transition-all"
+                            placeholder="https://..."
+                          />
+                          <p className="text-[10px] text-brand-gray mt-1">Dán link ảnh Unsplash hoặc bất kỳ URL ảnh công khai nào.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Vision & Info Config Card */}
+                    <div className="space-y-4 bg-brand-light-gray/40 border border-brand-border/40 p-5 rounded-2xl">
+                      <h4 className="font-display font-black text-sm text-brand-red uppercase tracking-wider flex items-center gap-2 pb-2 border-b border-brand-border/40">
+                        <Users className="w-4 h-4" />
+                        Phần Vision (Tầm nhìn &amp; Cộng đồng)
+                      </h4>
+
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block font-bold text-brand-dark mb-1">Tag Vision (Vision Tag)</label>
+                          <input 
+                            type="text"
+                            value={landingForm.visionTag}
+                            onChange={e => setLandingForm({ ...landingForm, visionTag: e.target.value })}
+                            className="w-full bg-white border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-3.5 py-2.5 font-semibold text-brand-dark outline-none transition-all"
+                            placeholder="Tầm nhìn cộng đồng"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-bold text-brand-dark mb-1">Tiêu đề Vision (Dùng \n để ngắt dòng)</label>
+                          <textarea 
+                            value={landingForm.visionTitle}
+                            onChange={e => setLandingForm({ ...landingForm, visionTitle: e.target.value })}
+                            rows={2}
+                            className="w-full bg-white border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-3.5 py-2.5 font-semibold text-brand-dark outline-none transition-all resize-none"
+                            placeholder="Chơi cùng nhau. \nTiến bộ cùng nhau."
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-bold text-brand-dark mb-1">Đoạn văn mô tả 1 (Vision Paragraph 1)</label>
+                          <textarea 
+                            value={landingForm.visionParagraph1}
+                            onChange={e => setLandingForm({ ...landingForm, visionParagraph1: e.target.value })}
+                            rows={3}
+                            className="w-full bg-white border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-3.5 py-2.5 font-semibold text-brand-dark outline-none transition-all resize-none"
+                            placeholder="Đoạn văn giới thiệu thứ nhất"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-bold text-brand-dark mb-1">Đoạn văn mô tả 2 (Vision Paragraph 2)</label>
+                          <textarea 
+                            value={landingForm.visionParagraph2}
+                            onChange={e => setLandingForm({ ...landingForm, visionParagraph2: e.target.value })}
+                            rows={3}
+                            className="w-full bg-white border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-3.5 py-2.5 font-semibold text-brand-dark outline-none transition-all resize-none"
+                            placeholder="Đoạn văn giới thiệu thứ hai"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-bold text-brand-dark mb-1">Ảnh Vision (Vision Image URL)</label>
+                          <input 
+                            type="text"
+                            value={landingForm.visionImage}
+                            onChange={e => setLandingForm({ ...landingForm, visionImage: e.target.value })}
+                            className="w-full bg-white border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-3.5 py-2.5 font-semibold text-brand-dark outline-none transition-all"
+                            placeholder="https://..."
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Micro stats and badge info row */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 text-xs text-left pt-2">
+                    {/* Micro Stats Card */}
+                    <div className="space-y-4 bg-brand-light-gray/40 border border-brand-border/40 p-5 rounded-2xl">
+                      <h4 className="font-display font-black text-sm text-brand-red uppercase tracking-wider flex items-center gap-2 pb-2 border-b border-brand-border/40">
+                        <BarChart3 className="w-4 h-4" />
+                        Số Liệu Thống Kê Nổi Bật (Micro Stats)
+                      </h4>
+
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <label className="block font-bold text-brand-dark mb-1">Số liệu 1</label>
+                          <input 
+                            type="text"
+                            value={landingForm.stat1Value}
+                            onChange={e => setLandingForm({ ...landingForm, stat1Value: e.target.value })}
+                            className="w-full bg-white border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-2.5 py-2 text-center font-bold text-brand-red outline-none transition-all"
+                            placeholder="12k+"
+                          />
+                          <input 
+                            type="text"
+                            value={landingForm.stat1Label}
+                            onChange={e => setLandingForm({ ...landingForm, stat1Label: e.target.value })}
+                            className="w-full bg-white border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-2 py-1 mt-1 text-center font-semibold text-brand-gray outline-none transition-all text-[10px]"
+                            placeholder="Hội viên"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-bold text-brand-dark mb-1">Số liệu 2</label>
+                          <input 
+                            type="text"
+                            value={landingForm.stat2Value}
+                            onChange={e => setLandingForm({ ...landingForm, stat2Value: e.target.value })}
+                            className="w-full bg-white border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-2.5 py-2 text-center font-bold text-brand-red outline-none transition-all"
+                            placeholder="50+"
+                          />
+                          <input 
+                            type="text"
+                            value={landingForm.stat2Label}
+                            onChange={e => setLandingForm({ ...landingForm, stat2Label: e.target.value })}
+                            className="w-full bg-white border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-2 py-1 mt-1 text-center font-semibold text-brand-gray outline-none transition-all text-[10px]"
+                            placeholder="Sân đối tác"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-bold text-brand-dark mb-1">Số liệu 3</label>
+                          <input 
+                            type="text"
+                            value={landingForm.stat3Value}
+                            onChange={e => setLandingForm({ ...landingForm, stat3Value: e.target.value })}
+                            className="w-full bg-white border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-2.5 py-2 text-center font-bold text-brand-red outline-none transition-all"
+                            placeholder="180+"
+                          />
+                          <input 
+                            type="text"
+                            value={landingForm.stat3Label}
+                            onChange={e => setLandingForm({ ...landingForm, stat3Label: e.target.value })}
+                            className="w-full bg-white border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-2 py-1 mt-1 text-center font-semibold text-brand-gray outline-none transition-all text-[10px]"
+                            placeholder="Giải đấu"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Image Badge Card */}
+                    <div className="space-y-4 bg-brand-light-gray/40 border border-brand-border/40 p-5 rounded-2xl">
+                      <h4 className="font-display font-black text-sm text-brand-red uppercase tracking-wider flex items-center gap-2 pb-2 border-b border-brand-border/40">
+                        <Award className="w-4 h-4" />
+                        Nhãn Nổi Bật Trên Ảnh (Image Overlay Badge)
+                      </h4>
+
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block font-bold text-brand-dark mb-1">Tiêu đề nhãn (Badge Title)</label>
+                          <input 
+                            type="text"
+                            value={landingForm.visionBadgeTitle}
+                            onChange={e => setLandingForm({ ...landingForm, visionBadgeTitle: e.target.value })}
+                            className="w-full bg-white border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-3.5 py-2.5 font-semibold text-brand-dark outline-none transition-all"
+                            placeholder="Chinh phục đỉnh cao mới"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-bold text-brand-dark mb-1">Nội dung phụ (Badge Text)</label>
+                          <input 
+                            type="text"
+                            value={landingForm.visionBadgeText}
+                            onChange={e => setLandingForm({ ...landingForm, visionBadgeText: e.target.value })}
+                            className="w-full bg-white border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-3.5 py-2.5 font-semibold text-brand-dark outline-none transition-all"
+                            placeholder="Sẵn sàng cùng đồng đội nâng hạng tuần này."
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
             </div>
           </div>

@@ -20,7 +20,7 @@ import TrainingModal from './components/TrainingModal';
 
 // Static Data and Types
 import { INITIAL_COURTS, INITIAL_OPEN_PLAYS, INITIAL_TOURNAMENTS, SPONSORS } from './data';
-import { Booking, OpenPlay, Tournament, TeamRegistration, Court, SocialRevenue, MemberRegistration } from './types';
+import { Booking, OpenPlay, Tournament, TeamRegistration, Court, SocialRevenue, MemberRegistration, LandingPageConfig } from './types';
 
 export default function App() {
   // Modal visibility states
@@ -30,6 +30,35 @@ export default function App() {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isTrainingOpen, setIsTrainingOpen] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
+
+  // Landing Page Configuration State
+  const [landingPageConfig, setLandingPageConfig] = useState<LandingPageConfig>(() => {
+    const saved = localStorage.getItem('pickle_landing_page_config');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return {
+      heroTag: "SPORT PICKLE BOUNCE",
+      heroTitle: "Khám phá tính năng",
+      heroSubtitle: "Tổ chức buổi chơi chuyên nghiệp. Miễn phí 100%. Đặt sân nhanh chóng, tìm bạn cùng trình, tổ chức giải đấu bùng nổ.",
+      heroImage: "https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&q=80&w=1600",
+      visionTag: "Tầm nhìn cộng đồng",
+      visionTitle: "Chơi cùng nhau. Tiến bộ cùng nhau. Vươn tầm cùng nhau.",
+      visionParagraph1: "Pickleball Bounce được tạo ra như một sân chơi mới cho cộng đồng đam mê pickleball. Từ người mới bắt đầu cầm vợt đến các vận động viên phong trào hay chuyên nghiệp, ai cũng có chỗ đứng và lộ trình phát triển rõ ràng.",
+      visionParagraph2: "Chúng tôi kết nối hệ thống giải đấu kịch tính, các hoạt động truyền thông sôi nổi và mạng lưới sân bãi đối tác rộng lớn thành một hệ sinh thái chung, mang lại sự tiện nghi và hứng khởi tuyệt đối cho người chơi.",
+      visionImage: "https://images.unsplash.com/photo-1541252260730-0412e8e2108e?auto=format&fit=crop&q=80&w=800",
+      stat1Value: "12k+",
+      stat1Label: "Hội viên active",
+      stat2Value: "50+",
+      stat2Label: "Sân đối tác",
+      stat3Value: "180+",
+      stat3Label: "Giải đấu lớn nhỏ",
+      visionBadgeTitle: "Chinh phục đỉnh cao mới",
+      visionBadgeText: "Sẵn sàng cùng đồng đội nâng hạng tuần này."
+    };
+  });
 
   // Core App State
   const [memberRegistrations, setMemberRegistrations] = useState<MemberRegistration[]>(() => {
@@ -423,6 +452,17 @@ export default function App() {
         }
       })
       .catch(err => console.error('Error fetching members from server:', err));
+
+    // 3. Fetch Landing Page Config
+    fetch('/api/landing-page')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.config) {
+          setLandingPageConfig(data.config);
+          localStorage.setItem('pickle_landing_page_config', JSON.stringify(data.config));
+        }
+      })
+      .catch(err => console.error('Error fetching landing page config:', err));
   }, []);
 
   // Sync bookings to LocalStorage on change and keep local state
@@ -632,13 +672,14 @@ export default function App() {
         <Hero 
           onOpenBooking={() => setIsBookingOpen(true)}
           onOpenMatchLobby={() => setIsMatchLobbyOpen(true)}
+          config={landingPageConfig}
         />
 
         {/* 2. Sponsors/Partners Marquee Row */}
         <Sponsors sponsors={SPONSORS} />
 
         {/* 3. Community Vision Section */}
-        <Vision />
+        <Vision config={landingPageConfig} />
 
         {/* 4. Ecosystem Steps (01 to 04) */}
         <Ecosystem />
@@ -724,6 +765,8 @@ export default function App() {
         onSaveSocialRevenues={setSocialRevenues}
         memberRegistrations={memberRegistrations}
         onSaveMemberRegistrations={setMemberRegistrations}
+        landingPageConfig={landingPageConfig}
+        onSaveLandingPageConfig={setLandingPageConfig}
       />
 
       {/* 6. Training & Membership Registration Modal */}

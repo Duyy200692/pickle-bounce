@@ -81,7 +81,7 @@ export default function AdminPanel({
   };
 
   const handleToggleMemberStatus = (id: string) => {
-    const updated = memberRegistrations.map(r => r.id === id ? { ...r, status: r.status === 'confirmed' ? 'pending' : 'confirmed' } : r);
+    const updated = memberRegistrations.map(r => r.id === id ? { ...r, status: (r.status === 'confirmed' ? 'pending' : 'confirmed') as 'pending' | 'confirmed' } : r);
     onSaveMemberRegistrations(updated);
   };
 
@@ -2342,97 +2342,21 @@ export default function AdminPanel({
       ss = SpreadsheetApp.openById(sheetId);
     }
     
-    // 1. Handle Member/Coaching registration
     if (data.action === "addRegistration") {
       var regSheet = ss.getSheetByName("BÁO CÁO PICKLE BOUNCE") || 
                      ss.getSheetByName("Đăng Ký Gói Tập") || 
                      ss.getSheetByName("Thành Viên") ||
                      ss.getSheets()[0];
       
-      var lastRow = regSheet.getLastRow();
-      var nextStt = lastRow; // STT index
-      if (lastRow <= 1) {
-        nextStt = 1;
-      }
-      
-      var rowData = [
-        nextStt,
-        data.contractDate || new Date().toLocaleDateString("vi-VN"),
-        data.fullName || "",
-        data.dob || "",
-        "'" + (data.phone || ""),
-        data.preferredTime || "",
-        data.hoursCount || "",
-        data.packageType || "",
-        data.durationMonths || "",
-        data.coachName || "",
-        data.serviceType || "",
-        data.totalPrice || 0,
-        data.depositAmount || 0,
-        data.remainingAmount || 0,
-        data.actualPaid || 0
-      ];
-      
-      regSheet.appendRow(rowData);
-      return ContentService.createTextOutput(JSON.stringify({ success: true, status: "registered", rowIndex: regSheet.getLastRow() }))
+      var res = writeRowToSheet(regSheet, data, false);
+      return ContentService.createTextOutput(JSON.stringify(res))
         .setMimeType(ContentService.MimeType.JSON);
     }
     
-    // 2. Handle standard court booking (clash prevention)
+    // Mặc định hoặc action === "addBooking"
     var sheet = ss.getSheets()[0];
-    if (data.action === "addBooking" || !data.action) {
-      var dateVal = data.date || "";
-      var timeSlotVal = data.timeSlot || "";
-      var courtNameVal = data.courtName || "";
-      var fullNameVal = data.fullName || "";
-      var phoneVal = "'" + (data.phone || "");
-      var priceVal = data.price || "";
-      var paymentStatusVal = data.paymentStatus || "";
-      var syncedAtVal = data.syncedAt || new Date().toLocaleString("vi-VN");
-      
-      var rows = sheet.getDataRange().getValues();
-      var foundRowIndex = -1;
-      
-      for (var i = 1; i < rows.length; i++) {
-        var rowDate = rows[i][0] ? String(rows[i][0]).trim() : "";
-        var rowTime = rows[i][1] ? String(rows[i][1]).trim() : "";
-        var rowCourt = rows[i][2] ? String(rows[i][2]).trim() : "";
-        
-        if (formatCompareDate(rowDate) === formatCompareDate(dateVal) && 
-            rowTime.toLowerCase() === timeSlotVal.toLowerCase() && 
-            rowCourt.toLowerCase() === courtNameVal.toLowerCase()) {
-          foundRowIndex = i + 1;
-          break;
-        }
-      }
-      
-      if (foundRowIndex > -1) {
-        sheet.getRange(foundRowIndex, 4).setValue(fullNameVal);
-        sheet.getRange(foundRowIndex, 5).setValue(phoneVal);
-        sheet.getRange(foundRowIndex, 6).setValue(priceVal);
-        sheet.getRange(foundRowIndex, 7).setValue(paymentStatusVal);
-        sheet.getRange(foundRowIndex, 8).setValue(syncedAtVal);
-        
-        return ContentService.createTextOutput(JSON.stringify({ success: true, status: "updated", rowIndex: foundRowIndex }))
-          .setMimeType(ContentService.MimeType.JSON);
-      } else {
-        sheet.appendRow([
-          dateVal,
-          timeSlotVal,
-          courtNameVal,
-          fullNameVal,
-          phoneVal,
-          priceVal,
-          paymentStatusVal,
-          syncedAtVal
-        ]);
-        
-        return ContentService.createTextOutput(JSON.stringify({ success: true, status: "inserted" }))
-          .setMimeType(ContentService.MimeType.JSON);
-      }
-    }
-    
-    return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Unknown action: " + data.action }))
+    var res = writeRowToSheet(sheet, data, true);
+    return ContentService.createTextOutput(JSON.stringify(res))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (error) {
     return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
@@ -2440,35 +2364,215 @@ export default function AdminPanel({
   }
 }
 
-function formatCompareDate(dateStr) {
-  if (!dateStr) return "";
-  dateStr = String(dateStr).trim();
-  
-  if (dateStr.indexOf('/') > -1) {
-    var parts = dateStr.split('/');
-    if (parts.length === 3) {
-      return fillZero(parts[0]) + "/" + fillZero(parts[1]) + "/" + parts[2];
-    }
-  }
-  
-  if (dateStr.indexOf('-') > -1) {
-    var parts = dateStr.split('-');
-    if (parts.length === 3) {
-      if (parts[0].length === 4) {
-        return fillZero(parts[2]) + "/" + fillZero(parts[1]) + "/" + parts[0];
-      } else if (parts[2].length === 4) {
-        return fillZero(parts[0]) + "/" + fillZero(parts[1]) + "/" + parts[2];
+function writeRowToSheet(sheet, data, isBooking) {
+  // 1. Tìm dòng chứa tiêu đề tự động bằng cách quét 5 dòng đầu
+  var headers = [];
+  var headerRowIdx = 1;
+  var maxRowsToScan = Math.min(sheet.getLastRow(), 5);
+  if (maxRowsToScan > 0) {
+    var scanRange = sheet.getRange(1, 1, maxRowsToScan, sheet.getLastColumn()).getValues();
+    var bestRowScore = -1;
+    for (var rIdx = 0; rIdx < scanRange.length; rIdx++) {
+      var rowCells = scanRange[rIdx];
+      var score = 0;
+      for (var cIdx = 0; cIdx < rowCells.length; cIdx++) {
+        var val = String(rowCells[cIdx]).toUpperCase().trim();
+        if (val.indexOf("HỌ VÀ TÊN") > -1 || val.indexOf("HỌ TÊN") > -1 || val.indexOf("KHÁCH HÀNG") > -1) score += 5;
+        if (val.indexOf("SĐT") > -1 || val.indexOf("SỐ ĐIỆN THOẠI") > -1 || val.indexOf("SDT") > -1) score += 3;
+        if (val.indexOf("STT") > -1) score += 2;
+        if (val.indexOf("NGÀY KÝ") > -1 || val.indexOf("NGÀY ĐẶT") > -1 || val.indexOf("NGÀY SINH") > -1) score += 2;
+      }
+      if (score > bestRowScore && score >= 5) {
+        bestRowScore = score;
+        headers = rowCells;
+        headerRowIdx = rIdx + 1;
       }
     }
   }
   
-  try {
-    var d = new Date(dateStr);
-    if (!isNaN(d.getTime())) {
-      return fillZero(d.getDate()) + "/" + fillZero(d.getMonth() + 1) + "/" + d.getFullYear();
-    }
-  } catch(e) {}
+  if (headers.length === 0 && sheet.getLastRow() >= 1) {
+    headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    headerRowIdx = 1;
+  }
   
+  // 2. Ánh xạ các cột dựa trên tên tiêu đề
+  var headerMap = {};
+  for (var colIdx = 0; colIdx < headers.length; colIdx++) {
+    var hName = String(headers[colIdx]).toUpperCase().trim();
+    if (hName.indexOf("STT") > -1) headerMap["STT"] = colIdx;
+    else if (hName.indexOf("NGÀY SINH") > -1) headerMap["NGÀY SINH"] = colIdx;
+    else if (hName.indexOf("NGÀY KÝ") > -1 || hName.indexOf("NGÀY ĐẶT") > -1 || hName.indexOf("NGÀY") > -1) headerMap["NGÀY KÝ"] = colIdx;
+    else if (hName.indexOf("HỌ VÀ TÊN") > -1 || hName.indexOf("HỌ TÊN") > -1 || hName.indexOf("KHÁCH HÀNG") > -1) headerMap["HỌ TÊN"] = colIdx;
+    else if (hName.indexOf("SĐT") > -1 || hName.indexOf("SỐ ĐIỆN THOẠI") > -1 || hName.indexOf("SDT") > -1 || hName.indexOf("ĐIỆN THOẠI") > -1) headerMap["SĐT"] = colIdx;
+    else if (hName.indexOf("THỜI GIAN") > -1 || hName.indexOf("KHUNG GIỜ") > -1) headerMap["THỜI GIAN"] = colIdx;
+    else if (hName.indexOf("GIỜ TẬP") > -1 || hName.indexOf("SỐ GIỜ") > -1) headerMap["GIỜ TẬP"] = colIdx;
+    else if (hName.indexOf("GÓI TẬP") > -1) headerMap["GÓI TẬP"] = colIdx;
+    else if (hName.indexOf("THỜI HẠN") > -1) headerMap["THỜI HẠN"] = colIdx;
+    else if (hName.indexOf("HLV") > -1) headerMap["HLV"] = colIdx;
+    else if (hName.indexOf("DỊCH VỤ") > -1) headerMap["DỊCH VỤ"] = colIdx;
+    else if (hName.indexOf("TỔNG TIỀN") > -1 || hName.indexOf("DOANH THU") > -1 || hName.indexOf("ĐƠN GIÁ") > -1 || hName.indexOf("GIÁ TRỊ") > -1) headerMap["TỔNG TIỀN"] = colIdx;
+    else if (hName.indexOf("ĐẶT CỌC") > -1 || hName.indexOf("CỌC") > -1) headerMap["ĐẶT CỌC"] = colIdx;
+    else if (hName.indexOf("CÒN LẠI") > -1) headerMap["CÒN LẠI"] = colIdx;
+    else if (hName.indexOf("THỰC TẾ") > -1 || hName.indexOf("THỰC THU") > -1) headerMap["THỰC TẾ"] = colIdx;
+    else if (hName.indexOf("GHI CHÚ") > -1 || hName.indexOf("TRẠNG THÁI") > -1) headerMap["GHI CHÚ"] = colIdx;
+  }
+  
+  // Khởi tạo các giá trị mặc định cho bảng đơn giản nếu tiêu đề không khớp
+  if (headerMap["NGÀY KÝ"] === undefined) headerMap["NGÀY KÝ"] = 0;
+  if (headerMap["THỜI GIAN"] === undefined) headerMap["THỜI GIAN"] = 1;
+  if (headerMap["DỊCH VỤ"] === undefined) headerMap["DỊCH VỤ"] = 2;
+  if (headerMap["HỌ TÊN"] === undefined) headerMap["HỌ TÊN"] = 3;
+  if (headerMap["SĐT"] === undefined) headerMap["SĐT"] = 4;
+  if (headerMap["TỔNG TIỀN"] === undefined) headerMap["TỔNG TIỀN"] = 5;
+  if (headerMap["THỰC TẾ"] === undefined) headerMap["THỰC TẾ"] = 6;
+  if (headerMap["GHI CHÚ"] === undefined) headerMap["GHI CHÚ"] = 7;
+
+  // 3. Trích xuất các trường dữ liệu truyền từ web portal
+  var dateVal = data.contractDate || data.date || data.ngay_ky || "";
+  var fullNameVal = data.fullName || data.ho_ten || "";
+  var dobVal = data.dob || data.ngay_sinh || "";
+  var phoneVal = "'" + (data.phone || data.sdt || "");
+  var timeSlotVal = data.preferredTime || data.timeSlot || data.thoi_gian || "";
+  var hoursCountVal = data.hoursCount || data.gio_tap || "";
+  var packageTypeVal = data.packageType || data.goi_tap || "";
+  var durationMonthsVal = data.durationMonths || data.thoi_han || "";
+  var coachNameVal = data.coachName || data.hlv || "";
+  var serviceTypeVal = data.serviceType || data.dich_vu || "";
+  
+  // Xử lý chuyển đổi tiền số học an toàn
+  var rawPrice = data.totalPrice !== undefined ? data.totalPrice : (data.price || data.gia_tri || 0);
+  var numericPrice = parseFloat(String(rawPrice).replace(/[^\\d]/g, "")) || 0;
+  
+  var rawDeposit = data.depositAmount !== undefined ? data.depositAmount : (data.dat_coc || 0);
+  var depositVal = parseFloat(String(rawDeposit).replace(/[^\\d]/g, "")) || 0;
+  
+  var rawRemaining = data.remainingAmount !== undefined ? data.remainingAmount : (data.con_lai || 0);
+  var remainingVal = parseFloat(String(rawRemaining).replace(/[^\\d]/g, "")) || 0;
+  
+  var rawActualPaid = data.actualPaid !== undefined ? data.actualPaid : (data.thuc_te || 0);
+  var actualPaidVal = parseFloat(String(rawActualPaid).replace(/[^\\d]/g, "")) || 0;
+  
+  var paymentStatusVal = data.paymentStatus || "";
+  var syncedAtVal = data.syncedAt || new Date().toLocaleString("vi-VN");
+  
+  // Custom logic cho Booking vãng lai vs Đăng ký Gói tập
+  if (isBooking) {
+    var nameLower = fullNameVal.toLowerCase();
+    var packageLower = packageTypeVal.toLowerCase();
+    var statusLower = paymentStatusVal.toLowerCase();
+    
+    var isSocial = (nameLower.indexOf("social") > -1 || 
+                    packageLower.indexOf("social") > -1 || 
+                    statusLower.indexOf("social") > -1);
+    
+    if (isSocial) {
+      if (!serviceTypeVal || serviceTypeVal === "Pickleball") serviceTypeVal = "SOCIAL";
+      if (!packageTypeVal || packageTypeVal === "Không" || packageTypeVal === "") packageTypeVal = "Social";
+      if (!hoursCountVal) hoursCountVal = "1 Social";
+    } else {
+      if (!serviceTypeVal || serviceTypeVal === "Pickleball") serviceTypeVal = "SÂN VÃNG LAI";
+      if (!packageTypeVal || packageTypeVal === "") packageTypeVal = "Không";
+    }
+    
+    if (actualPaidVal === 0 && paymentStatusVal && 
+        (statusLower.indexOf("đã thanh toán") > -1 || 
+         statusLower.indexOf("paid") > -1)) {
+      actualPaidVal = numericPrice;
+    }
+  }
+  
+  // 4. Tính toán số thứ tự (STT) tự động tăng
+  var lastRow = sheet.getLastRow();
+  var nextStt = lastRow - headerRowIdx + 1;
+  if (nextStt <= 0) {
+    nextStt = 1;
+  }
+  
+  // 5. Kiểm tra trùng lặp lịch đặt để cập nhật ghi đè thay vì tạo mới
+  var foundRowIndex = -1;
+  if (isBooking && lastRow > headerRowIdx) {
+    var rows = sheet.getDataRange().getValues();
+    var dateColIdx = headerMap["NGÀY KÝ"] !== undefined ? headerMap["NGÀY KÝ"] : 1;
+    var timeColIdx = headerMap["THỜI GIAN"] !== undefined ? headerMap["THỜI GIAN"] : 5;
+    var courtColIdx = headerMap["DỊCH VỤ"] !== undefined ? headerMap["DỊCH VỤ"] : 10;
+    
+    for (var i = headerRowIdx; i < rows.length; i++) {
+      var rowDate = rows[i][dateColIdx] ? String(rows[i][dateColIdx]).trim() : "";
+      var rowTime = rows[i][timeColIdx] ? String(rows[i][timeColIdx]).trim() : "";
+      var rowCourt = rows[i][courtColIdx] ? String(rows[i][courtColIdx]).trim() : "";
+      
+      var matchCourt = (rowCourt.toLowerCase() === serviceTypeVal.toLowerCase() || 
+                        rowCourt.toLowerCase() === packageTypeVal.toLowerCase() ||
+                        rowCourt.toLowerCase().indexOf(serviceTypeVal.toLowerCase()) > -1 ||
+                        serviceTypeVal.toLowerCase().indexOf(rowCourt.toLowerCase()) > -1);
+      
+      if (formatCompareDate(rowDate) === formatCompareDate(dateVal) && 
+          rowTime.toLowerCase() === timeSlotVal.toLowerCase() && 
+          matchCourt) {
+        foundRowIndex = i + 1;
+        break;
+      }
+    }
+  }
+  
+  // 6. Ghi dữ liệu vào trang tính
+  if (foundRowIndex > -1) {
+    if (headerMap["HỌ TÊN"] !== undefined) sheet.getRange(foundRowIndex, headerMap["HỌ TÊN"] + 1).setValue(fullNameVal);
+    if (headerMap["SĐT"] !== undefined) sheet.getRange(foundRowIndex, headerMap["SĐT"] + 1).setValue(phoneVal);
+    if (headerMap["TỔNG TIỀN"] !== undefined) sheet.getRange(foundRowIndex, headerMap["TỔNG TIỀN"] + 1).setValue(numericPrice);
+    if (headerMap["THỰC TẾ"] !== undefined) sheet.getRange(foundRowIndex, headerMap["THỰC TẾ"] + 1).setValue(actualPaidVal);
+    if (headerMap["GHI CHÚ"] !== undefined) {
+      sheet.getRange(foundRowIndex, headerMap["GHI CHÚ"] + 1).setValue(paymentStatusVal + " (" + syncedAtVal + ")");
+    }
+    return { success: true, status: "updated", rowIndex: foundRowIndex };
+  } else {
+    var maxCols = Math.max(sheet.getLastColumn(), headers.length, 12);
+    var rowData = [];
+    for (var colIdx = 0; colIdx < maxCols; colIdx++) {
+      rowData.push("");
+    }
+    
+    if (headerMap["STT"] !== undefined) rowData[headerMap["STT"]] = nextStt;
+    if (headerMap["NGÀY KÝ"] !== undefined) rowData[headerMap["NGÀY KÝ"]] = dateVal;
+    if (headerMap["HỌ TÊN"] !== undefined) rowData[headerMap["HỌ TÊN"]] = fullNameVal;
+    if (headerMap["NGÀY SINH"] !== undefined) rowData[headerMap["NGÀY SINH"]] = dobVal;
+    if (headerMap["SĐT"] !== undefined) rowData[headerMap["SĐT"]] = phoneVal;
+    if (headerMap["THỜI GIAN"] !== undefined) rowData[headerMap["THỜI GIAN"]] = timeSlotVal;
+    if (headerMap["GIỜ TẬP"] !== undefined) rowData[headerMap["GIỜ TẬP"]] = hoursCountVal;
+    if (headerMap["GÓI TẬP"] !== undefined) rowData[headerMap["GÓI TẬP"]] = packageTypeVal;
+    if (headerMap["THỜI HẠN"] !== undefined) rowData[headerMap["THỜI HẠN"]] = durationMonthsVal;
+    if (headerMap["HLV"] !== undefined) rowData[headerMap["HLV"]] = coachNameVal;
+    if (headerMap["DỊCH VỤ"] !== undefined) rowData[headerMap["DỊCH VỤ"]] = serviceTypeVal;
+    if (headerMap["TỔNG TIỀN"] !== undefined) rowData[headerMap["TỔNG TIỀN"]] = numericPrice;
+    if (headerMap["ĐẶT CỌC"] !== undefined) rowData[headerMap["ĐẶT CỌC"]] = depositVal;
+    if (headerMap["CÒN LẠI"] !== undefined) rowData[headerMap["CÒN LẠI"]] = remainingVal;
+    if (headerMap["THỰC TẾ"] !== undefined) rowData[headerMap["THỰC TẾ"]] = actualPaidVal;
+    
+    if (headerMap["GHI CHÚ"] !== undefined) {
+      rowData[headerMap["GHI CHÚ"]] = paymentStatusVal + " (" + syncedAtVal + ")";
+    } else {
+      rowData.push(paymentStatusVal + " (" + syncedAtVal + ")");
+    }
+    
+    sheet.appendRow(rowData);
+    return { success: true, status: "inserted", rowIndex: sheet.getLastRow() };
+  }
+}
+
+function formatCompareDate(dateStr) {
+  if (!dateStr) return "";
+  dateStr = String(dateStr).trim();
+  if (dateStr.indexOf('/') > -1) {
+    var parts = dateStr.split('/');
+    if (parts.length === 3) return fillZero(parts[0]) + "/" + fillZero(parts[1]) + "/" + parts[2];
+  }
+  if (dateStr.indexOf('-') > -1) {
+    var parts = dateStr.split('-');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) return fillZero(parts[2]) + "/" + fillZero(parts[1]) + "/" + parts[0];
+      return fillZero(parts[0]) + "/" + fillZero(parts[1]) + "/" + parts[2];
+    }
+  }
   return dateStr.toLowerCase();
 }
 
@@ -2507,79 +2611,214 @@ function fillZero(num) {
                      ss.getSheetByName("Thành Viên") ||
                      ss.getSheets()[0];
       
-      var lastRow = regSheet.getLastRow();
-      var nextStt = lastRow;
-      if (lastRow <= 1) nextStt = 1;
-      
-      var rowData = [
-        nextStt,
-        data.contractDate || new Date().toLocaleDateString("vi-VN"),
-        data.fullName || "",
-        data.dob || "",
-        "'" + (data.phone || ""),
-        data.preferredTime || "",
-        data.hoursCount || "",
-        data.packageType || "",
-        data.durationMonths || "",
-        data.coachName || "",
-        data.serviceType || "",
-        data.totalPrice || 0,
-        data.depositAmount || 0,
-        data.remainingAmount || 0,
-        data.actualPaid || 0
-      ];
-      
-      regSheet.appendRow(rowData);
-      return ContentService.createTextOutput(JSON.stringify({ success: true, status: "registered" }))
+      var res = writeRowToSheet(regSheet, data, false);
+      return ContentService.createTextOutput(JSON.stringify(res))
         .setMimeType(ContentService.MimeType.JSON);
     }
     
+    // Mặc định hoặc action === "addBooking"
     var sheet = ss.getSheets()[0];
-    if (data.action === "addBooking" || !data.action) {
-      var dateVal = data.date || "";
-      var timeSlotVal = data.timeSlot || "";
-      var courtNameVal = data.courtName || "";
-      var fullNameVal = data.fullName || "";
-      var phoneVal = "'" + (data.phone || "");
-      var priceVal = data.price || "";
-      var paymentStatusVal = data.paymentStatus || "";
-      var syncedAtVal = data.syncedAt || new Date().toLocaleString("vi-VN");
-      
-      var rows = sheet.getDataRange().getValues();
-      var foundRowIndex = -1;
-      
-      for (var i = 1; i < rows.length; i++) {
-        var rowDate = rows[i][0] ? String(rows[i][0]).trim() : "";
-        var rowTime = rows[i][1] ? String(rows[i][1]).trim() : "";
-        var rowCourt = rows[i][2] ? String(rows[i][2]).trim() : "";
-        
-        if (formatCompareDate(rowDate) === formatCompareDate(dateVal) && 
-            rowTime.toLowerCase() === timeSlotVal.toLowerCase() && 
-            rowCourt.toLowerCase() === courtNameVal.toLowerCase()) {
-          foundRowIndex = i + 1;
-          break;
-        }
-      }
-      
-      if (foundRowIndex > -1) {
-        sheet.getRange(foundRowIndex, 4).setValue(fullNameVal);
-        sheet.getRange(foundRowIndex, 5).setValue(phoneVal);
-        sheet.getRange(foundRowIndex, 6).setValue(priceVal);
-        sheet.getRange(foundRowIndex, 7).setValue(paymentStatusVal);
-        sheet.getRange(foundRowIndex, 8).setValue(syncedAtVal);
-        return ContentService.createTextOutput(JSON.stringify({ success: true, status: "updated" }))
-          .setMimeType(ContentService.MimeType.JSON);
-      } else {
-        sheet.appendRow([dateVal, timeSlotVal, courtNameVal, fullNameVal, phoneVal, priceVal, paymentStatusVal, syncedAtVal]);
-        return ContentService.createTextOutput(JSON.stringify({ success: true, status: "inserted" }))
-          .setMimeType(ContentService.MimeType.JSON);
-      }
-    }
-    return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Unknown action" }))
+    var res = writeRowToSheet(sheet, data, true);
+    return ContentService.createTextOutput(JSON.stringify(res))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (error) {
     return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function writeRowToSheet(sheet, data, isBooking) {
+  // 1. Tìm dòng chứa tiêu đề tự động bằng cách quét 5 dòng đầu
+  var headers = [];
+  var headerRowIdx = 1;
+  var maxRowsToScan = Math.min(sheet.getLastRow(), 5);
+  if (maxRowsToScan > 0) {
+    var scanRange = sheet.getRange(1, 1, maxRowsToScan, sheet.getLastColumn()).getValues();
+    var bestRowScore = -1;
+    for (var rIdx = 0; rIdx < scanRange.length; rIdx++) {
+      var rowCells = scanRange[rIdx];
+      var score = 0;
+      for (var cIdx = 0; cIdx < rowCells.length; cIdx++) {
+        var val = String(rowCells[cIdx]).toUpperCase().trim();
+        if (val.indexOf("HỌ VÀ TÊN") > -1 || val.indexOf("HỌ TÊN") > -1 || val.indexOf("KHÁCH HÀNG") > -1) score += 5;
+        if (val.indexOf("SĐT") > -1 || val.indexOf("SỐ ĐIỆN THOẠI") > -1 || val.indexOf("SDT") > -1) score += 3;
+        if (val.indexOf("STT") > -1) score += 2;
+        if (val.indexOf("NGÀY KÝ") > -1 || val.indexOf("NGÀY ĐẶT") > -1 || val.indexOf("NGÀY SINH") > -1) score += 2;
+      }
+      if (score > bestRowScore && score >= 5) {
+        bestRowScore = score;
+        headers = rowCells;
+        headerRowIdx = rIdx + 1;
+      }
+    }
+  }
+  
+  if (headers.length === 0 && sheet.getLastRow() >= 1) {
+    headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    headerRowIdx = 1;
+  }
+  
+  // 2. Ánh xạ các cột dựa trên tên tiêu đề
+  var headerMap = {};
+  for (var colIdx = 0; colIdx < headers.length; colIdx++) {
+    var hName = String(headers[colIdx]).toUpperCase().trim();
+    if (hName.indexOf("STT") > -1) headerMap["STT"] = colIdx;
+    else if (hName.indexOf("NGÀY SINH") > -1) headerMap["NGÀY SINH"] = colIdx;
+    else if (hName.indexOf("NGÀY KÝ") > -1 || hName.indexOf("NGÀY ĐẶT") > -1 || hName.indexOf("NGÀY") > -1) headerMap["NGÀY KÝ"] = colIdx;
+    else if (hName.indexOf("HỌ VÀ TÊN") > -1 || hName.indexOf("HỌ TÊN") > -1 || hName.indexOf("KHÁCH HÀNG") > -1) headerMap["HỌ TÊN"] = colIdx;
+    else if (hName.indexOf("SĐT") > -1 || hName.indexOf("SỐ ĐIỆN THOẠI") > -1 || hName.indexOf("SDT") > -1 || hName.indexOf("ĐIỆN THOẠI") > -1) headerMap["SĐT"] = colIdx;
+    else if (hName.indexOf("THỜI GIAN") > -1 || hName.indexOf("KHUNG GIỜ") > -1) headerMap["THỜI GIAN"] = colIdx;
+    else if (hName.indexOf("GIỜ TẬP") > -1 || hName.indexOf("SỐ GIỜ") > -1) headerMap["GIỜ TẬP"] = colIdx;
+    else if (hName.indexOf("GÓI TẬP") > -1) headerMap["GÓI TẬP"] = colIdx;
+    else if (hName.indexOf("THỜI HẠN") > -1) headerMap["THỜI HẠN"] = colIdx;
+    else if (hName.indexOf("HLV") > -1) headerMap["HLV"] = colIdx;
+    else if (hName.indexOf("DỊCH VỤ") > -1) headerMap["DỊCH VỤ"] = colIdx;
+    else if (hName.indexOf("TỔNG TIỀN") > -1 || hName.indexOf("DOANH THU") > -1 || hName.indexOf("ĐƠN GIÁ") > -1 || hName.indexOf("GIÁ TRỊ") > -1) headerMap["TỔNG TIỀN"] = colIdx;
+    else if (hName.indexOf("ĐẶT CỌC") > -1 || hName.indexOf("CỌC") > -1) headerMap["ĐẶT CỌC"] = colIdx;
+    else if (hName.indexOf("CÒN LẠI") > -1) headerMap["CÒN LẠI"] = colIdx;
+    else if (hName.indexOf("THỰC TẾ") > -1 || hName.indexOf("THỰC THU") > -1) headerMap["THỰC TẾ"] = colIdx;
+    else if (hName.indexOf("GHI CHÚ") > -1 || hName.indexOf("TRẠNG THÁI") > -1) headerMap["GHI CHÚ"] = colIdx;
+  }
+  
+  // Khởi tạo các giá trị mặc định cho bảng đơn giản nếu tiêu đề không khớp
+  if (headerMap["NGÀY KÝ"] === undefined) headerMap["NGÀY KÝ"] = 0;
+  if (headerMap["THỜI GIAN"] === undefined) headerMap["THỜI GIAN"] = 1;
+  if (headerMap["DỊCH VỤ"] === undefined) headerMap["DỊCH VỤ"] = 2;
+  if (headerMap["HỌ TÊN"] === undefined) headerMap["HỌ TÊN"] = 3;
+  if (headerMap["SĐT"] === undefined) headerMap["SĐT"] = 4;
+  if (headerMap["TỔNG TIỀN"] === undefined) headerMap["TỔNG TIỀN"] = 5;
+  if (headerMap["THỰC TẾ"] === undefined) headerMap["THỰC TẾ"] = 6;
+  if (headerMap["GHI CHÚ"] === undefined) headerMap["GHI CHÚ"] = 7;
+
+  // 3. Trích xuất các trường dữ liệu truyền từ web portal
+  var dateVal = data.contractDate || data.date || data.ngay_ky || "";
+  var fullNameVal = data.fullName || data.ho_ten || "";
+  var dobVal = data.dob || data.ngay_sinh || "";
+  var phoneVal = "'" + (data.phone || data.sdt || "");
+  var timeSlotVal = data.preferredTime || data.timeSlot || data.thoi_gian || "";
+  var hoursCountVal = data.hoursCount || data.gio_tap || "";
+  var packageTypeVal = data.packageType || data.goi_tap || "";
+  var durationMonthsVal = data.durationMonths || data.thoi_han || "";
+  var coachNameVal = data.coachName || data.hlv || "";
+  var serviceTypeVal = data.serviceType || data.dich_vu || "";
+  
+  // Xử lý chuyển đổi tiền số học an toàn
+  var rawPrice = data.totalPrice !== undefined ? data.totalPrice : (data.price || data.gia_tri || 0);
+  var numericPrice = parseFloat(String(rawPrice).replace(/[^\\d]/g, "")) || 0;
+  
+  var rawDeposit = data.depositAmount !== undefined ? data.depositAmount : (data.dat_coc || 0);
+  var depositVal = parseFloat(String(rawDeposit).replace(/[^\\d]/g, "")) || 0;
+  
+  var rawRemaining = data.remainingAmount !== undefined ? data.remainingAmount : (data.con_lai || 0);
+  var remainingVal = parseFloat(String(rawRemaining).replace(/[^\\d]/g, "")) || 0;
+  
+  var rawActualPaid = data.actualPaid !== undefined ? data.actualPaid : (data.thuc_te || 0);
+  var actualPaidVal = parseFloat(String(rawActualPaid).replace(/[^\\d]/g, "")) || 0;
+  
+  var paymentStatusVal = data.paymentStatus || "";
+  var syncedAtVal = data.syncedAt || new Date().toLocaleString("vi-VN");
+  
+  // Custom logic cho Booking vãng lai vs Đăng ký Gói tập
+  if (isBooking) {
+    var nameLower = fullNameVal.toLowerCase();
+    var packageLower = packageTypeVal.toLowerCase();
+    var statusLower = paymentStatusVal.toLowerCase();
+    
+    var isSocial = (nameLower.indexOf("social") > -1 || 
+                    packageLower.indexOf("social") > -1 || 
+                    statusLower.indexOf("social") > -1);
+    
+    if (isSocial) {
+      if (!serviceTypeVal || serviceTypeVal === "Pickleball") serviceTypeVal = "SOCIAL";
+      if (!packageTypeVal || packageTypeVal === "Không" || packageTypeVal === "") packageTypeVal = "Social";
+      if (!hoursCountVal) hoursCountVal = "1 Social";
+    } else {
+      if (!serviceTypeVal || serviceTypeVal === "Pickleball") serviceTypeVal = "SÂN VÃNG LAI";
+      if (!packageTypeVal || packageTypeVal === "") packageTypeVal = "Không";
+    }
+    
+    if (actualPaidVal === 0 && paymentStatusVal && 
+        (statusLower.indexOf("đã thanh toán") > -1 || 
+         statusLower.indexOf("paid") > -1)) {
+      actualPaidVal = numericPrice;
+    }
+  }
+  
+  // 4. Tính toán số thứ tự (STT) tự động tăng
+  var lastRow = sheet.getLastRow();
+  var nextStt = lastRow - headerRowIdx + 1;
+  if (nextStt <= 0) {
+    nextStt = 1;
+  }
+  
+  // 5. Kiểm tra trùng lặp lịch đặt để cập nhật ghi đè thay vì tạo mới
+  var foundRowIndex = -1;
+  if (isBooking && lastRow > headerRowIdx) {
+    var rows = sheet.getDataRange().getValues();
+    var dateColIdx = headerMap["NGÀY KÝ"] !== undefined ? headerMap["NGÀY KÝ"] : 1;
+    var timeColIdx = headerMap["THỜI GIAN"] !== undefined ? headerMap["THỜI GIAN"] : 5;
+    var courtColIdx = headerMap["DỊCH VỤ"] !== undefined ? headerMap["DỊCH VỤ"] : 10;
+    
+    for (var i = headerRowIdx; i < rows.length; i++) {
+      var rowDate = rows[i][dateColIdx] ? String(rows[i][dateColIdx]).trim() : "";
+      var rowTime = rows[i][timeColIdx] ? String(rows[i][timeColIdx]).trim() : "";
+      var rowCourt = rows[i][courtColIdx] ? String(rows[i][courtColIdx]).trim() : "";
+      
+      var matchCourt = (rowCourt.toLowerCase() === serviceTypeVal.toLowerCase() || 
+                        rowCourt.toLowerCase() === packageTypeVal.toLowerCase() ||
+                        rowCourt.toLowerCase().indexOf(serviceTypeVal.toLowerCase()) > -1 ||
+                        serviceTypeVal.toLowerCase().indexOf(rowCourt.toLowerCase()) > -1);
+      
+      if (formatCompareDate(rowDate) === formatCompareDate(dateVal) && 
+          rowTime.toLowerCase() === timeSlotVal.toLowerCase() && 
+          matchCourt) {
+        foundRowIndex = i + 1;
+        break;
+      }
+    }
+  }
+  
+  // 6. Ghi dữ liệu vào trang tính
+  if (foundRowIndex > -1) {
+    if (headerMap["HỌ TÊN"] !== undefined) sheet.getRange(foundRowIndex, headerMap["HỌ TÊN"] + 1).setValue(fullNameVal);
+    if (headerMap["SĐT"] !== undefined) sheet.getRange(foundRowIndex, headerMap["SĐT"] + 1).setValue(phoneVal);
+    if (headerMap["TỔNG TIỀN"] !== undefined) sheet.getRange(foundRowIndex, headerMap["TỔNG TIỀN"] + 1).setValue(numericPrice);
+    if (headerMap["THỰC TẾ"] !== undefined) sheet.getRange(foundRowIndex, headerMap["THỰC TẾ"] + 1).setValue(actualPaidVal);
+    if (headerMap["GHI CHÚ"] !== undefined) {
+      sheet.getRange(foundRowIndex, headerMap["GHI CHÚ"] + 1).setValue(paymentStatusVal + " (" + syncedAtVal + ")");
+    }
+    return { success: true, status: "updated", rowIndex: foundRowIndex };
+  } else {
+    var maxCols = Math.max(sheet.getLastColumn(), headers.length, 12);
+    var rowData = [];
+    for (var colIdx = 0; colIdx < maxCols; colIdx++) {
+      rowData.push("");
+    }
+    
+    if (headerMap["STT"] !== undefined) rowData[headerMap["STT"]] = nextStt;
+    if (headerMap["NGÀY KÝ"] !== undefined) rowData[headerMap["NGÀY KÝ"]] = dateVal;
+    if (headerMap["HỌ TÊN"] !== undefined) rowData[headerMap["HỌ TÊN"]] = fullNameVal;
+    if (headerMap["NGÀY SINH"] !== undefined) rowData[headerMap["NGÀY SINH"]] = dobVal;
+    if (headerMap["SĐT"] !== undefined) rowData[headerMap["SĐT"]] = phoneVal;
+    if (headerMap["THỜI GIAN"] !== undefined) rowData[headerMap["THỜI GIAN"]] = timeSlotVal;
+    if (headerMap["GIỜ TẬP"] !== undefined) rowData[headerMap["GIỜ TẬP"]] = hoursCountVal;
+    if (headerMap["GÓI TẬP"] !== undefined) rowData[headerMap["GÓI TẬP"]] = packageTypeVal;
+    if (headerMap["THỜI HẠN"] !== undefined) rowData[headerMap["THỜI HẠN"]] = durationMonthsVal;
+    if (headerMap["HLV"] !== undefined) rowData[headerMap["HLV"]] = coachNameVal;
+    if (headerMap["DỊCH VỤ"] !== undefined) rowData[headerMap["DỊCH VỤ"]] = serviceTypeVal;
+    if (headerMap["TỔNG TIỀN"] !== undefined) rowData[headerMap["TỔNG TIỀN"]] = numericPrice;
+    if (headerMap["ĐẶT CỌC"] !== undefined) rowData[headerMap["ĐẶT CỌC"]] = depositVal;
+    if (headerMap["CÒN LẠI"] !== undefined) rowData[headerMap["CÒN LẠI"]] = remainingVal;
+    if (headerMap["THỰC TẾ"] !== undefined) rowData[headerMap["THỰC TẾ"]] = actualPaidVal;
+    
+    if (headerMap["GHI CHÚ"] !== undefined) {
+      rowData[headerMap["GHI CHÚ"]] = paymentStatusVal + " (" + syncedAtVal + ")";
+    } else {
+      rowData.push(paymentStatusVal + " (" + syncedAtVal + ")");
+    }
+    
+    sheet.appendRow(rowData);
+    return { success: true, status: "inserted", rowIndex: sheet.getLastRow() };
   }
 }
 

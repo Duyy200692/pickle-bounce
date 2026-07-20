@@ -3,9 +3,10 @@ import {
   X, LayoutDashboard, MapPin, Trophy, Users, Calendar, 
   Trash2, Edit, Check, Lock, Plus, LogOut, Clock, Sparkles, 
   ShieldCheck, RefreshCw, FileText, CheckCircle,
-  DollarSign, TrendingUp, BarChart3, PieChart, PlusCircle, CalendarDays
+  DollarSign, TrendingUp, BarChart3, PieChart, PlusCircle, CalendarDays,
+  Copy, ExternalLink, Database, AlertTriangle
 } from 'lucide-react';
-import { Court, Booking, OpenPlay, Tournament, TeamRegistration, SocialRevenue } from '../types';
+import { Court, Booking, OpenPlay, Tournament, TeamRegistration, SocialRevenue, MemberRegistration } from '../types';
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -22,9 +23,11 @@ interface AdminPanelProps {
   onSaveTeamRegistrations: (regs: TeamRegistration[]) => void;
   socialRevenues: SocialRevenue[];
   onSaveSocialRevenues: (socials: SocialRevenue[]) => void;
+  memberRegistrations: MemberRegistration[];
+  onSaveMemberRegistrations: (regs: MemberRegistration[]) => void;
 }
 
-type AdminTab = 'dashboard' | 'courts' | 'bookings' | 'openplays' | 'tournaments' | 'registrations' | 'revenue';
+type AdminTab = 'dashboard' | 'courts' | 'bookings' | 'openplays' | 'tournaments' | 'registrations' | 'revenue' | 'alobo_sync';
 
 export default function AdminPanel({
   isOpen,
@@ -40,11 +43,14 @@ export default function AdminPanel({
   teamRegistrations,
   onSaveTeamRegistrations,
   socialRevenues,
-  onSaveSocialRevenues
+  onSaveSocialRevenues,
+  memberRegistrations = [],
+  onSaveMemberRegistrations
 }: AdminPanelProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
+  const [regSubTab, setRegSubTab] = useState<'tournament' | 'training'>('training');
   const [authError, setAuthError] = useState('');
 
   // Editing structures
@@ -63,6 +69,187 @@ export default function AdminPanel({
   const [filterYear, setFilterYear] = useState<string>('2026');
   const [filterMonth, setFilterMonth] = useState<string>('All');
   const [filterCourt, setFilterCourt] = useState<string>('All');
+
+  // Member registrations handlers
+  const [memberSyncingId, setMemberSyncingId] = useState<string | null>(null);
+
+  const handleDeleteMemberReg = (id: string) => {
+    if (confirm('Bạn có chắc chắn muốn xoá đăng ký gói tập này không?')) {
+      const updated = memberRegistrations.filter(r => r.id !== id);
+      onSaveMemberRegistrations(updated);
+    }
+  };
+
+  const handleToggleMemberStatus = (id: string) => {
+    const updated = memberRegistrations.map(r => r.id === id ? { ...r, status: r.status === 'confirmed' ? 'pending' : 'confirmed' } : r);
+    onSaveMemberRegistrations(updated);
+  };
+
+  const handleManualSyncMember = async (reg: MemberRegistration) => {
+    setMemberSyncingId(reg.id);
+    try {
+      const res = await fetch('/api/alobo/forward-booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'addRegistration',
+          contractId: reg.id,
+          contractDate: reg.contractDate,
+          fullName: reg.fullName,
+          dob: reg.dob,
+          phone: reg.phone,
+          preferredTime: reg.preferredTime,
+          hoursCount: reg.hoursCount,
+          packageType: reg.packageType,
+          durationMonths: reg.durationMonths,
+          coachName: reg.coachName,
+          serviceType: reg.serviceType,
+          totalPrice: reg.totalPrice,
+          depositAmount: reg.depositAmount,
+          remainingAmount: reg.remainingAmount,
+          actualPaid: reg.actualPaid
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(`Đã gửi dữ liệu hợp đồng ${reg.fullName} lên Google Sheet thành công!`);
+      } else {
+        alert(`Gửi thất bại: ${data.error || 'Vui lòng kiểm tra lại cấu hình webhook.'}`);
+      }
+    } catch (e: any) {
+      alert(`Lỗi kết nối: ${e.message || 'Không thể kết nối đến máy chủ.'}`);
+    } finally {
+      setMemberSyncingId(null);
+    }
+  };
+
+  // Alobo & Google Sheets Sync State
+  const [googleSheetWebhookUrl, setGoogleSheetWebhookUrl] = useState('');
+  const [googleSheetUrl, setGoogleSheetUrl] = useState('');
+  const [syncLogs, setSyncLogs] = useState<any[]>([]);
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
+  const [isTestingSheet, setIsTestingSheet] = useState(false);
+  const [testResult, setTestResult] = useState<{ success?: boolean; error?: string } | null>(null);
+  
+  // Custom manual forward form state
+  const [manualBookingForm, setManualBookingForm] = useState({
+    fullName: '',
+    phone: '',
+    courtName: 'Sân 1',
+    date: new Date().toISOString().split('T')[0],
+    timeSlot: '09:00 - 10:00',
+    price: '150.000',
+    paymentStatus: 'Đã thanh toán'
+  });
+  const [isManualSending, setIsManualSending] = useState(false);
+  const [manualSendResult, setManualSendResult] = useState<{ success?: boolean; error?: string } | null>(null);
+
+  const getSheetId = () => {
+    const match = googleSheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    return match ? match[1] : '1-Hw978q5B4krlwS_PemsnmV6axata5wyQVFVuWdpo38';
+  };
+
+  // Load config on authentication or tab switch
+  React.useEffect(() => {
+    if (isAuthenticated && activeTab === 'alobo_sync') {
+      fetchConfig();
+    }
+  }, [isAuthenticated, activeTab]);
+
+  const fetchConfig = async () => {
+    try {
+      const res = await fetch('/api/alobo/config');
+      const data = await res.json();
+      if (data.success && data.config) {
+        setGoogleSheetWebhookUrl(data.config.googleSheetWebhookUrl || '');
+        setGoogleSheetUrl(data.config.googleSheetUrl || '');
+        setSyncLogs(data.config.forwardLogs || []);
+      }
+    } catch (err) {
+      console.error('Error fetching alobo config:', err);
+    }
+  };
+
+  const saveConfig = async () => {
+    setIsSavingConfig(true);
+    try {
+      const res = await fetch('/api/alobo/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ googleSheetWebhookUrl, googleSheetUrl })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Cấu hình Google Sheets đã được cập nhật thành công!');
+        fetchConfig();
+      } else {
+        alert('Lỗi: ' + data.error);
+      }
+    } catch (err) {
+      alert('Không thể kết nối tới máy chủ.');
+    } finally {
+      setIsSavingConfig(false);
+    }
+  };
+
+  const clearSyncLogs = async () => {
+    if (!confirm('Bạn có chắc chắn muốn xóa toàn bộ lịch sử đồng bộ?')) return;
+    try {
+      const res = await fetch('/api/alobo/config/clear-logs', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setSyncLogs([]);
+      }
+    } catch (err) {
+      console.error('Error clearing sync logs:', err);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    setIsTestingSheet(true);
+    setTestResult(null);
+    try {
+      const res = await fetch('/api/alobo/test-sheet', { method: 'POST' });
+      const data = await res.json();
+      setTestResult(data);
+    } catch (err: any) {
+      setTestResult({ error: err.message || 'Lỗi kết nối mạng.' });
+    } finally {
+      setIsTestingSheet(false);
+    }
+  };
+
+  const handleManualSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsManualSending(true);
+    setManualSendResult(null);
+    try {
+      const res = await fetch('/api/alobo/forward-booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(manualBookingForm)
+      });
+      const data = await res.json();
+      setManualSendResult(data.result || data);
+      if (data.success) {
+        setManualBookingForm({
+          ...manualBookingForm,
+          fullName: '',
+          phone: '',
+          price: '150.000',
+          courtName: 'Sân 1',
+          date: new Date().toISOString().split('T')[0],
+          timeSlot: '09:00 - 10:00',
+          paymentStatus: 'Đã thanh toán'
+        });
+        fetchConfig(); // Reload logs
+      }
+    } catch (err: any) {
+      setManualSendResult({ error: err.message || 'Lỗi kết nối mạng.' });
+    } finally {
+      setIsManualSending(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -455,6 +642,21 @@ export default function AdminPanel({
                 <span>Doanh Thu Thực Tế</span>
                 <span className="bg-green-600 text-white text-[9px] px-1.5 py-0.5 rounded ml-auto font-black font-sans uppercase">
                   VND
+                </span>
+              </button>
+
+              <button 
+                onClick={() => { setActiveTab('alobo_sync'); setEditingCourtId(null); setEditingTournamentId(null); setEditingOpenPlayId(null); }}
+                className={`w-full text-left px-3 py-2.5 rounded-xl font-sans font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
+                  activeTab === 'alobo_sync' 
+                    ? 'bg-brand-red text-white shadow-sm' 
+                    : 'text-brand-dark/80 hover:bg-white hover:text-brand-red'
+                }`}
+              >
+                <RefreshCw className="w-4 h-4 flex-shrink-0" />
+                <span>Đồng Bộ Alobo & Sheets</span>
+                <span className="bg-[#4285F4] text-white text-[9px] px-1.5 py-0.5 rounded ml-auto font-black font-sans uppercase">
+                  AUTO
                 </span>
               </button>
             </div>
@@ -1134,72 +1336,196 @@ export default function AdminPanel({
                 </div>
               )}
 
-              {/* 6. Tournament Registrations Tab */}
+              {/* 6. Tournament & Member Registrations Tab */}
               {activeTab === 'registrations' && (
                 <div className="space-y-6">
-                  <div>
-                    <h3 className="font-display font-black text-xl text-brand-dark">Cổng Đăng Ký Giải Đấu Của Các Cặp Đấu</h3>
-                    <p className="font-sans text-xs text-brand-gray mt-1">Xem danh sách các đội đăng ký thi đấu, xác nhận trạng thái lệ phí giải đấu.</p>
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                      <h3 className="font-display font-black text-xl text-brand-dark">Cổng Quản Lý Danh Sách Đăng Ký</h3>
+                      <p className="font-sans text-xs text-brand-gray mt-1">Xem danh sách đăng ký giải đấu và các hợp đồng đăng ký gói tập/HLV của thành viên.</p>
+                    </div>
+                    
+                    {/* Sub Tab Switcher */}
+                    <div className="flex bg-brand-light-gray p-1 rounded-full border border-brand-border/40">
+                      <button 
+                        onClick={() => setRegSubTab('training')}
+                        className={`px-4 py-1.5 rounded-full font-sans font-bold text-xs transition-all cursor-pointer ${
+                          regSubTab === 'training' 
+                            ? 'bg-brand-blue text-white shadow-sm shadow-brand-blue/20' 
+                            : 'text-brand-gray hover:text-brand-dark'
+                        }`}
+                      >
+                        Đăng Ký Gói Tập ({memberRegistrations.length})
+                      </button>
+                      <button 
+                        onClick={() => setRegSubTab('tournament')}
+                        className={`px-4 py-1.5 rounded-full font-sans font-bold text-xs transition-all cursor-pointer ${
+                          regSubTab === 'tournament' 
+                            ? 'bg-brand-red text-white shadow-sm shadow-brand-red/20' 
+                            : 'text-brand-gray hover:text-brand-dark'
+                        }`}
+                      >
+                        Đăng Ký Giải Đấu ({teamRegistrations.length})
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="bg-white border border-brand-border/40 rounded-2xl overflow-hidden shadow-sm">
-                    <table className="w-full text-left text-xs border-collapse font-sans">
-                      <thead>
-                        <tr className="bg-brand-light-gray text-brand-gray font-bold border-b border-brand-border/40">
-                          <th className="p-3">Mã đăng ký</th>
-                          <th className="p-3">Tên Đội</th>
-                          <th className="p-3">Giải Đấu</th>
-                          <th className="p-3">Thành viên</th>
-                          <th className="p-3">Liên hệ</th>
-                          <th className="p-3 text-center">Xử lý</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-brand-border/40">
-                        {teamRegistrations.length === 0 ? (
-                          <tr>
-                            <td colSpan={6} className="p-8 text-center text-brand-gray">Chưa ghi nhận lượt đăng ký thi đấu giải nào.</td>
+                  {regSubTab === 'tournament' ? (
+                    <div className="bg-white border border-brand-border/40 rounded-2xl overflow-hidden shadow-sm">
+                      <table className="w-full text-left text-xs border-collapse font-sans">
+                        <thead>
+                          <tr className="bg-brand-light-gray text-brand-gray font-bold border-b border-brand-border/40">
+                            <th className="p-3">Mã đăng ký</th>
+                            <th className="p-3">Tên Đội</th>
+                            <th className="p-3">Giải Đấu</th>
+                            <th className="p-3">Thành viên</th>
+                            <th className="p-3">Liên hệ</th>
+                            <th className="p-3 text-center">Xử lý</th>
                           </tr>
-                        ) : (
-                          teamRegistrations.map((reg) => (
-                            <tr key={reg.id} className="hover:bg-brand-light-gray/50">
-                              <td className="p-3 font-mono font-bold text-brand-red">{reg.id}</td>
-                              <td className="p-3 font-black text-brand-dark">{reg.teamName}</td>
-                              <td className="p-3 font-bold text-brand-dark truncate max-w-[150px]" title={reg.tournamentName}>{reg.tournamentName}</td>
-                              <td className="p-3 text-[11px]">
-                                <div>Cầu thủ 1: <strong>{reg.player1}</strong></div>
-                                <div>Cầu thủ 2: <strong>{reg.player2}</strong></div>
-                              </td>
-                              <td className="p-3">
-                                <div>{reg.phone}</div>
-                                <div className="text-[10px] text-brand-gray">{reg.email}</div>
-                              </td>
-                              <td className="p-3">
-                                <div className="flex items-center justify-center gap-1.5">
-                                  <button 
-                                    onClick={() => toggleRegStatus(reg.id)}
-                                    className={`px-2 py-1 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
-                                      reg.status === 'confirmed' 
-                                        ? 'bg-green-100 text-green-700 hover:bg-yellow-100 hover:text-yellow-700' 
-                                        : 'bg-yellow-100 text-yellow-700 hover:bg-green-100 hover:text-green-700'
-                                    }`}
-                                  >
-                                    {reg.status === 'confirmed' ? 'Đã đóng lệ phí' : 'Chờ đóng lệ phí'}
-                                  </button>
-                                  <button 
-                                    onClick={() => deleteReg(reg.id)}
-                                    className="p-1.5 hover:bg-brand-red-light hover:text-brand-red rounded text-brand-gray/50 transition-all cursor-pointer"
-                                    title="Xoá đăng ký"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              </td>
+                        </thead>
+                        <tbody className="divide-y divide-brand-border/40">
+                          {teamRegistrations.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="p-8 text-center text-brand-gray">Chưa ghi nhận lượt đăng ký thi đấu giải nào.</td>
                             </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                          ) : (
+                            teamRegistrations.map((reg) => (
+                              <tr key={reg.id} className="hover:bg-brand-light-gray/50">
+                                <td className="p-3 font-mono font-bold text-brand-red">{reg.id}</td>
+                                <td className="p-3 font-black text-brand-dark">{reg.teamName}</td>
+                                <td className="p-3 font-bold text-brand-dark truncate max-w-[150px]" title={reg.tournamentName}>{reg.tournamentName}</td>
+                                <td className="p-3 text-[11px]">
+                                  <div>Cầu thủ 1: <strong>{reg.player1}</strong></div>
+                                  <div>Cầu thủ 2: <strong>{reg.player2}</strong></div>
+                                </td>
+                                <td className="p-3">
+                                  <div>{reg.phone}</div>
+                                  <div className="text-[10px] text-brand-gray">{reg.email}</div>
+                                </td>
+                                <td className="p-3">
+                                  <div className="flex items-center justify-center gap-1.5">
+                                    <button 
+                                      onClick={() => toggleRegStatus(reg.id)}
+                                      className={`px-2 py-1 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
+                                        reg.status === 'confirmed' 
+                                          ? 'bg-green-100 text-green-700 hover:bg-yellow-100 hover:text-yellow-700' 
+                                          : 'bg-yellow-100 text-yellow-700 hover:bg-green-100 hover:text-green-700'
+                                      }`}
+                                    >
+                                      {reg.status === 'confirmed' ? 'Đã duyệt' : 'Chờ duyệt'}
+                                    </button>
+                                    <button 
+                                      onClick={() => deleteReg(reg.id)}
+                                      className="p-1.5 hover:bg-brand-red-light hover:text-brand-red rounded text-brand-gray/50 transition-all cursor-pointer"
+                                      title="Xoá đăng ký"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="bg-white border border-brand-border/40 rounded-2xl overflow-hidden shadow-sm overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse font-sans min-w-[1000px]">
+                        <thead>
+                          <tr className="bg-brand-light-gray text-brand-gray font-bold border-b border-brand-border/40">
+                            <th className="p-3 whitespace-nowrap">STT</th>
+                            <th className="p-3 whitespace-nowrap">Ngày ký HĐ</th>
+                            <th className="p-3 whitespace-nowrap">Họ & Tên</th>
+                            <th className="p-3 whitespace-nowrap">Ngày sinh</th>
+                            <th className="p-3 whitespace-nowrap">SĐT</th>
+                            <th className="p-3 whitespace-nowrap">Lịch tập</th>
+                            <th className="p-3 whitespace-nowrap">Số giờ tập</th>
+                            <th className="p-3 whitespace-nowrap">Gói tập</th>
+                            <th className="p-3 whitespace-nowrap">Thời hạn</th>
+                            <th className="p-3 whitespace-nowrap">HLV</th>
+                            <th className="p-3 whitespace-nowrap">Dịch vụ</th>
+                            <th className="p-3 whitespace-nowrap">Giá trị (đ)</th>
+                            <th className="p-3 whitespace-nowrap">Đặt cọc (đ)</th>
+                            <th className="p-3 whitespace-nowrap">Còn lại (đ)</th>
+                            <th className="p-3 whitespace-nowrap">Thực tế (đ)</th>
+                            <th className="p-3 whitespace-nowrap text-center">Xử lý</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-brand-border/40 text-[11px]">
+                          {memberRegistrations.length === 0 ? (
+                            <tr>
+                              <td colSpan={16} className="p-8 text-center text-brand-gray">Chưa ghi nhận lượt đăng ký gói tập nào.</td>
+                            </tr>
+                          ) : (
+                            memberRegistrations.map((reg, idx) => (
+                              <tr key={reg.id} className="hover:bg-brand-light-gray/50">
+                                <td className="p-3 font-mono text-brand-gray font-semibold text-center">{idx + 1}</td>
+                                <td className="p-3 font-medium whitespace-nowrap">{reg.contractDate}</td>
+                                <td className="p-3 font-bold text-brand-dark whitespace-nowrap">{reg.fullName}</td>
+                                <td className="p-3 text-brand-gray whitespace-nowrap">{reg.dob}</td>
+                                <td className="p-3 font-mono font-bold text-brand-dark whitespace-nowrap">{reg.phone}</td>
+                                <td className="p-3 text-brand-gray truncate max-w-[120px]" title={reg.preferredTime}>{reg.preferredTime}</td>
+                                <td className="p-3 text-brand-gray whitespace-nowrap">{reg.hoursCount}</td>
+                                <td className="p-3 font-medium text-brand-dark truncate max-w-[130px]" title={reg.packageType}>{reg.packageType}</td>
+                                <td className="p-3 whitespace-nowrap">{reg.durationMonths} tháng</td>
+                                <td className="p-3 font-semibold text-brand-blue whitespace-nowrap">{reg.coachName}</td>
+                                <td className="p-3 text-brand-gray whitespace-nowrap">{reg.serviceType}</td>
+                                <td className="p-3 font-mono font-bold text-brand-dark whitespace-nowrap text-right">
+                                  {reg.totalPrice.toLocaleString('vi-VN')}
+                                </td>
+                                <td className="p-3 font-mono text-green-600 whitespace-nowrap text-right">
+                                  {reg.depositAmount.toLocaleString('vi-VN')}
+                                </td>
+                                <td className="p-3 font-mono text-red-500 whitespace-nowrap text-right">
+                                  {reg.remainingAmount.toLocaleString('vi-VN')}
+                                </td>
+                                <td className="p-3 font-mono font-bold text-brand-blue whitespace-nowrap text-right">
+                                  {reg.actualPaid.toLocaleString('vi-VN')}
+                                </td>
+                                <td className="p-3">
+                                  <div className="flex items-center justify-center gap-1">
+                                    <button 
+                                      onClick={() => handleToggleMemberStatus(reg.id)}
+                                      className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all cursor-pointer ${
+                                        reg.status === 'confirmed' 
+                                          ? 'bg-green-50 text-green-700 hover:bg-yellow-50 hover:text-yellow-700' 
+                                          : 'bg-yellow-50 text-yellow-700 hover:bg-green-50 hover:text-green-700'
+                                      }`}
+                                    >
+                                      {reg.status === 'confirmed' ? 'Duyệt' : 'Chờ'}
+                                    </button>
+                                    
+                                    {/* Webhook sheet forward button */}
+                                    <button 
+                                      disabled={memberSyncingId === reg.id}
+                                      onClick={() => handleManualSyncMember(reg)}
+                                      className="p-1 rounded text-brand-blue hover:bg-blue-50 transition-all cursor-pointer flex items-center justify-center"
+                                      title="Đẩy dữ liệu thủ công lên Google Sheets"
+                                    >
+                                      {memberSyncingId === reg.id ? (
+                                        <div className="w-3.5 h-3.5 border-2 border-brand-blue border-t-transparent rounded-full animate-spin"></div>
+                                      ) : (
+                                        <Database className="w-3.5 h-3.5" />
+                                      )}
+                                    </button>
+
+                                    <button 
+                                      onClick={() => handleDeleteMemberReg(reg.id)}
+                                      className="p-1 hover:bg-brand-red-light hover:text-brand-red rounded text-brand-gray/50 transition-all cursor-pointer"
+                                      title="Xoá hợp đồng"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1693,6 +2019,753 @@ export default function AdminPanel({
                   </div>
                 );
               })()}
+
+              {/* 8. Alobo Sync & Google Sheets Automation Tab */}
+              {activeTab === 'alobo_sync' && (
+                <div className="space-y-6 animate-fadeIn text-left">
+                  {/* Title Block */}
+                  <div>
+                    <h3 className="font-display font-black text-xl text-brand-dark flex items-center gap-2">
+                      <Database className="w-6 h-6 text-[#4285F4] bg-[#4285F4]/10 p-1 rounded-full" />
+                      Trung Tâm Đồng Bộ Alobo & Google Sheets
+                    </h3>
+                    <p className="font-sans text-xs text-brand-gray mt-1">
+                      Cấu hình tự động ghi nhận thông tin đặt sân từ Alobo.vn và đồng bộ trực tiếp thời gian thực vào bảng tính Google Sheets của bạn.
+                    </p>
+                  </div>
+
+                  {googleSheetWebhookUrl && googleSheetWebhookUrl.includes("docs.google.com/spreadsheets") && (
+                    <div className="bg-amber-50 border border-amber-200 text-amber-900 p-5 rounded-2xl text-xs space-y-3 shadow-sm">
+                      <div className="font-bold flex items-center gap-2 text-amber-950 text-sm">
+                        <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 animate-bounce" />
+                        <span>⚠️ Cảnh báo cấu hình nhầm lẫn: Dán link bảng tính vào ô Webhook URL!</span>
+                      </div>
+                      <p className="leading-relaxed text-amber-800">
+                        Bạn đã dán <strong>đường dẫn bảng tính Google Sheets (Sheet Link)</strong> vào ô <strong>Webhook URL (Apps Script URL)</strong>.
+                        Webhook URL bắt buộc phải là một đường dẫn chạy ứng dụng Web App có dạng <code>https://script.google.com/macros/s/.../exec</code>.
+                      </p>
+                      <p className="leading-relaxed text-amber-800 font-semibold">
+                        Hãy làm theo <strong>hướng dẫn 3 bước ở cột bên phải</strong> để tạo Google Apps Script Web App và lấy mã Webhook chuẩn. Hoặc bấm nút bên dưới để chuyển đường dẫn bảng tính này xuống ô "Đường dẫn bảng tính Google Sheets" đúng vị trí.
+                      </p>
+                      <button
+                        onClick={async () => {
+                          const sheetLink = googleSheetWebhookUrl;
+                          setGoogleSheetUrl(sheetLink);
+                          setGoogleSheetWebhookUrl('');
+                          // Auto trigger saving the corrected configuration to the server
+                          try {
+                            const res = await fetch('/api/alobo/config', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ googleSheetWebhookUrl: '', googleSheetUrl: sheetLink })
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                              alert('Đã tự động di chuyển đường dẫn sang đúng ô "Link bảng tính" và cập nhật cấu hình hệ thống!');
+                            }
+                          } catch (err) {
+                            console.error('Error saving config corrections:', err);
+                          }
+                        }}
+                        className="bg-amber-600 hover:bg-amber-700 text-white font-sans font-bold px-4 py-2 rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
+                      >
+                        <RefreshCw className="w-4 h-4" /> Chuyển sang đúng ô &amp; Lưu cấu hình
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    {/* Left Column: Config, Test, and Manual Forward */}
+                    <div className="lg:col-span-7 space-y-6">
+                      
+                      {/* Webhook URL Config */}
+                      <div className="bg-white border border-brand-border/40 p-5 rounded-2xl shadow-sm space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-display font-bold text-sm text-brand-dark flex items-center gap-2">
+                            <span>1. Cấu hình Google Apps Script Webhook</span>
+                          </h4>
+                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                            googleSheetWebhookUrl ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                          }`}>
+                            {googleSheetWebhookUrl ? 'Đang hoạt động' : 'Chưa kết nối'}
+                          </span>
+                        </div>
+
+                        <div className="space-y-2 text-xs">
+                          <label className="block text-[11px] font-bold text-brand-gray">GOOGLE WEB APP URL (APPS SCRIPT WEBHOOK)</label>
+                          <div className="flex gap-2">
+                            <input 
+                              type="text"
+                              value={googleSheetWebhookUrl}
+                              onChange={(e) => setGoogleSheetWebhookUrl(e.target.value)}
+                              placeholder="https://script.google.com/macros/s/AKfycb.../exec"
+                              className="flex-grow bg-brand-light-gray border border-brand-border/60 rounded-xl px-3 py-2 text-xs font-semibold text-brand-dark outline-none"
+                            />
+                            <button 
+                              onClick={saveConfig}
+                              disabled={isSavingConfig}
+                              className="bg-[#4285F4] hover:bg-[#357ae8] text-white font-sans font-bold text-xs px-4 py-2 rounded-xl cursor-pointer disabled:opacity-50 flex-shrink-0"
+                            >
+                              {isSavingConfig ? 'Đang lưu...' : 'Lưu cấu hình'}
+                            </button>
+                          </div>
+                          <p className="text-[10px] text-brand-gray italic">
+                            Mẹo: Làm theo hướng dẫn ở cột bên phải để lấy URL này từ Google Sheets của bạn.
+                          </p>
+                        </div>
+
+                        {/* Google Sheet URL Config */}
+                        <div className="space-y-2 text-xs border-t border-brand-border/20 pt-4">
+                          <label className="block text-[11px] font-bold text-brand-gray flex items-center justify-between">
+                            <span>ĐƯỜNG DẪN BẢNG TÍNH GOOGLE SHEETS (SHEET LINK)</span>
+                            {googleSheetUrl && (
+                              <a 
+                                href={googleSheetUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="text-[#0F9D58] hover:underline font-bold flex items-center gap-1"
+                              >
+                                <span>Mở trang tính ↗</span>
+                              </a>
+                            )}
+                          </label>
+                          <div className="flex gap-2">
+                            <input 
+                              type="text"
+                              value={googleSheetUrl}
+                              onChange={(e) => setGoogleSheetUrl(e.target.value)}
+                              placeholder="https://docs.google.com/spreadsheets/d/.../edit"
+                              className="flex-grow bg-brand-light-gray border border-brand-border/60 rounded-xl px-3 py-2 text-xs font-semibold text-brand-dark outline-none"
+                            />
+                            <button 
+                              onClick={saveConfig}
+                              disabled={isSavingConfig}
+                              className="bg-[#0F9D58] hover:bg-[#0b8043] text-white font-sans font-bold text-xs px-4 py-2 rounded-xl cursor-pointer disabled:opacity-50 flex-shrink-0"
+                            >
+                              Lưu Link
+                            </button>
+                          </div>
+                          <p className="text-[10px] text-brand-gray italic">
+                            Dán link Google Sheets của bạn ở đây để lưu trữ và mở nhanh từ xa.
+                          </p>
+                        </div>
+
+                        {/* Test connection row */}
+                        <div className="pt-3 border-t border-brand-border/20 flex flex-wrap items-center justify-between gap-3 text-xs">
+                          <div className="text-[11px] text-brand-gray">
+                            Gửi dữ liệu mẫu để kiểm tra tính chính xác của bảng tính.
+                          </div>
+                          <button 
+                            onClick={handleTestConnection}
+                            disabled={isTestingSheet || !googleSheetWebhookUrl}
+                            className="bg-brand-dark hover:bg-brand-dark/95 text-white font-sans font-bold text-xs px-4 py-2 rounded-xl cursor-pointer disabled:opacity-40 transition-colors"
+                          >
+                            {isTestingSheet ? 'Đang gửi...' : 'Kiểm tra kết nối'}
+                          </button>
+                        </div>
+
+                        {testResult && (
+                          <div className={`p-3 rounded-xl text-xs font-semibold ${
+                            testResult.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-brand-red border border-brand-red-light/30'
+                          }`}>
+                            {testResult.success ? (
+                              '✓ Kết nối thành công! Một hàng dữ liệu thử nghiệm đã được chèn vào Google Sheets của bạn.'
+                            ) : (
+                              `✗ Lỗi kết nối: ${testResult.error || 'Vui lòng kiểm tra lại URL Apps Script Web App.'}`
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Manual Booking Input Form */}
+                      <div className="bg-white border border-brand-border/40 p-5 rounded-2xl shadow-sm space-y-4 text-xs">
+                        <h4 className="font-display font-bold text-sm text-brand-dark">
+                          2. Gửi giao dịch thủ công lên Google Sheets
+                        </h4>
+                        <p className="font-sans text-[11px] text-brand-gray mt-0.5 text-left">
+                          Sử dụng khi bạn muốn đẩy nhanh một ca khách vãng lai hoặc bổ sung đặt lịch vào Sheets mà không qua Alobo.
+                        </p>
+
+                        <form onSubmit={handleManualSend} className="space-y-4">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1">Tên khách hàng</label>
+                              <input 
+                                type="text"
+                                required
+                                value={manualBookingForm.fullName}
+                                onChange={(e) => setManualBookingForm({...manualBookingForm, fullName: e.target.value})}
+                                placeholder="e.g. Anh Huy"
+                                className="w-full bg-brand-light-gray border border-brand-border/60 rounded-xl px-3 py-2 text-xs font-semibold text-brand-dark outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1">Số điện thoại</label>
+                              <input 
+                                type="text"
+                                required
+                                value={manualBookingForm.phone}
+                                onChange={(e) => setManualBookingForm({...manualBookingForm, phone: e.target.value})}
+                                placeholder="0901234567"
+                                className="w-full bg-brand-light-gray border border-brand-border/60 rounded-xl px-3 py-2 text-xs font-semibold text-brand-dark outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-3">
+                            <div>
+                              <label className="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1">Sân chơi</label>
+                              <select 
+                                value={manualBookingForm.courtName}
+                                onChange={(e) => setManualBookingForm({...manualBookingForm, courtName: e.target.value})}
+                                className="w-full bg-white border border-brand-border/40 rounded-xl px-2.5 py-2 text-xs font-bold text-brand-dark outline-none"
+                              >
+                                <option value="Sân 1">Sân 1</option>
+                                <option value="Sân 2">Sân 2</option>
+                                <option value="Sân 3">Sân 3</option>
+                                <option value="Sân 4">Sân 4</option>
+                                <option value="Sân 5">Sân 5</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1">Khung giờ</label>
+                              <input 
+                                type="text"
+                                required
+                                value={manualBookingForm.timeSlot}
+                                onChange={(e) => setManualBookingForm({...manualBookingForm, timeSlot: e.target.value})}
+                                placeholder="17:00 - 18:00"
+                                className="w-full bg-brand-light-gray border border-brand-border/60 rounded-xl px-3 py-2 text-xs font-semibold text-brand-dark outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1">Tiền sân (VND)</label>
+                              <input 
+                                type="text"
+                                required
+                                value={manualBookingForm.price}
+                                onChange={(e) => setManualBookingForm({...manualBookingForm, price: e.target.value})}
+                                placeholder="150.000"
+                                className="w-full bg-brand-light-gray border border-brand-border/60 rounded-xl px-3 py-2 text-xs font-bold text-brand-dark outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1">Ngày chơi</label>
+                              <input 
+                                type="date"
+                                value={manualBookingForm.date}
+                                onChange={(e) => setManualBookingForm({...manualBookingForm, date: e.target.value})}
+                                className="w-full bg-brand-light-gray border border-brand-border/60 rounded-xl px-3 py-2 text-xs font-semibold text-brand-dark outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1">Trạng thái thanh toán</label>
+                              <input 
+                                type="text"
+                                value={manualBookingForm.paymentStatus}
+                                onChange={(e) => setManualBookingForm({...manualBookingForm, paymentStatus: e.target.value})}
+                                className="w-full bg-brand-light-gray border border-brand-border/60 rounded-xl px-3 py-2 text-xs font-semibold text-brand-dark outline-none"
+                              />
+                            </div>
+                          </div>
+
+                          <button 
+                            type="submit"
+                            disabled={isManualSending || !googleSheetWebhookUrl}
+                            className="w-full bg-green-600 hover:bg-green-700 text-white font-sans font-bold text-xs py-3 rounded-xl transition-all cursor-pointer disabled:opacity-40"
+                          >
+                            {isManualSending ? 'Đang gửi...' : 'Gửi trực tiếp lên Google Sheets'}
+                          </button>
+                        </form>
+
+                        {manualSendResult && (
+                          <div className={`p-3 rounded-xl text-xs font-semibold ${
+                            manualSendResult.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-brand-red border border-brand-red-light/30'
+                          }`}>
+                            {manualSendResult.success ? (
+                              '✓ Đã gửi dữ liệu đặt sân lên Google Sheets thành công!'
+                            ) : (
+                              `✗ Gửi thất bại: ${manualSendResult.error || 'Vui lòng kiểm tra lại kết nối.'}`
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                    </div>
+
+                    {/* Right Column: Step-by-step Guide and Copy scripts */}
+                    <div className="lg:col-span-5 space-y-6">
+                      
+                      {/* Step-by-Step Guide */}
+                      <div className="bg-brand-light-gray p-5 rounded-2xl border border-brand-border/40 space-y-4 text-xs text-left">
+                        <h4 className="font-display font-black text-xs text-brand-dark uppercase tracking-widest text-[#4285F4]">
+                          Hướng Dẫn Kết Nối Báo Cáo Pickle Bounce & Đặt Sân
+                        </h4>
+                        
+                        <div className="space-y-3 font-sans leading-relaxed text-brand-dark">
+                          <div>
+                            <span className="font-bold text-[#4285F4]">Bước 1:</span> Chuẩn bị file Google Sheets có trang tính chính là <strong>Trang 1 (Đặt sân)</strong> và một trang tính tên là <strong>BÁO CÁO PICKLE BOUNCE</strong> để điền hợp đồng.
+                          </div>
+
+                          <div>
+                            <span className="font-bold text-[#4285F4]">Bước 2:</span> Mở <strong>Tiện ích mở rộng (Extensions)</strong> &gt; <strong>Apps Script</strong>. Xóa mã cũ, dán mã Google Apps Script cải tiến ở ô bên dưới vào và bấm lưu.
+                          </div>
+
+                          <div>
+                            <span className="font-bold text-[#4285F4]">Bước 3:</span> Bấm <strong>Triển khai (Deploy)</strong> &gt; <strong>Triển khai mới (New deployment)</strong>. Chọn <strong>Ứng dụng web (Web app)</strong>, cấu hình chạy dưới tên bạn và phân quyền <strong>Bất kỳ ai (Anyone)</strong>, lấy URL triển khai dán vào ô bên trái.
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Google Apps Script Code Copy Block */}
+                      <div className="bg-white border border-brand-border/40 rounded-2xl overflow-hidden text-xs">
+                        <div className="bg-brand-dark p-3 text-white text-xs font-bold flex justify-between items-center">
+                          <span>Google Apps Script Template (Báo Cáo Pickle Bounce & Đặt Sân)</span>
+                          <button 
+                            onClick={() => {
+                              const scriptCode = `function doPost(e) {
+  try {
+    var jsonString = e.postData.contents;
+    var data = JSON.parse(jsonString);
+    
+    // Fallback thông minh nếu file script không được tạo trực tiếp từ Sheet (Độc lập)
+    var ss = null;
+    try {
+      ss = SpreadsheetApp.getActiveSpreadsheet();
+    } catch (err) {}
+    
+    if (!ss) {
+      var sheetId = "${getSheetId()}";
+      ss = SpreadsheetApp.openById(sheetId);
+    }
+    
+    // 1. Handle Member/Coaching registration
+    if (data.action === "addRegistration") {
+      var regSheet = ss.getSheetByName("BÁO CÁO PICKLE BOUNCE") || 
+                     ss.getSheetByName("Đăng Ký Gói Tập") || 
+                     ss.getSheetByName("Thành Viên") ||
+                     ss.getSheets()[0];
+      
+      var lastRow = regSheet.getLastRow();
+      var nextStt = lastRow; // STT index
+      if (lastRow <= 1) {
+        nextStt = 1;
+      }
+      
+      var rowData = [
+        nextStt,
+        data.contractDate || new Date().toLocaleDateString("vi-VN"),
+        data.fullName || "",
+        data.dob || "",
+        "'" + (data.phone || ""),
+        data.preferredTime || "",
+        data.hoursCount || "",
+        data.packageType || "",
+        data.durationMonths || "",
+        data.coachName || "",
+        data.serviceType || "",
+        data.totalPrice || 0,
+        data.depositAmount || 0,
+        data.remainingAmount || 0,
+        data.actualPaid || 0
+      ];
+      
+      regSheet.appendRow(rowData);
+      return ContentService.createTextOutput(JSON.stringify({ success: true, status: "registered", rowIndex: regSheet.getLastRow() }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // 2. Handle standard court booking (clash prevention)
+    var sheet = ss.getSheets()[0];
+    if (data.action === "addBooking" || !data.action) {
+      var dateVal = data.date || "";
+      var timeSlotVal = data.timeSlot || "";
+      var courtNameVal = data.courtName || "";
+      var fullNameVal = data.fullName || "";
+      var phoneVal = "'" + (data.phone || "");
+      var priceVal = data.price || "";
+      var paymentStatusVal = data.paymentStatus || "";
+      var syncedAtVal = data.syncedAt || new Date().toLocaleString("vi-VN");
+      
+      var rows = sheet.getDataRange().getValues();
+      var foundRowIndex = -1;
+      
+      for (var i = 1; i < rows.length; i++) {
+        var rowDate = rows[i][0] ? String(rows[i][0]).trim() : "";
+        var rowTime = rows[i][1] ? String(rows[i][1]).trim() : "";
+        var rowCourt = rows[i][2] ? String(rows[i][2]).trim() : "";
+        
+        if (formatCompareDate(rowDate) === formatCompareDate(dateVal) && 
+            rowTime.toLowerCase() === timeSlotVal.toLowerCase() && 
+            rowCourt.toLowerCase() === courtNameVal.toLowerCase()) {
+          foundRowIndex = i + 1;
+          break;
+        }
+      }
+      
+      if (foundRowIndex > -1) {
+        sheet.getRange(foundRowIndex, 4).setValue(fullNameVal);
+        sheet.getRange(foundRowIndex, 5).setValue(phoneVal);
+        sheet.getRange(foundRowIndex, 6).setValue(priceVal);
+        sheet.getRange(foundRowIndex, 7).setValue(paymentStatusVal);
+        sheet.getRange(foundRowIndex, 8).setValue(syncedAtVal);
+        
+        return ContentService.createTextOutput(JSON.stringify({ success: true, status: "updated", rowIndex: foundRowIndex }))
+          .setMimeType(ContentService.MimeType.JSON);
+      } else {
+        sheet.appendRow([
+          dateVal,
+          timeSlotVal,
+          courtNameVal,
+          fullNameVal,
+          phoneVal,
+          priceVal,
+          paymentStatusVal,
+          syncedAtVal
+        ]);
+        
+        return ContentService.createTextOutput(JSON.stringify({ success: true, status: "inserted" }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Unknown action: " + data.action }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function formatCompareDate(dateStr) {
+  if (!dateStr) return "";
+  dateStr = String(dateStr).trim();
+  
+  if (dateStr.indexOf('/') > -1) {
+    var parts = dateStr.split('/');
+    if (parts.length === 3) {
+      return fillZero(parts[0]) + "/" + fillZero(parts[1]) + "/" + parts[2];
+    }
+  }
+  
+  if (dateStr.indexOf('-') > -1) {
+    var parts = dateStr.split('-');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        return fillZero(parts[2]) + "/" + fillZero(parts[1]) + "/" + parts[0];
+      } else if (parts[2].length === 4) {
+        return fillZero(parts[0]) + "/" + fillZero(parts[1]) + "/" + parts[2];
+      }
+    }
+  }
+  
+  try {
+    var d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+      return fillZero(d.getDate()) + "/" + fillZero(d.getMonth() + 1) + "/" + d.getFullYear();
+    }
+  } catch(e) {}
+  
+  return dateStr.toLowerCase();
+}
+
+function fillZero(num) {
+  var n = parseInt(num);
+  return n < 10 ? "0" + n : String(n);
+}`;
+                              navigator.clipboard.writeText(scriptCode);
+                              alert('Đã sao chép mã Google Apps Script cải tiến thông minh (Báo Cáo & Đặt Sân) vào Clipboard!');
+                            }}
+                            className="bg-white/10 hover:bg-white/20 px-2.5 py-1 rounded text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                          >
+                            <Copy className="w-3 h-3" /> Sao chép mã
+                          </button>
+                        </div>
+                        <div className="p-3 bg-brand-light-gray font-mono text-[9px] text-brand-dark/90 h-40 overflow-y-auto select-all leading-normal whitespace-pre text-left">
+{`function doPost(e) {
+  try {
+    var jsonString = e.postData.contents;
+    var data = JSON.parse(jsonString);
+    
+    // Fallback thông minh nếu file script không được tạo trực tiếp từ Sheet (Độc lập)
+    var ss = null;
+    try {
+      ss = SpreadsheetApp.getActiveSpreadsheet();
+    } catch (err) {}
+    
+    if (!ss) {
+      var sheetId = "${getSheetId()}";
+      ss = SpreadsheetApp.openById(sheetId);
+    }
+    
+    if (data.action === "addRegistration") {
+      var regSheet = ss.getSheetByName("BÁO CÁO PICKLE BOUNCE") || 
+                     ss.getSheetByName("Đăng Ký Gói Tập") || 
+                     ss.getSheetByName("Thành Viên") ||
+                     ss.getSheets()[0];
+      
+      var lastRow = regSheet.getLastRow();
+      var nextStt = lastRow;
+      if (lastRow <= 1) nextStt = 1;
+      
+      var rowData = [
+        nextStt,
+        data.contractDate || new Date().toLocaleDateString("vi-VN"),
+        data.fullName || "",
+        data.dob || "",
+        "'" + (data.phone || ""),
+        data.preferredTime || "",
+        data.hoursCount || "",
+        data.packageType || "",
+        data.durationMonths || "",
+        data.coachName || "",
+        data.serviceType || "",
+        data.totalPrice || 0,
+        data.depositAmount || 0,
+        data.remainingAmount || 0,
+        data.actualPaid || 0
+      ];
+      
+      regSheet.appendRow(rowData);
+      return ContentService.createTextOutput(JSON.stringify({ success: true, status: "registered" }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    var sheet = ss.getSheets()[0];
+    if (data.action === "addBooking" || !data.action) {
+      var dateVal = data.date || "";
+      var timeSlotVal = data.timeSlot || "";
+      var courtNameVal = data.courtName || "";
+      var fullNameVal = data.fullName || "";
+      var phoneVal = "'" + (data.phone || "");
+      var priceVal = data.price || "";
+      var paymentStatusVal = data.paymentStatus || "";
+      var syncedAtVal = data.syncedAt || new Date().toLocaleString("vi-VN");
+      
+      var rows = sheet.getDataRange().getValues();
+      var foundRowIndex = -1;
+      
+      for (var i = 1; i < rows.length; i++) {
+        var rowDate = rows[i][0] ? String(rows[i][0]).trim() : "";
+        var rowTime = rows[i][1] ? String(rows[i][1]).trim() : "";
+        var rowCourt = rows[i][2] ? String(rows[i][2]).trim() : "";
+        
+        if (formatCompareDate(rowDate) === formatCompareDate(dateVal) && 
+            rowTime.toLowerCase() === timeSlotVal.toLowerCase() && 
+            rowCourt.toLowerCase() === courtNameVal.toLowerCase()) {
+          foundRowIndex = i + 1;
+          break;
+        }
+      }
+      
+      if (foundRowIndex > -1) {
+        sheet.getRange(foundRowIndex, 4).setValue(fullNameVal);
+        sheet.getRange(foundRowIndex, 5).setValue(phoneVal);
+        sheet.getRange(foundRowIndex, 6).setValue(priceVal);
+        sheet.getRange(foundRowIndex, 7).setValue(paymentStatusVal);
+        sheet.getRange(foundRowIndex, 8).setValue(syncedAtVal);
+        return ContentService.createTextOutput(JSON.stringify({ success: true, status: "updated" }))
+          .setMimeType(ContentService.MimeType.JSON);
+      } else {
+        sheet.appendRow([dateVal, timeSlotVal, courtNameVal, fullNameVal, phoneVal, priceVal, paymentStatusVal, syncedAtVal]);
+        return ContentService.createTextOutput(JSON.stringify({ success: true, status: "inserted" }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+    return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Unknown action" }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function formatCompareDate(dateStr) {
+  if (!dateStr) return "";
+  dateStr = String(dateStr).trim();
+  if (dateStr.indexOf('/') > -1) {
+    var parts = dateStr.split('/');
+    if (parts.length === 3) return fillZero(parts[0]) + "/" + fillZero(parts[1]) + "/" + parts[2];
+  }
+  if (dateStr.indexOf('-') > -1) {
+    var parts = dateStr.split('-');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) return fillZero(parts[2]) + "/" + fillZero(parts[1]) + "/" + parts[0];
+      return fillZero(parts[0]) + "/" + fillZero(parts[1]) + "/" + parts[2];
+    }
+  }
+  return dateStr.toLowerCase();
+}
+
+function fillZero(num) {
+  var n = parseInt(num);
+  return n < 10 ? "0" + n : String(n);
+}`}
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+
+                  {/* Tampermonkey Script Copy Section */}
+                  <div className="bg-white border border-brand-border/40 rounded-2xl overflow-hidden p-5 space-y-4 text-xs text-left">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div>
+                        <h4 className="font-display font-bold text-sm text-brand-dark">
+                          3. Cách Lấy API Của Alobo & Đồng Bộ Tự Động (Bản chất kỹ thuật)
+                        </h4>
+                        <p className="font-sans text-[11px] text-brand-gray mt-0.5">
+                          Alobo.vn sử dụng cơ chế Flutter Web nên dữ liệu lịch đặt sân được tải qua API nội bộ JSON. Chúng tôi cung cấp đoạn mã Userscript (chạy trên Chrome) giúp bạn <strong>tự động chặn bắt</strong> và đồng bộ sang hệ thống này, sau đó đẩy tự động sang Google Sheets khi bạn xem lịch sân!
+                        </p>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          const scraperScript = `// ==UserScript==
+// @name         Alobo Live Sync to Pickle Bounce
+// @namespace    http://tampermonkey.net/
+// @version      1.0
+// @description  Intercept and auto-sync bookings from Alobo to Google Sheets
+// @author       Pickle Bounce Dev
+// @match        *://*.alobo.vn/*
+// @match        *://datlich.alobo.vn/*
+// @grant        GM_xmlhttpRequest
+// @connect      *
+// ==/UserScript==
+
+(function() {
+    'use strict';
+    console.log('[Alobo Sync] Userscript active and watching...');
+
+    // Periodically watch for detail modal changes or click events
+    setInterval(() => {
+        // Look for typical booking details in Flutter Web DOM
+        const customerField = Array.from(document.querySelectorAll('*')).find(el => el.textContent && el.textContent.includes('KH:'));
+        if (customerField && !customerField.hasAttribute('data-synced')) {
+            customerField.setAttribute('data-synced', 'true');
+            
+            const rawText = customerField.parentElement?.textContent || '';
+            console.log('[Alobo Sync] Found modal text:', rawText);
+            
+            // Extract attributes from raw text
+            const customerMatch = rawText.match(/KH:\\s*([^\\n\\r]+)/);
+            const courtMatch = rawText.match(/(Sân\\s*\\d+)/);
+            const timeMatch = rawText.match(/(\\d+h\\d*\\s*-\\s*\\d+h\\d*)/);
+            const priceMatch = rawText.match(/Chuyển khoản:\\s*([\\d.]+)/) || rawText.match(/Tổng đơn:\\s*([\\d.]+)/);
+            
+            const fullName = customerMatch ? customerMatch[1].trim() : "Khách Alobo";
+            const courtName = courtMatch ? courtMatch[1].trim() : "Sân 2";
+            const timeSlot = timeMatch ? timeMatch[1].trim() : "07:00 - 08:00";
+            const price = priceMatch ? priceMatch[1].trim() + " đ" : "150.000 đ";
+            
+            console.log('[Alobo Sync] Extracted booking:', { fullName, courtName, timeSlot, price });
+
+            // Post to our portal backend (it will automatically push to Google Sheets)
+            GM_xmlhttpRequest({
+                method: "POST",
+                url: window.location.origin + "/api/alobo/forward-booking",
+                headers: { "Content-Type": "application/json" },
+                data: JSON.stringify({
+                    fullName: fullName,
+                    phone: "Alobo App",
+                    courtName: courtName,
+                    date: new Date().toISOString().split('T')[0],
+                    timeSlot: timeSlot,
+                    price: price,
+                    paymentStatus: "Đã thanh toán (Alobo)"
+                }),
+                onload: function(res) {
+                    console.log("[Alobo Sync] Sync Response: ", res.responseText);
+                }
+            });
+        }
+    }, 2000);
+})();`;
+                          navigator.clipboard.writeText(scraperScript);
+                          alert('Đã sao chép mã Tampermonkey Userscript vào Clipboard!');
+                        }}
+                        className="bg-[#4285F4] hover:bg-[#357ae8] text-white font-sans font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-1.5 cursor-pointer self-start sm:self-auto transition-all"
+                      >
+                        <Copy className="w-3.5 h-3.5" /> Sao Chép Mã Userscript
+                      </button>
+                    </div>
+
+                    <div className="bg-brand-light-gray p-4 rounded-xl border border-brand-border/20 text-xs font-sans text-brand-dark leading-relaxed space-y-2">
+                      <div className="font-bold text-brand-dark">Làm thế nào để cài đặt và chạy?</div>
+                      <ol className="list-decimal pl-4 space-y-1 text-brand-gray">
+                        <li>Cài đặt tiện ích mở rộng <a href="https://www.tampermonkey.net/" target="_blank" rel="noreferrer" className="text-[#4285F4] hover:underline font-bold inline-flex items-center gap-0.5">Tampermonkey <ExternalLink className="w-3 h-3" /></a> trên Google Chrome.</li>
+                        <li>Mở bảng điều khiển Tampermonkey &gt; Chọn <strong>Add a new script (Tạo script mới)</strong>.</li>
+                        <li>Xóa sạch nội dung cũ, dán đoạn mã Userscript vừa sao chép ở trên vào và nhấn <strong>File &gt; Save (Lưu)</strong>.</li>
+                        <li>Giờ đây, bất cứ khi nào bạn mở <strong>datlich.alobo.vn</strong> và nhấp xem chi tiết bất cứ lịch đặt nào, dữ liệu sẽ được <strong>Tự Động Trích Xuất</strong> và gửi về hệ thống của bạn, đồng thời lưu thẳng vào Google Sheets!</li>
+                      </ol>
+                    </div>
+                  </div>
+
+                  {/* Sync Event Log Streams */}
+                  <div className="bg-white border border-brand-border/40 p-5 rounded-2xl shadow-sm space-y-4 text-xs text-left">
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-display font-bold text-sm text-brand-dark">
+                        4. Nhật ký đồng bộ Google Sheets gần đây
+                      </h4>
+                      <button 
+                        onClick={clearSyncLogs}
+                        className="font-sans font-bold text-[11px] text-brand-red hover:underline cursor-pointer"
+                      >
+                        Xóa lịch sử log
+                      </button>
+                    </div>
+
+                    <div className="border border-brand-border/40 rounded-xl overflow-hidden">
+                      <table className="w-full text-left text-xs border-collapse font-sans">
+                        <thead>
+                          <tr className="bg-brand-light-gray text-brand-gray font-bold border-b border-brand-border/40">
+                            <th className="p-3">Thời gian</th>
+                            <th className="p-3">Khách hàng</th>
+                            <th className="p-3">Sân chơi & Khung giờ</th>
+                            <th className="p-3 text-right">Tiền sân</th>
+                            <th className="p-3 text-center">Trạng thái Google Sheets</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-brand-border/40">
+                          {syncLogs.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="p-8 text-center text-brand-gray">
+                                Chưa có nhật ký đồng bộ nào. Nhấn &quot;Kiểm tra kết nối&quot; hoặc đồng bộ dữ liệu để ghi nhận logs.
+                              </td>
+                            </tr>
+                          ) : (
+                            syncLogs.map((log) => (
+                              <tr key={log.id} className="hover:bg-brand-light-gray/50">
+                                <td className="p-3 font-mono text-[10px] text-brand-dark">{log.syncedAt}</td>
+                                <td className="p-3">
+                                  <div className="font-bold text-brand-dark">{log.fullName}</div>
+                                  <div className="text-[10px] text-brand-gray">{log.phone}</div>
+                                </td>
+                                <td className="p-3">
+                                  <span className="font-semibold text-brand-dark">{log.courtName}</span>
+                                  <span className="mx-1 text-brand-gray">|</span>
+                                  <span className="text-brand-red font-semibold">{log.timeSlot}</span>
+                                </td>
+                                <td className="p-3 font-bold text-brand-dark text-right">{log.price}</td>
+                                <td className="p-3 text-center">
+                                  <span className={`inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                                    log.status === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-brand-red'
+                                  }`}>
+                                    {log.status === 'success' ? '✓ Đã đồng bộ' : '✗ Thất bại'}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                </div>
+              )}
 
             </div>
           </div>

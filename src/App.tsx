@@ -16,10 +16,11 @@ import MatchLobby from './components/MatchLobby';
 import TournamentModal from './components/TournamentModal';
 import MyScheduleModal from './components/MyScheduleModal';
 import AdminPanel from './components/AdminPanel';
+import TrainingModal from './components/TrainingModal';
 
 // Static Data and Types
 import { INITIAL_COURTS, INITIAL_OPEN_PLAYS, INITIAL_TOURNAMENTS, SPONSORS } from './data';
-import { Booking, OpenPlay, Tournament, TeamRegistration, Court, SocialRevenue } from './types';
+import { Booking, OpenPlay, Tournament, TeamRegistration, Court, SocialRevenue, MemberRegistration } from './types';
 
 export default function App() {
   // Modal visibility states
@@ -27,9 +28,59 @@ export default function App() {
   const [isMatchLobbyOpen, setIsMatchLobbyOpen] = useState(false);
   const [isMyScheduleOpen, setIsMyScheduleOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isTrainingOpen, setIsTrainingOpen] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
 
   // Core App State
+  const [memberRegistrations, setMemberRegistrations] = useState<MemberRegistration[]>(() => {
+    const saved = localStorage.getItem('pickle_member_registrations');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    return [
+      {
+        id: 'MEM-7301',
+        contractDate: '19/07/2026',
+        fullName: 'Anh Khanh (Lớp VIP)',
+        dob: '1995-04-12',
+        phone: '0908882233',
+        preferredTime: 'Thứ 2, 4, 6 (18:00 - 20:00)',
+        hoursCount: '20 giờ tập',
+        packageType: 'Combo 20 Buổi Chuyên Sâu',
+        durationMonths: 6,
+        coachName: 'Coach Tommy (Đội tuyển)',
+        serviceType: 'Tập luyện cá nhân 1-1',
+        totalPrice: 9000000,
+        depositAmount: 3000000,
+        remainingAmount: 6000000,
+        actualPaid: 3000000,
+        status: 'confirmed',
+        createdAt: '19/07/2026 15:30:22'
+      },
+      {
+        id: 'MEM-7302',
+        contractDate: '18/07/2026',
+        fullName: 'Chị Mai Anh',
+        dob: '1998-09-25',
+        phone: '0912445566',
+        preferredTime: 'Thứ 3, 5, Bảy (19:00 - 21:00)',
+        hoursCount: '10 giờ tập',
+        packageType: 'Combo 10 Buổi Nhập Môn',
+        durationMonths: 3,
+        coachName: 'Coach Lisa (Cựu tuyển thủ quốc gia)',
+        serviceType: 'Tập luyện cá nhân 1-1',
+        totalPrice: 5000000,
+        depositAmount: 5000000,
+        remainingAmount: 0,
+        actualPaid: 5000000,
+        status: 'confirmed',
+        createdAt: '18/07/2026 10:15:45'
+      }
+    ];
+  });
+
   const [bookings, setBookings] = useState<Booking[]>(() => {
     const saved = localStorage.getItem('pickle_bookings');
     if (saved) {
@@ -311,6 +362,10 @@ export default function App() {
     localStorage.setItem('pickle_social_revenues', JSON.stringify(socialRevenues));
   }, [socialRevenues]);
 
+  useEffect(() => {
+    localStorage.setItem('pickle_member_registrations', JSON.stringify(memberRegistrations));
+  }, [memberRegistrations]);
+
   // Load bookings from LocalStorage on mount
   useEffect(() => {
     const savedBookings = localStorage.getItem('pickle_bookings');
@@ -327,6 +382,36 @@ export default function App() {
   const saveBookings = (newBookings: Booking[]) => {
     setBookings(newBookings);
     localStorage.setItem('pickle_bookings', JSON.stringify(newBookings));
+  };
+
+  // Create a new member/coaching package registration
+  const handleRegisterMember = (newReg: MemberRegistration) => {
+    const updated = [newReg, ...memberRegistrations];
+    setMemberRegistrations(updated);
+    
+    // Auto sync registration to Google Sheets in real-time!
+    fetch('/api/alobo/forward-booking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'addRegistration',
+        contractId: newReg.id,
+        contractDate: newReg.contractDate,
+        fullName: newReg.fullName,
+        dob: newReg.dob,
+        phone: newReg.phone,
+        preferredTime: newReg.preferredTime,
+        hoursCount: newReg.hoursCount,
+        packageType: newReg.packageType,
+        durationMonths: newReg.durationMonths,
+        coachName: newReg.coachName,
+        serviceType: newReg.serviceType,
+        totalPrice: newReg.totalPrice,
+        depositAmount: newReg.depositAmount,
+        remainingAmount: newReg.remainingAmount,
+        actualPaid: newReg.actualPaid
+      })
+    }).catch(err => console.error('Auto Google Sheets registration sync failed:', err));
   };
 
   // Create a new court booking
@@ -352,6 +437,21 @@ export default function App() {
       };
       setOpenPlays([autoOpenPlay, ...openPlays]);
     }
+
+    // Auto sync booking to Google Sheets via server endpoint in real-time!
+    fetch('/api/alobo/forward-booking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fullName: newBooking.fullName,
+        phone: newBooking.phone,
+        courtName: newBooking.courtName,
+        date: newBooking.date,
+        timeSlot: newBooking.timeSlot,
+        price: (newBooking.totalPrice).toLocaleString('vi-VN') + ' đ',
+        paymentStatus: 'Thanh toán tại quầy (Sân Pickle Bounce)'
+      })
+    }).catch(err => console.error('Auto Google Sheets sync failed:', err));
   };
 
   // Cancel an existing booking
@@ -362,6 +462,7 @@ export default function App() {
 
   // Join an existing open play matchup
   const handleJoinOpenPlay = (id: string, name: string) => {
+    const matchedOpenPlay = openPlays.find(op => op.id === id);
     const updated = openPlays.map(op => {
       if (op.id === id) {
         if (op.joinedPlayers.includes(name)) return op; // prevent double join
@@ -373,11 +474,43 @@ export default function App() {
       return op;
     });
     setOpenPlays(updated);
+
+    if (matchedOpenPlay && !matchedOpenPlay.joinedPlayers.includes(name)) {
+      // Sync open play joiner to Google Sheets
+      fetch('/api/alobo/forward-booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: `${name} (Tham gia ghép sân)`,
+          phone: 'Thành viên ghép',
+          courtName: `Hội ghép: ${matchedOpenPlay.title}`,
+          date: new Date().toISOString().split('T')[0],
+          timeSlot: matchedOpenPlay.time,
+          price: matchedOpenPlay.fee.toLocaleString('vi-VN') + ' đ / người',
+          paymentStatus: 'Giao lưu tại sân'
+        })
+      }).catch(err => console.error('Auto Google Sheets open play join sync failed:', err));
+    }
   };
 
   // Post a new custom open play matchmaking request to lobby
   const handlePostOpenPlay = (newOpenPlay: OpenPlay) => {
     setOpenPlays([newOpenPlay, ...openPlays]);
+    
+    // Sync newly created open play matchup to Google Sheets
+    fetch('/api/alobo/forward-booking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fullName: `${newOpenPlay.hostName} (Mở kèo mới)`,
+        phone: 'Chủ kèo',
+        courtName: `Yêu cầu ghép: ${newOpenPlay.title}`,
+        date: new Date().toISOString().split('T')[0],
+        timeSlot: newOpenPlay.time,
+        price: newOpenPlay.fee.toLocaleString('vi-VN') + ' đ / người',
+        paymentStatus: 'Đăng giao lưu'
+      })
+    }).catch(err => console.error('Auto Google Sheets open play post sync failed:', err));
   };
 
   // Register a team for a tournament
@@ -396,6 +529,21 @@ export default function App() {
       return t;
     });
     setTournaments(updatedTours);
+
+    // Auto sync tournament registration to Google Sheets in real-time!
+    fetch('/api/alobo/forward-booking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fullName: `${newReg.teamName} (${newReg.player1} & ${newReg.player2})`,
+        phone: newReg.phone,
+        courtName: `Đăng ký giải đấu: ${newReg.tournamentName}`,
+        date: new Date().toISOString().split('T')[0],
+        timeSlot: 'Đăng Ký Giải Đấu',
+        price: 'Miễn phí (0 đ)',
+        paymentStatus: 'Chờ ban tổ chức duyệt'
+      })
+    }).catch(err => console.error('Auto Google Sheets tournament sync failed:', err));
   };
 
   return (
@@ -407,6 +555,7 @@ export default function App() {
         onOpenMatchLobby={() => setIsMatchLobbyOpen(true)}
         onOpenMySchedule={() => setIsMyScheduleOpen(true)}
         onOpenAdmin={() => setIsAdminOpen(true)}
+        onOpenTraining={() => setIsTrainingOpen(true)}
         bookingCount={bookings.length}
       />
 
@@ -507,6 +656,15 @@ export default function App() {
         onSaveTeamRegistrations={setTeamRegistrations}
         socialRevenues={socialRevenues}
         onSaveSocialRevenues={setSocialRevenues}
+        memberRegistrations={memberRegistrations}
+        onSaveMemberRegistrations={setMemberRegistrations}
+      />
+
+      {/* 6. Training & Membership Registration Modal */}
+      <TrainingModal 
+        isOpen={isTrainingOpen}
+        onClose={() => setIsTrainingOpen(false)}
+        onAddRegistration={handleRegisterMember}
       />
 
     </div>

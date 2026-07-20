@@ -127,6 +127,249 @@ const DEFAULT_SYNCED_SLOTS: SyncedSlot[] = [
   { courtName: "Sân 5", timeSlot: "21:00 - 22:00", status: "free", date: "2026-07-16" },
 ];
 
+// Config for Google Sheets Integration
+const CONFIG_PATH = path.join(process.cwd(), "alobo_config.json");
+
+interface AloboConfig {
+  googleSheetWebhookUrl: string;
+  googleSheetUrl: string;
+  googleSheetSyncedSlots?: string[]; // array of "date|courtName|timeSlot" keys to prevent duplicates
+  forwardLogs: Array<{
+    id: string;
+    fullName: string;
+    phone: string;
+    courtName: string;
+    date: string;
+    timeSlot: string;
+    price: string;
+    paymentStatus: string;
+    syncedAt: string;
+    status: "success" | "failed";
+  }>;
+}
+
+const DEFAULT_CONFIG: AloboConfig = {
+  googleSheetWebhookUrl: "",
+  googleSheetUrl: "",
+  googleSheetSyncedSlots: [],
+  forwardLogs: []
+};
+
+function loadConfig(): AloboConfig {
+  try {
+    if (fs.existsSync(CONFIG_PATH)) {
+      return JSON.parse(fs.readFileSync(CONFIG_PATH, "utf-8"));
+    }
+  } catch (err) {
+    console.error("Error reading config file", err);
+  }
+  return DEFAULT_CONFIG;
+}
+
+function saveConfig(config: AloboConfig) {
+  try {
+    fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), "utf-8");
+  } catch (err) {
+    console.error("Error saving config file", err);
+  }
+}
+
+// Ensure config file is initialized on startup
+if (!fs.existsSync(CONFIG_PATH)) {
+  saveConfig(DEFAULT_CONFIG);
+}
+
+// Helper to forward booking to Google Sheets via Apps Script Web App Webhook
+async function forwardToGoogleSheets(booking: any) {
+  const config = loadConfig();
+  const webhookUrl = config.googleSheetWebhookUrl;
+  
+  const logEntry = {
+    id: "gsl-" + Math.random().toString(36).substr(2, 9),
+    fullName: booking.fullName || "",
+    phone: booking.phone || "",
+    courtName: booking.courtName || booking.packageType || "Gói đăng ký",
+    date: booking.date || booking.contractDate || new Date().toISOString().split('T')[0],
+    timeSlot: booking.timeSlot || booking.preferredTime || "N/A",
+    price: booking.price || (booking.totalPrice ? booking.totalPrice.toLocaleString('vi-VN') + " đ" : "0 đ"),
+    paymentStatus: booking.paymentStatus || (booking.depositAmount ? `Đã cọc ${booking.depositAmount.toLocaleString('vi-VN')} đ` : "Đã đặt"),
+    syncedAt: new Date().toLocaleString("vi-VN"),
+    status: "failed" as "success" | "failed"
+  };
+
+  if (!webhookUrl) {
+    console.log("[Google Sheets] Forwarding skipped: Webhook URL is empty.");
+    config.forwardLogs = [logEntry, ...config.forwardLogs].slice(0, 50);
+    saveConfig(config);
+    return { success: false, error: "Chưa cấu hình Google Sheets Webhook URL trong hệ thống." };
+  }
+
+  // Double check if they accidentally pasted the Google Sheets Link in Webhook URL
+  if (webhookUrl.includes("docs.google.com/spreadsheets")) {
+    console.log("[Google Sheets] Forwarding skipped: Webhook URL contains a spreadsheet link instead of a Web App macro link.");
+    config.forwardLogs = [logEntry, ...config.forwardLogs].slice(0, 50);
+    saveConfig(config);
+    return { success: false, error: "Lỗi cấu hình: Webhook URL là link bảng tính, không phải link Apps Script Web App." };
+  }
+
+  try {
+    const formattedData: any = {
+      action: booking.action || "addBooking",
+      ...booking,
+      syncedAt: logEntry.syncedAt
+    };
+
+    // Enrich with Vietnamese fields for seamless compatibility with Apps Script
+    formattedData.ngay_ky = booking.contractDate || booking.date || "";
+    formattedData.ho_ten = booking.fullName || "";
+    formattedData.ngay_sinh = booking.dob || "";
+    formattedData.sdt = booking.phone || "";
+    formattedData.thoi_gian = booking.preferredTime || booking.timeSlot || "";
+    formattedData.gio_tap = booking.hoursCount || "";
+    formattedData.goi_tap = booking.packageType || booking.courtName || "";
+    formattedData.thoi_han = booking.durationMonths || "";
+    formattedData.hlv = booking.coachName || "";
+    formattedData.dich_vu = booking.serviceType || "Pickleball";
+    formattedData.gia_tri = booking.totalPrice || booking.price || 0;
+    formattedData.dat_coc = booking.depositAmount || 0;
+    formattedData.con_lai = booking.remainingAmount || 0;
+    formattedData.thuc_te = booking.actualPaid || 0;
+
+    console.log(`[Google Sheets] Forwarding to webhook: ${webhookUrl}`, formattedData);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 seconds timeout
+
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formattedData),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    // Apps Script redirects, and usually returns 200 or 302
+    if (response.ok) {
+      const respText = await response.text();
+      let respJson: any = null;
+      let isJson = false;
+      try {
+        respJson = JSON.parse(respText);
+        isJson = true;
+      } catch (e) {
+        isJson = false;
+      }
+
+      if (isJson) {
+        if (respJson && (respJson.status === "error" || respJson.status === "failed" || respJson.success === false)) {
+          logEntry.status = "failed";
+          console.error("[Google Sheets] Apps Script returned error status:", respJson);
+          config.forwardLogs = [logEntry, ...config.forwardLogs].slice(0, 50);
+          saveConfig(config);
+          return { success: false, error: `Lỗi Google Apps Script: ${respJson.message || respJson.error || JSON.stringify(respJson)}` };
+        }
+        
+        logEntry.status = "success";
+        console.log("[Google Sheets] Successfully forwarded booking!");
+        config.forwardLogs = [logEntry, ...config.forwardLogs].slice(0, 50);
+        saveConfig(config);
+        return { success: true };
+      } else {
+        // If it is HTML, check for authentication or compilation error indications
+        const isHtml = respText.toLowerCase().includes("<html") || respText.toLowerCase().includes("<!doctype");
+        if (isHtml) {
+          logEntry.status = "failed";
+          let friendlyError = "Lỗi kết nối: Google trả về trang HTML thay vì JSON.";
+          if (respText.includes("Sign in") || respText.includes("Service Login") || respText.includes("accounts.google.com") || respText.includes("login")) {
+            friendlyError = "Lỗi phân quyền Apps Script: Bạn chưa phân quyền 'Bất kỳ ai' (Anyone) khi Triển khai (Deploy). Vui lòng Triển khai mới, ở mục 'Ai có quyền truy cập' chọn 'Bất kỳ ai' (Anyone).";
+          } else if (respText.includes("script_error") || respText.includes("Script error") || respText.includes("Lỗi tập lệnh") || respText.includes("syntax error") || respText.includes("ReferenceError")) {
+            friendlyError = "Lỗi tập lệnh Google Apps Script: Code của bạn bị lỗi cú pháp hoặc lỗi logic (ví dụ: thiếu dấu ngoặc nhọn } ở hàm 'myFunction' dòng 1). Vui lòng dán lại mã Apps Script mẫu chuẩn.";
+          } else {
+            friendlyError = "Lỗi phản hồi Google Apps Script: Web App trả về giao diện HTML. Hãy chắc chắn bạn đã Deploy đúng dạng 'Web App' với cấu hình Access: 'Anyone'.";
+          }
+          console.error("[Google Sheets] HTML response received:", friendlyError);
+          config.forwardLogs = [logEntry, ...config.forwardLogs].slice(0, 50);
+          saveConfig(config);
+          return { success: false, error: friendlyError };
+        }
+
+        logEntry.status = "success";
+        console.log("[Google Sheets] Forwarded but response was not JSON:", respText.substring(0, 100));
+        config.forwardLogs = [logEntry, ...config.forwardLogs].slice(0, 50);
+        saveConfig(config);
+        return { success: true };
+      }
+    } else {
+      const respText = await response.text();
+      console.error("[Google Sheets] Server error from Apps Script webhook:", respText);
+      config.forwardLogs = [logEntry, ...config.forwardLogs].slice(0, 50);
+      saveConfig(config);
+      return { success: false, error: `Lỗi máy chủ Google (${response.status}): ${respText.substring(0, 100)}` };
+    }
+  } catch (error: any) {
+    console.error("[Google Sheets] Connection failed:", error);
+    config.forwardLogs = [logEntry, ...config.forwardLogs].slice(0, 50);
+    saveConfig(config);
+    return { success: false, error: error.message || "Không thể kết nối tới Google Webhook." };
+  }
+}
+
+// Sync newly detected booked slots to Sheets in background
+async function autoSyncNewBookingsToSheets(oldSlots: SyncedSlot[], newSlots: SyncedSlot[]) {
+  const config = loadConfig();
+  if (!config.googleSheetSyncedSlots) {
+    config.googleSheetSyncedSlots = [];
+  }
+
+  let updated = false;
+
+  for (const newSlot of newSlots) {
+    if (newSlot.status === "booked") {
+      const slotKey = `${newSlot.date}|${newSlot.courtName}|${newSlot.timeSlot}`;
+      
+      // Check if already synced
+      if (!config.googleSheetSyncedSlots.includes(slotKey)) {
+        // Find if this was already booked in oldSlots (to sync transitions to booked only)
+        const oldSlot = oldSlots.find(
+          os => os.courtName === newSlot.courtName && 
+                os.timeSlot === newSlot.timeSlot && 
+                os.date === newSlot.date
+        );
+
+        if (!oldSlot || oldSlot.status !== "booked") {
+          console.log(`[Google Sheets Auto-Sync] Syncing newly booked slot: ${slotKey}`);
+          
+          const booking = {
+            fullName: `Khách Alobo (${newSlot.courtName})`,
+            phone: "Sân đặt từ xa",
+            courtName: newSlot.courtName,
+            date: newSlot.date,
+            timeSlot: newSlot.timeSlot,
+            price: "150.000 đ",
+            paymentStatus: "Đã đặt (Alobo.vn)"
+          };
+
+          // Async forward to Google Sheets (letting it process in background)
+          forwardToGoogleSheets(booking).catch(err => {
+            console.error(`[Google Sheets Auto-Sync] Error forwarding slot ${slotKey}:`, err);
+          });
+          
+          config.googleSheetSyncedSlots.push(slotKey);
+          updated = true;
+        }
+      }
+    }
+  }
+
+  if (updated) {
+    if (config.googleSheetSyncedSlots.length > 1000) {
+      config.googleSheetSyncedSlots = config.googleSheetSyncedSlots.slice(-1000);
+    }
+    saveConfig(config);
+  }
+}
+
 function loadAloboBookings(): SyncedSlot[] {
   try {
     if (fs.existsSync(DB_PATH)) {
@@ -141,7 +384,22 @@ function loadAloboBookings(): SyncedSlot[] {
 
 function saveAloboBookings(slots: SyncedSlot[]) {
   try {
+    let oldSlots: SyncedSlot[] = [];
+    if (fs.existsSync(DB_PATH)) {
+      try {
+        const content = fs.readFileSync(DB_PATH, "utf-8");
+        oldSlots = JSON.parse(content);
+      } catch (e) {
+        console.error("Error reading old slots inside saveAloboBookings:", e);
+      }
+    }
+
     fs.writeFileSync(DB_PATH, JSON.stringify(slots, null, 2), "utf-8");
+
+    // Async trigger Sheets auto-sync
+    autoSyncNewBookingsToSheets(oldSlots, slots).catch(err => {
+      console.error("[Google Sheets Auto-Sync] Error in background sync:", err);
+    });
   } catch (err) {
     console.error("Error writing Alobo DB", err);
   }
@@ -155,6 +413,91 @@ if (!fs.existsSync(DB_PATH)) {
 // -------------------------------------------------------------
 // BACKEND API ENDPOINTS
 // -------------------------------------------------------------
+
+// Config & Logs retrieval
+app.get("/api/alobo/config", (req, res) => {
+  const config = loadConfig();
+  res.json({ success: true, config });
+});
+
+// Update Config
+app.post("/api/alobo/config", (req, res) => {
+  try {
+    const { googleSheetWebhookUrl, googleSheetUrl } = req.body;
+    const config = loadConfig();
+    config.googleSheetWebhookUrl = googleSheetWebhookUrl || "";
+    config.googleSheetUrl = googleSheetUrl || "";
+    saveConfig(config);
+    res.json({ success: true, message: "Đã lưu cấu hình Google Sheets thành công!", config });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Clear Sync Logs
+app.post("/api/alobo/config/clear-logs", (req, res) => {
+  try {
+    const config = loadConfig();
+    config.forwardLogs = [];
+    saveConfig(config);
+    res.json({ success: true, message: "Đã xoá sạch nhật ký đồng bộ!", config });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Test Google Sheets Connection
+app.post("/api/alobo/test-sheet", async (req, res) => {
+  try {
+    const testBooking = {
+      fullName: "Nguyễn Văn Test",
+      phone: "0909888888",
+      courtName: "Sân 3",
+      date: "2026-07-18",
+      timeSlot: "17:00 - 18:00",
+      price: "150.000 đ",
+      paymentStatus: "Đã thanh toán (Kiểm tra hệ thống)"
+    };
+    
+    const result = await forwardToGoogleSheets(testBooking);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Direct Forward Booking Route
+app.post("/api/alobo/forward-booking", async (req, res) => {
+  try {
+    const { action, fullName, phone } = req.body;
+    
+    // If it's a registration or custom action, bypass simple booking validation
+    if (action && action !== "addBooking") {
+      const result = await forwardToGoogleSheets(req.body);
+      return res.json({ success: true, result, payload: req.body });
+    }
+
+    const { courtName, date, timeSlot, price, paymentStatus } = req.body;
+    if (!fullName || !phone || !courtName) {
+      return res.status(400).json({ success: false, error: "Thiếu thông tin bắt buộc (Tên khách hàng, Số điện thoại, Sân đấu)." });
+    }
+
+    const booking = {
+      fullName,
+      phone,
+      courtName,
+      date: date || new Date().toISOString().split('T')[0],
+      timeSlot: timeSlot || "09:00 - 10:00",
+      price: price || "150.000",
+      paymentStatus: paymentStatus || "Đã thanh toán"
+    };
+
+    const result = await forwardToGoogleSheets(booking);
+    res.json({ success: true, result, booking });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 // 1. Get Synced Booking Schedule
 app.get("/api/alobo/sync", (req, res) => {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, User, Users, Compass, ChevronDown, Menu, X, Shield, ShoppingBag } from 'lucide-react';
+import { Calendar, User, Users, Compass, ChevronDown, Menu, X, Shield, ShoppingBag, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface NavbarProps {
@@ -7,10 +7,11 @@ interface NavbarProps {
   onOpenMatchLobby: () => void;
   onOpenMySchedule: () => void;
   onOpenAdmin: () => void;
+  onOpenTraining: () => void;
   bookingCount: number;
 }
 
-export default function Navbar({ onOpenBooking, onOpenMatchLobby, onOpenMySchedule, onOpenAdmin, bookingCount }: NavbarProps) {
+export default function Navbar({ onOpenBooking, onOpenMatchLobby, onOpenMySchedule, onOpenAdmin, onOpenTraining, bookingCount }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -84,6 +85,13 @@ export default function Navbar({ onOpenBooking, onOpenMatchLobby, onOpenMySchedu
               className="text-brand-dark/80 hover:text-brand-red font-sans font-semibold text-sm transition-colors cursor-pointer"
             >
               Vé F&B
+            </button>
+            <button 
+              onClick={onOpenTraining}
+              className="text-brand-blue hover:text-brand-red font-sans font-extrabold text-sm flex items-center gap-1 transition-all cursor-pointer bg-blue-50 hover:bg-blue-100 px-3.5 py-1.5 rounded-full border border-brand-blue/20"
+            >
+              <Sparkles className="w-4 h-4 text-brand-blue animate-pulse" />
+              Đăng Ký Gói Tập & HLV
             </button>
           </div>
 
@@ -193,6 +201,16 @@ export default function Navbar({ onOpenBooking, onOpenMatchLobby, onOpenMySchedu
                 className="block w-full text-left px-3 py-2 rounded-md text-brand-dark hover:bg-brand-light-gray font-sans font-semibold text-base"
               >
                 Vé F&B
+              </button>
+              <button 
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenTraining();
+                }}
+                className="block w-full text-left px-3 py-2 rounded-md text-brand-blue hover:text-brand-red hover:bg-blue-50 font-sans font-bold text-base flex items-center gap-1.5 transition-colors"
+              >
+                <Sparkles className="w-4 h-4 text-brand-blue animate-pulse" />
+                Đăng Ký Gói Tập & HLV
               </button>
               
               <div className="pt-4 border-t border-brand-border/40 flex flex-col gap-2">

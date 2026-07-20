@@ -82,3 +82,24 @@ export interface SocialRevenue {
   notes: string;
   createdAt: string;
 }
+
+export interface MemberRegistration {
+  id: string;
+  contractDate: string; // NGÀY KÝ HĐ
+  fullName: string;     // HỌ VÀ TÊN
+  dob: string;          // NGÀY SINH
+  phone: string;        // SĐT
+  preferredTime: string;// Thời gian
+  hoursCount: string;   // SỐ GIỜ TẬP / SỐ VÉ
+  packageType: string;  // GÓI TẬP
+  durationMonths: number; // THỜI HẠN (THÁNG)
+  coachName: string;    // HLV
+  serviceType: string;  // DỊCH VỤ
+  totalPrice: number;   // GIÁ TRỊ
+  depositAmount: number;// ĐẶT CỌC
+  remainingAmount: number; // CÒN LẠI
+  actualPaid: number;   // DTHU THỰC TẾ
+  status: 'confirmed' | 'pending';
+  createdAt: string;
+}
+

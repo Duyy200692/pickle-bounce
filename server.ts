@@ -32,9 +32,41 @@ if (fs.existsSync(FIREBASE_CONFIG_PATH)) {
         : getFirestore(firebaseApp);
       isFirebaseActive = true;
       console.log(`[Firebase] Initialized successfully with project ID: ${fbConfig.projectId}`);
+      // Clean up any test records in Firestore
+      cleanupFirestoreTestRecords();
     }
   } catch (err) {
     console.error("[Firebase] Error initializing Firebase client SDK:", err);
+  }
+}
+
+async function cleanupFirestoreTestRecords() {
+  if (!isFirebaseActive || !firestoreDb) return;
+  try {
+    console.log("[Firebase] Cleaning up test records from Firestore...");
+    // 1. Clean up test bookings
+    const bookingsSnap = await getDocs(collection(firestoreDb, "bookings"));
+    bookingsSnap.forEach(async (dDoc) => {
+      const data = dDoc.data();
+      const lowerName = (data.fullName || "").toLowerCase();
+      if (lowerName.includes("test") || data.phone === "0901234567") {
+        await deleteDoc(doc(firestoreDb, "bookings", dDoc.id));
+        console.log(`[Firebase] Cleaned up test booking document: ${dDoc.id}`);
+      }
+    });
+
+    // 2. Clean up test member registrations
+    const membersSnap = await getDocs(collection(firestoreDb, "member_registrations"));
+    membersSnap.forEach(async (dDoc) => {
+      const data = dDoc.data();
+      const lowerName = (data.fullName || "").toLowerCase();
+      if (lowerName.includes("test") || data.phone === "0901234567" || lowerName === "duy") {
+        await deleteDoc(doc(firestoreDb, "member_registrations", dDoc.id));
+        console.log(`[Firebase] Cleaned up test member registration document: ${dDoc.id}`);
+      }
+    });
+  } catch (err) {
+    console.error("[Firebase] Error during test records cleanup:", err);
   }
 }
 
@@ -501,6 +533,21 @@ async function saveFirebaseMember(member: any) {
       console.log(`[Firebase] Synced member registration ${member.id} to Firestore.`);
     } catch (err) {
       console.error(`[Firebase] Error syncing member registration:`, err);
+    }
+  }
+}
+
+async function deleteFirebaseMember(id: string) {
+  const mList = loadLocalMembers().filter(m => m.id !== id);
+  saveLocalMembers(mList);
+
+  if (isFirebaseActive && firestoreDb) {
+    try {
+      const docRef = doc(firestoreDb, "member_registrations", id);
+      await deleteDoc(docRef);
+      console.log(`[Firebase] Deleted member registration ${id} from Firestore.`);
+    } catch (err) {
+      console.error(`[Firebase] Error deleting member registration:`, err);
     }
   }
 }
@@ -1786,6 +1833,129 @@ app.post("/api/member-registrations", async (req, res) => {
     }
     await saveFirebaseMember(member);
     res.json({ success: true, memberRegistration: member, isFirebaseActive });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Parse raw member registration lists via Gemini and import them
+app.post("/api/member-registrations/parse-raw", async (req, res) => {
+  try {
+    const { rawText } = req.body;
+    if (!rawText) {
+      return res.status(400).json({ success: false, error: "Thiếu dữ liệu danh sách để phân tích." });
+    }
+
+    if (!ai) {
+      return res.status(500).json({ success: false, error: "GEMINI_API_KEY chưa cấu hình." });
+    }
+
+    const todayStr = new Date().toLocaleDateString("vi-VN"); // e.g. 20/07/2026
+
+    const parsePrompt = `
+      Bạn là một trợ lý AI phân tích danh sách đăng ký hội viên của sân Pickleball.
+      Hãy phân tích nội dung danh sách thô, bảng Excel dán vào, hoặc CSV sau đây để trích xuất danh sách hội viên đăng ký gói tập.
+      Hãy chuyển đổi thông tin về cấu trúc JSON hợp lệ khớp với các trường sau đây.
+
+      Lưu ý đặc biệt cho các trường số:
+      - totalPrice, depositAmount, remainingAmount, actualPaid: Phải là kiểu số nguyên (number). Hãy loại bỏ tất cả ký tự dấu chấm ".", chữ "đ", "VND", khoảng trắng... Ví dụ: "5.000.000 đ" thành 5000000. Nếu không thấy ghi cọc/trả, đặt depositAmount và actualPaid bằng totalPrice, và remainingAmount bằng 0.
+      - durationMonths (Thời hạn tháng): Kiểu số nguyên. Ví dụ: "Combo 10 Buổi Nhập Môn" thường hạn dùng là 3 tháng. Nếu không chỉ rõ, tự ước lượng hợp lý (thường là 3 hoặc 6).
+
+      Lưu ý cho ngày tháng:
+      - contractDate (Ngày ký HĐ): Hãy trích xuất ngày ký HĐ dưới định dạng "dd/mm/yyyy" (ví dụ: "20/07/2026"). Nếu chỉ có ngày tháng như "18/07", hãy thêm năm 2026 thành "18/07/2026". Nếu không tìm thấy, mặc định dùng ngày hiện tại: "${todayStr}".
+      - dob (Ngày sinh): Định dạng "YYYY-MM-DD" nếu có. Nếu không có đặt chuỗi rỗng "".
+
+      Lưu ý cho gói tập:
+      - packageType (Gói tập): Tên gói tập (ví dụ: "Combo 10 Buổi Nhập Môn", "Combo 20 Buổi Chuyên Sâu", "Gói tháng", v.v.)
+      - hoursCount (Số giờ tập): ví dụ: "10 giờ tập", "20 giờ tập", "Gói tháng".
+      - coachName (Tên HLV): ví dụ: "Coach Lisa", "Coach Tommy", hoặc để trống nếu không có.
+      - serviceType (Dịch vụ): ví dụ: "Tập luyện cá nhân 1-1", "Học viên lớp nhóm", hoặc tự suy luận.
+      - status: Chỉ được là 'confirmed' hoặc 'pending'. Mặc định 'confirmed'.
+    `;
+
+    const modelResponse = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: [
+        { text: parsePrompt },
+        { text: rawText }
+      ],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              fullName: { type: Type.STRING },
+              phone: { type: Type.STRING },
+              contractDate: { type: Type.STRING },
+              dob: { type: Type.STRING },
+              preferredTime: { type: Type.STRING },
+              hoursCount: { type: Type.STRING },
+              packageType: { type: Type.STRING },
+              durationMonths: { type: Type.INTEGER },
+              coachName: { type: Type.STRING },
+              serviceType: { type: Type.STRING },
+              totalPrice: { type: Type.INTEGER },
+              depositAmount: { type: Type.INTEGER },
+              remainingAmount: { type: Type.INTEGER },
+              actualPaid: { type: Type.INTEGER },
+              status: { 
+                type: Type.STRING,
+                description: "Must be 'confirmed' or 'pending'"
+              }
+            },
+            required: ["fullName", "phone", "packageType"]
+          }
+        }
+      }
+    });
+
+    const parsedText = modelResponse.text?.trim() || "[]";
+    const importedMembers = JSON.parse(parsedText) as any[];
+
+    const savedList: any[] = [];
+    for (const m of importedMembers) {
+      if (!m.id) {
+        m.id = "MEM-" + Math.floor(1000 + Math.random() * 9000);
+      }
+      if (!m.createdAt) {
+        m.createdAt = new Date().toLocaleString("vi-VN");
+      }
+      if (!m.contractDate) {
+        m.contractDate = todayStr;
+      }
+      // Ensure numeric values are numbers
+      m.totalPrice = Number(m.totalPrice) || 0;
+      m.depositAmount = m.depositAmount !== undefined ? Number(m.depositAmount) : m.totalPrice;
+      m.actualPaid = m.actualPaid !== undefined ? Number(m.actualPaid) : m.totalPrice;
+      m.remainingAmount = m.remainingAmount !== undefined ? Number(m.remainingAmount) : (m.totalPrice - m.depositAmount);
+      m.durationMonths = Number(m.durationMonths) || 3;
+      m.status = m.status || 'confirmed';
+
+      await saveFirebaseMember(m);
+      savedList.push(m);
+    }
+
+    res.json({
+      success: true,
+      message: `Đã tự động trích xuất và nhập thành công ${savedList.length} hội viên bằng AI!`,
+      members: savedList,
+      isFirebaseActive
+    });
+
+  } catch (err: any) {
+    console.error("AI Member Import Error:", err);
+    res.status(500).json({ success: false, error: err.message || "Lỗi khi trích xuất danh sách hội viên bằng AI." });
+  }
+});
+
+// Delete member registration
+app.delete("/api/member-registrations/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    await deleteFirebaseMember(id);
+    res.json({ success: true, message: `Deleted member registration ${id}`, isFirebaseActive });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }

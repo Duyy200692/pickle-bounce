@@ -190,6 +190,87 @@ export default function AdminPanel({
   const [isParsingPaste, setIsParsingPaste] = useState(false);
   const [aiPasteResult, setAiPasteResult] = useState<{ success?: boolean; error?: string; booking?: any } | null>(null);
 
+  // AI Member Importer State
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importRawText, setImportRawText] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+  const [importError, setImportError] = useState('');
+  const [importSuccessMsg, setImportSuccessMsg] = useState('');
+
+  const handleAIImport = async () => {
+    if (!importRawText.trim()) {
+      setImportError('Vui lòng nhập nội dung danh sách khách hàng.');
+      return;
+    }
+
+    setIsImporting(true);
+    setImportError('');
+    setImportSuccessMsg('');
+
+    try {
+      const res = await fetch('/api/member-registrations/parse-raw', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ rawText: importRawText })
+      });
+
+      const data = await res.json();
+      if (data.success && data.members) {
+        setImportSuccessMsg(data.message || `Đã nhập thành công ${data.members.length} khách hàng!`);
+        // Prepend the new members to the state list
+        onSaveMemberRegistrations([...data.members, ...memberRegistrations]);
+        setImportRawText('');
+      } else {
+        setImportError(data.error || 'Có lỗi xảy ra khi xử lý bằng AI.');
+      }
+    } catch (err: any) {
+      setImportError(err.message || 'Lỗi kết nối tới máy chủ.');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handleFileDropOrSelect = (e: React.DragEvent<HTMLDivElement> | React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    let file: File | null = null;
+    if ('dataTransfer' in e) {
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        file = e.dataTransfer.files[0];
+      }
+    } else {
+      if (e.target.files && e.target.files.length > 0) {
+        file = e.target.files[0];
+      }
+    }
+
+    if (!file) return;
+
+    const fileType = file.name.split('.').pop()?.toLowerCase();
+    if (fileType === 'csv' || fileType === 'txt' || fileType === 'json') {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setImportRawText(event.target.result as string);
+          setImportError('');
+        }
+      };
+      reader.readAsText(file);
+    } else if (fileType === 'xlsx' || fileType === 'xls') {
+      setImportError('File Excel (.xlsx) chứa dữ liệu nhị phân không thể đọc trực tiếp. Hãy MỞ FILE EXCEL, COPY (Ctrl+C) các dòng/bảng rồi DÁN (Ctrl+V) trực tiếp vào ô văn bản phía dưới. Trợ lý AI sẽ trích xuất chuẩn xác ngay!');
+    } else {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setImportRawText(event.target.result as string);
+          setImportError('');
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+
   // Firebase Integration State
   const [firebaseActive, setFirebaseActive] = useState(false);
   const [firebaseProjectId, setFirebaseProjectId] = useState<string | null>(null);
@@ -1433,6 +1514,32 @@ export default function AdminPanel({
                         />
                       </div>
 
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end bg-white/50 p-3 rounded-2xl border border-brand-border/20">
+                        <div className="md:col-span-3">
+                          <label className="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1">Hình ảnh đại diện giải đấu (Thumbnail URL/Path)</label>
+                          <input 
+                            type="text"
+                            value={tournamentForm.image || ''}
+                            onChange={(e) => setTournamentForm({...tournamentForm, image: e.target.value})}
+                            className="w-full bg-white border border-brand-border/40 rounded-xl px-3 py-2 text-xs text-brand-dark outline-none"
+                            placeholder="Ví dụ: https://images.unsplash.com/... hoặc đường dẫn ảnh"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {tournamentForm.image && (
+                            <img 
+                              src={tournamentForm.image} 
+                              alt="Thumbnail Preview" 
+                              className="w-10 h-10 rounded-lg object-cover border border-brand-border/30"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1599447421416-3414500d18a5?auto=format&fit=crop&q=80&w=800';
+                              }}
+                            />
+                          )}
+                          <span className="text-[10px] text-brand-gray font-medium">Xem trước</span>
+                        </div>
+                      </div>
+
                       <div className="flex justify-end gap-2 pt-2 border-t border-brand-border/40">
                         <button 
                           onClick={() => { setEditingTournamentId(null); setTournamentForm({}); }}
@@ -1493,14 +1600,29 @@ export default function AdminPanel({
               {/* 6. Tournament & Member Registrations Tab */}
               {activeTab === 'registrations' && (
                 <div className="space-y-6">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
                       <h3 className="font-display font-black text-xl text-brand-dark">Cổng Quản Lý Danh Sách Đăng Ký</h3>
                       <p className="font-sans text-xs text-brand-gray mt-1">Xem danh sách đăng ký giải đấu và các hợp đồng đăng ký gói tập/HLV của thành viên.</p>
                     </div>
                     
-                    {/* Sub Tab Switcher */}
-                    <div className="flex bg-brand-light-gray p-1 rounded-full border border-brand-border/40">
+                    <div className="flex flex-wrap items-center gap-3">
+                      {regSubTab === 'training' && (
+                        <button
+                          onClick={() => {
+                            setIsImportModalOpen(true);
+                            setImportError('');
+                            setImportSuccessMsg('');
+                          }}
+                          className="flex items-center gap-2 bg-brand-yellow hover:bg-brand-yellow/90 text-brand-dark px-4 py-2 rounded-full font-sans font-extrabold text-xs shadow-sm transition-all cursor-pointer"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          Nhập Nhanh bằng AI (Excel)
+                        </button>
+                      )}
+
+                      {/* Sub Tab Switcher */}
+                      <div className="flex bg-brand-light-gray p-1 rounded-full border border-brand-border/40">
                       <button 
                         onClick={() => setRegSubTab('training')}
                         className={`px-4 py-1.5 rounded-full font-sans font-bold text-xs transition-all cursor-pointer ${
@@ -1523,6 +1645,7 @@ export default function AdminPanel({
                       </button>
                     </div>
                   </div>
+                </div>
 
                   {regSubTab === 'tournament' ? (
                     <div className="bg-white border border-brand-border/40 rounded-2xl overflow-hidden shadow-sm">
@@ -4458,6 +4581,114 @@ function fillZero(num) {
                 </div>
               )}
 
+            </div>
+          </div>
+        )}
+
+        {/* AI Member Importer Modal */}
+        {isImportModalOpen && (
+          <div className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="bg-white rounded-[28px] w-full max-w-2xl shadow-2xl border border-brand-border/40 overflow-hidden flex flex-col max-h-[85vh]">
+              <div className="bg-brand-dark p-4 text-white flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-brand-yellow animate-pulse" />
+                  <div className="text-left">
+                    <h3 className="font-display font-black text-sm text-white">Nhập Danh Sách Hội Viên Bằng AI (Thông Minh)</h3>
+                    <p className="text-[10px] text-white/60 mt-0.5">Trích xuất tự động từ Excel, bảng Copy-Paste hoặc dữ liệu văn bản thô</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsImportModalOpen(false)}
+                  className="text-white/60 hover:text-white p-1 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-5 overflow-y-auto space-y-4 flex-grow text-xs text-brand-dark text-left">
+                {/* Visual Drag and Drop file selection area */}
+                <div 
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={handleFileDropOrSelect}
+                  className="border-2 border-dashed border-brand-border/80 hover:border-brand-yellow rounded-2xl p-6 text-center bg-brand-light-gray/20 transition-all group cursor-pointer relative"
+                >
+                  <input 
+                    type="file" 
+                    id="memberFileImport" 
+                    accept=".txt,.csv,.json"
+                    onChange={handleFileDropOrSelect}
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                  />
+                  <div className="flex flex-col items-center gap-2 pointer-events-none">
+                    <FileText className="w-8 h-8 text-brand-gray group-hover:text-brand-yellow transition-colors" />
+                    <span className="font-bold text-brand-dark">Kéo thả file danh sách (.txt, .csv) vào đây hoặc bấm để chọn file</span>
+                    <span className="text-[10px] text-brand-gray">Hỗ trợ đọc dữ liệu tự động</span>
+                  </div>
+                </div>
+
+                <div className="bg-brand-blue/5 border border-brand-blue/20 rounded-xl p-3 flex gap-2 items-start text-[11px] text-brand-dark">
+                  <span className="text-base leading-none">💡</span>
+                  <div className="leading-relaxed">
+                    <strong>Mẹo siêu nhanh từ Excel:</strong> Bạn không cần tải hay chuyển đổi file! Chỉ cần <strong>Mở file Excel của bạn, copy các dòng thông tin (Ctrl+C)</strong> rồi <strong>Dán trực tiếp (Ctrl+V)</strong> vào khung văn bản lớn bên dưới. Trợ lý AI Gemini sẽ tự bóc tách chính xác từng cột!
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block font-bold text-brand-dark uppercase tracking-wider text-[10px]">Nội dung danh sách thô dán từ Excel / Copy-paste:</label>
+                  <textarea
+                    value={importRawText}
+                    onChange={(e) => setImportRawText(e.target.value)}
+                    placeholder="Ví dụ dán:&#10;1. Nguyễn Văn A - 0901234567 - Combo 10 buổi - Cọc 1.000.000đ - Tập thứ 2,4,6&#10;2. Trần Thị B | ĐT 0911222333 | Gói 20 buổi | HLV Lisa | Đã đóng đủ 9tr"
+                    className="w-full h-44 bg-brand-light-gray/40 border border-brand-border/60 rounded-xl p-3 font-mono text-[11px] outline-none focus:border-brand-yellow focus:ring-1 focus:ring-brand-yellow transition-all resize-none"
+                  />
+                </div>
+
+                {importError && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-xl font-medium leading-relaxed">
+                    ⚠️ {importError}
+                  </div>
+                )}
+
+                {importSuccessMsg && (
+                  <div className="bg-green-50 border border-green-200 text-green-700 p-3 rounded-xl font-medium flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 flex-shrink-0 text-green-600" />
+                    <span>{importSuccessMsg}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-brand-light-gray/50 px-5 py-4 border-t border-brand-border/40 flex justify-between items-center">
+                <span className="text-[10px] text-brand-gray font-medium">Hỗ trợ bởi Gemini 3.5 AI Engine</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setImportRawText('');
+                      setImportError('');
+                      setImportSuccessMsg('');
+                    }}
+                    className="px-4 py-2 border border-brand-border/60 hover:bg-brand-light-gray rounded-xl font-bold transition-all text-[11px] cursor-pointer"
+                  >
+                    Xoá Trắng
+                  </button>
+                  <button
+                    onClick={handleAIImport}
+                    disabled={isImporting}
+                    className="flex items-center gap-1.5 bg-brand-yellow hover:bg-brand-yellow/90 disabled:opacity-50 text-brand-dark font-extrabold px-5 py-2 rounded-xl text-[11px] shadow-sm transition-all cursor-pointer"
+                  >
+                    {isImporting ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        Đang phân tích &amp; Nhập...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5" />
+                        Phân Tích &amp; Nhập Tự Động
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}

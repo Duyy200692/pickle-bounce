@@ -483,6 +483,33 @@ export default function App() {
     localStorage.setItem('pickle_bookings', JSON.stringify(newBookings));
   };
 
+  const saveMemberRegistrations = (newMembers: MemberRegistration[]) => {
+    // Sync change in local state first
+    setMemberRegistrations(newMembers);
+    localStorage.setItem('pickle_member_registrations', JSON.stringify(newMembers));
+
+    // Detect deleted members and sync to server/Firebase
+    const deleted = memberRegistrations.filter(m => !newMembers.some(nm => nm.id === m.id));
+    deleted.forEach(m => {
+      fetch(`/api/member-registrations/${m.id}`, {
+        method: 'DELETE'
+      }).catch(err => console.error('Server delete member failed:', err));
+    });
+
+    // Detect updated/edited members and sync to server/Firebase
+    const updated = newMembers.filter(nm => {
+      const current = memberRegistrations.find(m => m.id === nm.id);
+      return !current || JSON.stringify(current) !== JSON.stringify(nm);
+    });
+    updated.forEach(m => {
+      fetch('/api/member-registrations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(m)
+      }).catch(err => console.error('Server save member failed:', err));
+    });
+  };
+
   // Create a new member/coaching package registration
   const handleRegisterMember = (newReg: MemberRegistration) => {
     const updated = [newReg, ...memberRegistrations];
@@ -779,7 +806,7 @@ export default function App() {
         socialRevenues={socialRevenues}
         onSaveSocialRevenues={setSocialRevenues}
         memberRegistrations={memberRegistrations}
-        onSaveMemberRegistrations={setMemberRegistrations}
+        onSaveMemberRegistrations={saveMemberRegistrations}
         landingPageConfig={landingPageConfig}
         onSaveLandingPageConfig={setLandingPageConfig}
       />

@@ -4,8 +4,39 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
+import { initializeApp } from "firebase/app";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs, deleteDoc } from "firebase/firestore";
 
 dotenv.config();
+
+// Initialize Firebase if config exists
+let firebaseApp: any = null;
+let firestoreDb: any = null;
+let isFirebaseActive = false;
+
+const FIREBASE_CONFIG_PATH = path.join(process.cwd(), "firebase-applet-config.json");
+if (fs.existsSync(FIREBASE_CONFIG_PATH)) {
+  try {
+    const fbConfig = JSON.parse(fs.readFileSync(FIREBASE_CONFIG_PATH, "utf-8"));
+    if (fbConfig.apiKey && fbConfig.projectId) {
+      firebaseApp = initializeApp({
+        apiKey: fbConfig.apiKey,
+        authDomain: fbConfig.authDomain,
+        projectId: fbConfig.projectId,
+        storageBucket: fbConfig.storageBucket,
+        messagingSenderId: fbConfig.messagingSenderId,
+        appId: fbConfig.appId
+      });
+      firestoreDb = fbConfig.firestoreDatabaseId 
+        ? getFirestore(firebaseApp, fbConfig.firestoreDatabaseId)
+        : getFirestore(firebaseApp);
+      isFirebaseActive = true;
+      console.log(`[Firebase] Initialized successfully with project ID: ${fbConfig.projectId}`);
+    }
+  } catch (err) {
+    console.error("[Firebase] Error initializing Firebase client SDK:", err);
+  }
+}
 
 // Initialize Gemini API Client
 const ai = process.env.GEMINI_API_KEY
@@ -177,6 +208,207 @@ function saveConfig(config: AloboConfig) {
 // Ensure config file is initialized on startup
 if (!fs.existsSync(CONFIG_PATH)) {
   saveConfig(DEFAULT_CONFIG);
+}
+
+// Firebase Config Helpers
+async function getFirebaseConfig(): Promise<AloboConfig> {
+  if (isFirebaseActive && firestoreDb) {
+    try {
+      const docRef = doc(firestoreDb, "settings", "alobo_config");
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        return docSnap.data() as AloboConfig;
+      }
+    } catch (err) {
+      console.error("[Firebase] Error fetching alobo_config:", err);
+    }
+  }
+  return loadConfig();
+}
+
+async function saveFirebaseConfig(config: AloboConfig) {
+  saveConfig(config); // Always back up locally
+  if (isFirebaseActive && firestoreDb) {
+    try {
+      const docRef = doc(firestoreDb, "settings", "alobo_config");
+      await setDoc(docRef, config);
+      console.log("[Firebase] Saved config to Firestore.");
+    } catch (err) {
+      console.error("[Firebase] Error saving config to Firestore:", err);
+    }
+  }
+}
+
+// Firebase Bookings Helpers (Lượt đặt sân lẻ trên website)
+const BOOKINGS_DB_PATH = path.join(process.cwd(), "bookings.json");
+
+function loadLocalBookings(): any[] {
+  try {
+    if (fs.existsSync(BOOKINGS_DB_PATH)) {
+      return JSON.parse(fs.readFileSync(BOOKINGS_DB_PATH, "utf-8"));
+    }
+  } catch (err) {
+    console.error("Error reading local bookings:", err);
+  }
+  return [];
+}
+
+function saveLocalBookings(b: any[]) {
+  try {
+    fs.writeFileSync(BOOKINGS_DB_PATH, JSON.stringify(b, null, 2), "utf-8");
+  } catch (err) {
+    console.error("Error saving local bookings:", err);
+  }
+}
+
+async function getFirebaseBookings(): Promise<any[]> {
+  if (isFirebaseActive && firestoreDb) {
+    try {
+      const querySnapshot = await getDocs(collection(firestoreDb, "bookings"));
+      const bList: any[] = [];
+      querySnapshot.forEach((dDoc) => {
+        bList.push({ id: dDoc.id, ...dDoc.data() });
+      });
+      if (bList.length > 0) {
+        bList.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+        saveLocalBookings(bList);
+        return bList;
+      }
+    } catch (err) {
+      console.error("[Firebase] Error fetching bookings:", err);
+    }
+  }
+  return loadLocalBookings();
+}
+
+async function saveFirebaseBooking(booking: any) {
+  const bList = loadLocalBookings();
+  const index = bList.findIndex(b => b.id === booking.id);
+  if (index >= 0) {
+    bList[index] = booking;
+  } else {
+    bList.unshift(booking);
+  }
+  saveLocalBookings(bList);
+
+  if (isFirebaseActive && firestoreDb) {
+    try {
+      const docRef = doc(firestoreDb, "bookings", booking.id);
+      await setDoc(docRef, booking);
+      console.log(`[Firebase] Synced booking ${booking.id} to Firestore.`);
+    } catch (err) {
+      console.error(`[Firebase] Error syncing booking to Firestore:`, err);
+    }
+  }
+}
+
+async function deleteFirebaseBooking(id: string) {
+  const bList = loadLocalBookings().filter(b => b.id !== id);
+  saveLocalBookings(bList);
+
+  if (isFirebaseActive && firestoreDb) {
+    try {
+      const docRef = doc(firestoreDb, "bookings", id);
+      await deleteDoc(docRef);
+      console.log(`[Firebase] Deleted booking ${id} from Firestore.`);
+    } catch (err) {
+      console.error(`[Firebase] Error deleting booking:`, err);
+    }
+  }
+}
+
+// Firebase Member Registrations Helpers (Hội viên đăng ký gói tập)
+const MEMBERS_DB_PATH = path.join(process.cwd(), "member_registrations.json");
+
+function loadLocalMembers(): any[] {
+  try {
+    if (fs.existsSync(MEMBERS_DB_PATH)) {
+      return JSON.parse(fs.readFileSync(MEMBERS_DB_PATH, "utf-8"));
+    }
+  } catch (err) {
+    console.error("Error reading local members:", err);
+  }
+  return [];
+}
+
+function saveLocalMembers(m: any[]) {
+  try {
+    fs.writeFileSync(MEMBERS_DB_PATH, JSON.stringify(m, null, 2), "utf-8");
+  } catch (err) {
+    console.error("Error saving local members:", err);
+  }
+}
+
+async function getFirebaseMembers(): Promise<any[]> {
+  if (isFirebaseActive && firestoreDb) {
+    try {
+      const querySnapshot = await getDocs(collection(firestoreDb, "member_registrations"));
+      const mList: any[] = [];
+      querySnapshot.forEach((dDoc) => {
+        mList.push({ id: dDoc.id, ...dDoc.data() });
+      });
+      if (mList.length > 0) {
+        mList.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+        saveLocalMembers(mList);
+        return mList;
+      }
+    } catch (err) {
+      console.error("[Firebase] Error fetching member registrations:", err);
+    }
+  }
+  return loadLocalMembers();
+}
+
+async function saveFirebaseMember(member: any) {
+  const mList = loadLocalMembers();
+  const index = mList.findIndex(m => m.id === member.id);
+  if (index >= 0) {
+    mList[index] = member;
+  } else {
+    mList.unshift(member);
+  }
+  saveLocalMembers(mList);
+
+  if (isFirebaseActive && firestoreDb) {
+    try {
+      const docRef = doc(firestoreDb, "member_registrations", member.id);
+      await setDoc(docRef, member);
+      console.log(`[Firebase] Synced member registration ${member.id} to Firestore.`);
+    } catch (err) {
+      console.error(`[Firebase] Error syncing member registration:`, err);
+    }
+  }
+}
+
+// Firebase Slots Helpers (Khung giờ đồng bộ Alobo)
+async function getFirebaseSlots(dateStr: string): Promise<SyncedSlot[]> {
+  let formattedDate = dateStr;
+  if (dateStr.includes("/")) {
+    const parts = dateStr.split("/");
+    if (parts.length === 3) {
+      formattedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+  }
+
+  if (isFirebaseActive && firestoreDb) {
+    try {
+      const docRef = doc(firestoreDb, "court_slots", formattedDate);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data && Array.isArray(data.slots)) {
+          return data.slots as SyncedSlot[];
+        }
+      }
+    } catch (err) {
+      console.error(`[Firebase] Error fetching slots for date ${formattedDate}:`, err);
+    }
+  }
+
+  // Fallback to local
+  let allSlots = loadAloboBookings();
+  allSlots = ensureSlotsForDate(allSlots, formattedDate);
+  return allSlots.filter(s => s.date === formattedDate);
 }
 
 // Helper to forward booking to Google Sheets via Apps Script Web App Webhook
@@ -518,6 +750,18 @@ function saveAloboBookings(slots: SyncedSlot[]) {
     autoSyncNewBookingsToSheets(oldSlots, slots).catch(err => {
       console.error("[Google Sheets Auto-Sync] Error in background sync:", err);
     });
+
+    // Mirror to Firebase for each date present in slots
+    if (isFirebaseActive && firestoreDb) {
+      const dates = Array.from(new Set(slots.map(s => s.date)));
+      for (const d of dates) {
+        const dateSlots = slots.filter(s => s.date === d);
+        const docRef = doc(firestoreDb, "court_slots", d);
+        setDoc(docRef, { slots: dateSlots, lastUpdated: new Date().toISOString() }).catch(err => {
+          console.error(`[Firebase] Error async mirroring slots for date ${d}:`, err);
+        });
+      }
+    }
   } catch (err) {
     console.error("Error writing Alobo DB", err);
   }
@@ -533,19 +777,19 @@ if (!fs.existsSync(DB_PATH)) {
 // -------------------------------------------------------------
 
 // Config & Logs retrieval
-app.get("/api/alobo/config", (req, res) => {
-  const config = loadConfig();
+app.get("/api/alobo/config", async (req, res) => {
+  const config = await getFirebaseConfig();
   res.json({ success: true, config });
 });
 
 // Update Config
-app.post("/api/alobo/config", (req, res) => {
+app.post("/api/alobo/config", async (req, res) => {
   try {
     const { googleSheetWebhookUrl, googleSheetUrl } = req.body;
-    const config = loadConfig();
+    const config = await getFirebaseConfig();
     config.googleSheetWebhookUrl = googleSheetWebhookUrl || "";
     config.googleSheetUrl = googleSheetUrl || "";
-    saveConfig(config);
+    await saveFirebaseConfig(config);
     res.json({ success: true, message: "Đã lưu cấu hình Google Sheets thành công!", config });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -553,11 +797,11 @@ app.post("/api/alobo/config", (req, res) => {
 });
 
 // Clear Sync Logs
-app.post("/api/alobo/config/clear-logs", (req, res) => {
+app.post("/api/alobo/config/clear-logs", async (req, res) => {
   try {
-    const config = loadConfig();
+    const config = await getFirebaseConfig();
     config.forwardLogs = [];
-    saveConfig(config);
+    await saveFirebaseConfig(config);
     res.json({ success: true, message: "Đã xoá sạch nhật ký đồng bộ!", config });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -652,7 +896,7 @@ app.post("/api/alobo/forward-booking", async (req, res) => {
 });
 
 // 1. Get Synced Booking Schedule
-app.get("/api/alobo/sync", (req, res) => {
+app.get("/api/alobo/sync", async (req, res) => {
   const dateQuery = req.query.date as string || "2026-07-16";
   
   let formattedDate = dateQuery;
@@ -663,11 +907,7 @@ app.get("/api/alobo/sync", (req, res) => {
     }
   }
 
-  let allSlots = loadAloboBookings();
-  allSlots = ensureSlotsForDate(allSlots, formattedDate);
-  saveAloboBookings(allSlots);
-
-  const slotsForDate = allSlots.filter(slot => slot.date === formattedDate);
+  const slotsForDate = await getFirebaseSlots(formattedDate);
   
   res.json({
     success: true,
@@ -1234,28 +1474,32 @@ app.post("/api/alobo/parse-text-sync", async (req, res) => {
     }
 
     const parsePrompt = `
-      You are an expert AI booking detail scraper. Analyze this raw text or HTML copied from a booking details page on app.alobo.vn or datlich.alobo.vn.
-      Extract the customer name, phone number, court name, timeslot, and price.
+      You are an expert AI booking detail scraper. Analyze this raw text, HTML, or copy-pasted spreadsheet cells.
+      Identify any and all booking entries within the text. Each booking entry should have a customer name, court name, and time slot.
+      The text may be a single booking detail page, or multiple rows/columns copied from an Excel sheet or Google Sheet of bookings.
       
       Look for patterns like:
-      - Customer Name (KH, Tên khách hàng, Họ tên, Tên, Người đặt): E.g., "Anh Khanh", "Chị Hà", "A Toàn"
-      - Phone Number (SĐT, Điện thoại, Số điện thoại, Sdt): usually starts with 0 and has 9-11 digits
+      - Customer Name (KH, Tên khách hàng, Họ tên, Tên, Người đặt, Khách hàng): E.g., "Anh Khanh", "Chị Hà", "A Toàn"
+      - Phone Number (SĐT, Điện thoại, Số điện thoại, Sdt): usually starts with 0 and has 9-11 digits. If not found, use "Alobo App".
       - Court Name (Sân, Sân số, Court): E.g., "Sân 1", "Sân 2", etc.
-      - Time Slot (Thời gian, Giờ, Giờ chơi, Khung giờ): E.g., "17:00 - 18:00", "08:00 - 09:00", etc. Format should be HH:mm - HH:mm
-      - Price (Tiền, Tổng đơn, Chuyển khoản, Đơn giá, Đơn giá/giờ): E.g., "150.000", "300.000 đ".
+      - Time Slot (Thời gian, Giờ, Giờ chơi, Khung giờ, Giờ đặt): E.g., "17:00 - 18:00", "08:00 - 09:00", etc. Format should be HH:mm - HH:mm.
+      - Price (Tiền, Tổng đơn, Chuyển khoản, Đơn giá, Đơn giá/giờ, Tổng cộng): E.g., "150.000", "300.000 đ". If not found, use "150.000 đ".
+      - Payment Status (Trạng thái, Giao dịch): E.g., "Đã thanh toán" or "Chưa thanh toán". If not found, use "Đã thanh toán (AI Copy-Paste)".
 
-      Convert this raw text into a single structured JSON object matching this exact schema:
-      {
-        "fullName": "Name of customer",
-        "phone": "Phone number",
-        "courtName": "Sân 1",
-        "timeSlot": "17:00 - 18:00",
-        "price": "150.000 đ",
-        "paymentStatus": "Đã thanh toán (AI Copy-Paste)"
-      }
+      Convert this raw text into a structured JSON ARRAY containing one or more booking objects matching this exact schema:
+      [
+        {
+          "fullName": "Name of customer",
+          "phone": "Phone number",
+          "courtName": "Sân 1",
+          "timeSlot": "17:00 - 18:00",
+          "price": "150.000 đ",
+          "paymentStatus": "Đã thanh toán (AI Copy-Paste)"
+        }
+      ]
       
       Ensure your outputs are completely accurate to the text. If any field is not found, use a reasonable default.
-      Ensure the output is STRICTLY a JSON object, no markdown code blocks, no trailing comments.
+      Ensure the output is STRICTLY a JSON array, no markdown code blocks, no trailing comments.
     `;
 
     const modelResponse = await ai.models.generateContent({
@@ -1267,40 +1511,56 @@ app.post("/api/alobo/parse-text-sync", async (req, res) => {
       config: {
         responseMimeType: "application/json",
         responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            fullName: { type: Type.STRING },
-            phone: { type: Type.STRING },
-            courtName: { type: Type.STRING },
-            timeSlot: { type: Type.STRING },
-            price: { type: Type.STRING },
-            paymentStatus: { type: Type.STRING }
-          },
-          required: ["fullName", "phone", "courtName", "timeSlot", "price"]
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              fullName: { type: Type.STRING },
+              phone: { type: Type.STRING },
+              courtName: { type: Type.STRING },
+              timeSlot: { type: Type.STRING },
+              price: { type: Type.STRING },
+              paymentStatus: { type: Type.STRING }
+            },
+            required: ["fullName", "courtName", "timeSlot"]
+          }
         }
       }
     });
 
-    const parsedText = modelResponse.text?.trim() || "{}";
-    const booking = JSON.parse(parsedText);
+    const parsedText = modelResponse.text?.trim() || "[]";
+    const bookings = JSON.parse(parsedText) as Array<{
+      fullName: string;
+      phone?: string;
+      courtName: string;
+      timeSlot: string;
+      price?: string;
+      paymentStatus?: string;
+      date?: string;
+    }>;
 
-    if (booking && booking.fullName) {
-      booking.date = formattedDate;
-      if (!booking.paymentStatus) {
-        booking.paymentStatus = "Đã thanh toán (AI Copy-Paste)";
-      }
+    const results = [];
+    if (bookings && bookings.length > 0) {
+      const allSlots = loadAloboBookings();
+      let updatedLocalDb = false;
 
-      const result = await forwardToGoogleSheets(booking);
+      for (const booking of bookings) {
+        if (!booking.fullName || !booking.courtName || !booking.timeSlot) continue;
 
-      // Also update local database cache for this court and hour slot as booked
-      try {
-        const allSlots = loadAloboBookings();
+        booking.date = formattedDate;
+        if (!booking.phone) booking.phone = "Alobo App";
+        if (!booking.price) booking.price = "150.000 đ";
+        if (!booking.paymentStatus) booking.paymentStatus = "Đã thanh toán (AI Copy-Paste)";
+
+        const result = await forwardToGoogleSheets(booking as any);
+        results.push({ booking, result });
+
+        // Update local database cache
         const targetCourt = booking.courtName;
         const targetTime = booking.timeSlot;
         
-        let updatedLocalSlot = false;
-        const updatedSlots = allSlots.map(slot => {
-          if (slot.date !== formattedDate) return slot;
+        allSlots.forEach(slot => {
+          if (slot.date !== formattedDate) return;
 
           const isCourtMatch = slot.courtName.toLowerCase() === targetCourt.toLowerCase() ||
                                slot.courtName.includes(targetCourt) ||
@@ -1311,27 +1571,21 @@ app.post("/api/alobo/parse-text-sync", async (req, res) => {
           const isHourMatch = dbHour && bookingHour && dbHour === bookingHour;
           
           if (isCourtMatch && isHourMatch) {
-            updatedLocalSlot = true;
-            return {
-              ...slot,
-              status: "booked" as "booked" | "locked" | "free"
-            };
+            updatedLocalDb = true;
+            slot.status = "booked" as "booked" | "locked" | "free";
           }
-          return slot;
         });
-        
-        if (updatedLocalSlot) {
-          saveAloboBookings(updatedSlots);
-        }
-      } catch (dbErr) {
-        console.error("Failed to update local bookings cache:", dbErr);
+      }
+
+      if (updatedLocalDb) {
+        saveAloboBookings(allSlots);
       }
 
       return res.json({
         success: true,
-        message: `Trích xuất AI và đồng bộ Google Sheets thành công cho ${booking.fullName}!`,
-        booking: booking,
-        result: result
+        message: `Trích xuất AI và đồng bộ Google Sheets thành công cho ${bookings.length} lượt đặt sân!`,
+        bookings: bookings,
+        results: results
       });
     }
 
@@ -1341,6 +1595,112 @@ app.post("/api/alobo/parse-text-sync", async (req, res) => {
     console.error("Parse text sync error:", err);
     res.status(500).json({ success: false, error: err.message || "Lỗi khi xử lý trích xuất văn bản AI." });
   }
+});
+
+// -------------------------------------------------------------
+// CLOUD SYNCED WEBSITES & MEMBER DATA ENDPOINTS
+// -------------------------------------------------------------
+
+// Get all website bookings (persisted in Firestore if active, else local json)
+app.get("/api/bookings", async (req, res) => {
+  try {
+    const list = await getFirebaseBookings();
+    res.json({ success: true, bookings: list, isFirebaseActive });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Create/Update website booking
+app.post("/api/bookings", async (req, res) => {
+  try {
+    const booking = req.body;
+    if (!booking.id) {
+      booking.id = "B-" + Math.floor(1000 + Math.random() * 9000);
+    }
+    if (!booking.createdAt) {
+      booking.createdAt = new Date().toISOString();
+    }
+    await saveFirebaseBooking(booking);
+    res.json({ success: true, booking, isFirebaseActive });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Delete website booking
+app.delete("/api/bookings/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    await deleteFirebaseBooking(id);
+    res.json({ success: true, message: `Deleted booking ${id}`, isFirebaseActive });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Get all member registrations
+app.get("/api/member-registrations", async (req, res) => {
+  try {
+    const list = await getFirebaseMembers();
+    res.json({ success: true, memberRegistrations: list, isFirebaseActive });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Create/Update member registration
+app.post("/api/member-registrations", async (req, res) => {
+  try {
+    const member = req.body;
+    if (!member.id) {
+      member.id = "MEM-" + Math.floor(1000 + Math.random() * 9000);
+    }
+    if (!member.createdAt) {
+      member.createdAt = new Date().toLocaleString("vi-VN");
+    }
+    await saveFirebaseMember(member);
+    res.json({ success: true, memberRegistration: member, isFirebaseActive });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Bulk Import/Initialize Firebase with frontend state
+app.post("/api/firebase/bulk-sync", async (req, res) => {
+  try {
+    const { bookings, memberRegistrations } = req.body;
+    let syncedCount = 0;
+
+    if (isFirebaseActive && firestoreDb) {
+      if (Array.isArray(bookings)) {
+        for (const bk of bookings) {
+          await saveFirebaseBooking(bk);
+          syncedCount++;
+        }
+      }
+      if (Array.isArray(memberRegistrations)) {
+        for (const mb of memberRegistrations) {
+          await saveFirebaseMember(mb);
+          syncedCount++;
+        }
+      }
+      res.json({ success: true, message: `Đã đồng bộ thành công ${syncedCount} bản ghi lên Firebase đám mây!`, isFirebaseActive });
+    } else {
+      res.status(400).json({ success: false, error: "Firebase chưa được kích hoạt hoặc không thể kết nối." });
+    }
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Firebase status endpoint
+app.get("/api/firebase/status", (req, res) => {
+  res.json({
+    success: true,
+    isFirebaseActive,
+    projectId: isFirebaseActive ? (JSON.parse(fs.readFileSync(FIREBASE_CONFIG_PATH, "utf-8")).projectId) : null
+  });
 });
 
 // -------------------------------------------------------------

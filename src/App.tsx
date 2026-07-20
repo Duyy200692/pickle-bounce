@@ -366,19 +366,66 @@ export default function App() {
     localStorage.setItem('pickle_member_registrations', JSON.stringify(memberRegistrations));
   }, [memberRegistrations]);
 
-  // Load bookings from LocalStorage on mount
+  // Load bookings and member registrations from Backend/Firebase on mount
   useEffect(() => {
-    const savedBookings = localStorage.getItem('pickle_bookings');
-    if (savedBookings) {
-      try {
-        setBookings(JSON.parse(savedBookings));
-      } catch (e) {
-        console.error('Error parsing saved bookings', e);
-      }
-    }
+    // 1. Fetch Bookings
+    fetch('/api/bookings')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.bookings && data.bookings.length > 0) {
+          setBookings(data.bookings);
+        } else {
+          // Fallback to localstorage
+          const saved = localStorage.getItem('pickle_bookings');
+          if (saved) {
+            try {
+              const parsed = JSON.parse(saved);
+              setBookings(parsed);
+              if (data.isFirebaseActive) {
+                fetch('/api/firebase/bulk-sync', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ bookings: parsed })
+                }).catch(err => console.error('Auto initial bookings sync failed:', err));
+              }
+            } catch (e) {
+              console.error('Error parsing saved bookings', e);
+            }
+          }
+        }
+      })
+      .catch(err => console.error('Error fetching bookings from server:', err));
+
+    // 2. Fetch Member Registrations
+    fetch('/api/member-registrations')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.memberRegistrations && data.memberRegistrations.length > 0) {
+          setMemberRegistrations(data.memberRegistrations);
+        } else {
+          // Fallback to localstorage
+          const saved = localStorage.getItem('pickle_member_registrations');
+          if (saved) {
+            try {
+              const parsed = JSON.parse(saved);
+              setMemberRegistrations(parsed);
+              if (data.isFirebaseActive) {
+                fetch('/api/firebase/bulk-sync', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ memberRegistrations: parsed })
+                }).catch(err => console.error('Auto initial member sync failed:', err));
+              }
+            } catch (e) {
+              console.error('Error parsing saved registrations', e);
+            }
+          }
+        }
+      })
+      .catch(err => console.error('Error fetching members from server:', err));
   }, []);
 
-  // Sync bookings to LocalStorage on change
+  // Sync bookings to LocalStorage on change and keep local state
   const saveBookings = (newBookings: Booking[]) => {
     setBookings(newBookings);
     localStorage.setItem('pickle_bookings', JSON.stringify(newBookings));
@@ -389,6 +436,13 @@ export default function App() {
     const updated = [newReg, ...memberRegistrations];
     setMemberRegistrations(updated);
     
+    // Sync to server/Firebase!
+    fetch('/api/member-registrations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newReg)
+    }).catch(err => console.error('Server sync failed for new member:', err));
+
     // Auto sync registration to Google Sheets in real-time!
     fetch('/api/alobo/forward-booking', {
       method: 'POST',
@@ -418,6 +472,13 @@ export default function App() {
   const handleAddBooking = (newBooking: Booking) => {
     const updated = [newBooking, ...bookings];
     saveBookings(updated);
+
+    // Sync to server/Firebase!
+    fetch('/api/bookings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newBooking)
+    }).catch(err => console.error('Server sync failed for new booking:', err));
 
     // If "Open Play" was enabled, automatically publish an open play matchup to the community lobby!
     if (newBooking.isOpenPlay) {
@@ -458,6 +519,11 @@ export default function App() {
   const handleCancelBooking = (id: string) => {
     const filtered = bookings.filter(b => b.id !== id);
     saveBookings(filtered);
+
+    // Delete on server/Firebase!
+    fetch(`/api/bookings/${id}`, {
+      method: 'DELETE'
+    }).catch(err => console.error('Server delete failed:', err));
   };
 
   // Join an existing open play matchup

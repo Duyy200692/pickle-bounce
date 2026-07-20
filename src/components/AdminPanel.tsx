@@ -4,7 +4,7 @@ import {
   Trash2, Edit, Check, Lock, Plus, LogOut, Clock, Sparkles, 
   ShieldCheck, RefreshCw, FileText, CheckCircle,
   DollarSign, TrendingUp, BarChart3, PieChart, PlusCircle, CalendarDays,
-  Copy, ExternalLink, Database, AlertTriangle
+  Copy, ExternalLink, Database, AlertTriangle, Search, Award, UserCheck, CreditCard
 } from 'lucide-react';
 import { Court, Booking, OpenPlay, Tournament, TeamRegistration, SocialRevenue, MemberRegistration } from '../types';
 
@@ -27,7 +27,7 @@ interface AdminPanelProps {
   onSaveMemberRegistrations: (regs: MemberRegistration[]) => void;
 }
 
-type AdminTab = 'dashboard' | 'courts' | 'bookings' | 'openplays' | 'tournaments' | 'registrations' | 'revenue' | 'alobo_sync';
+type AdminTab = 'dashboard' | 'courts' | 'bookings' | 'openplays' | 'tournaments' | 'registrations' | 'revenue' | 'alobo_sync' | 'customer_lookup';
 
 export default function AdminPanel({
   isOpen,
@@ -52,6 +52,10 @@ export default function AdminPanel({
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [regSubTab, setRegSubTab] = useState<'tournament' | 'training'>('training');
   const [authError, setAuthError] = useState('');
+
+  // Customer search states
+  const [customerSearchKeyword, setCustomerSearchKeyword] = useState('');
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
 
   // Editing structures
   const [editingCourtId, setEditingCourtId] = useState<string | null>(null);
@@ -148,6 +152,45 @@ export default function AdminPanel({
   const [aiPasteText, setAiPasteText] = useState('');
   const [isParsingPaste, setIsParsingPaste] = useState(false);
   const [aiPasteResult, setAiPasteResult] = useState<{ success?: boolean; error?: string; booking?: any } | null>(null);
+
+  // Firebase Integration State
+  const [firebaseActive, setFirebaseActive] = useState(false);
+  const [firebaseProjectId, setFirebaseProjectId] = useState<string | null>(null);
+  const [isBulkSyncing, setIsBulkSyncing] = useState(false);
+
+  // Fetch Firebase Status
+  React.useEffect(() => {
+    fetch('/api/firebase/status')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setFirebaseActive(data.isFirebaseActive);
+          setFirebaseProjectId(data.projectId);
+        }
+      })
+      .catch(err => console.error('Error fetching firebase status:', err));
+  }, []);
+
+  const handleFirebaseBulkSync = async () => {
+    setIsBulkSyncing(true);
+    try {
+      const res = await fetch('/api/firebase/bulk-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookings, memberRegistrations })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Đồng bộ hóa đám mây Firebase thành công! Tất cả danh sách khách hàng và lịch đặt sân hiện tại đã được lưu vào Firestore cá nhân của bạn.');
+      } else {
+        alert('Đồng bộ hóa thất bại: ' + (data.error || 'Vui lòng kiểm tra cấu hình Firebase.'));
+      }
+    } catch (err: any) {
+      alert('Không thể kết nối đến máy chủ: ' + err.message);
+    } finally {
+      setIsBulkSyncing(false);
+    }
+  };
 
   const getSheetId = () => {
     const match = googleSheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
@@ -274,7 +317,8 @@ export default function AdminPanel({
       if (data.success) {
         setAiPasteResult({
           success: true,
-          booking: data.booking
+          bookings: data.bookings,
+          booking: data.bookings?.[0]
         });
         setAiPasteText('');
         fetchConfig(); // Reload sync logs
@@ -700,6 +744,21 @@ export default function AdminPanel({
                 <span>Đồng Bộ Alobo & Sheets</span>
                 <span className="bg-[#4285F4] text-white text-[9px] px-1.5 py-0.5 rounded ml-auto font-black font-sans uppercase">
                   AUTO
+                </span>
+              </button>
+
+              <button 
+                onClick={() => { setActiveTab('customer_lookup'); setEditingCourtId(null); setEditingTournamentId(null); setEditingOpenPlayId(null); }}
+                className={`w-full text-left px-3 py-2.5 rounded-xl font-sans font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
+                  activeTab === 'customer_lookup' 
+                    ? 'bg-brand-red text-white shadow-sm' 
+                    : 'text-brand-dark/80 hover:bg-white hover:text-brand-red'
+                }`}
+              >
+                <Search className="w-4 h-4 flex-shrink-0" />
+                <span>Tra Cứu Khách Hàng</span>
+                <span className="bg-green-600 text-white text-[9px] px-1.5 py-0.5 rounded ml-auto font-black font-sans uppercase font-sans">
+                  TÌM
                 </span>
               </button>
             </div>
@@ -2077,6 +2136,53 @@ export default function AdminPanel({
                     </p>
                   </div>
 
+                  {/* FIREBASE PERSONAL CLOUD INTEGRATION CARD */}
+                  <div className={`border p-5 rounded-2xl text-xs space-y-3 shadow-sm transition-all ${
+                    firebaseActive 
+                      ? 'bg-gradient-to-r from-[#ECEFF1] to-[#CFD8DC] border-slate-300' 
+                      : 'bg-amber-50 border-amber-200'
+                  }`}>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="font-black flex items-center gap-2 text-slate-900 text-sm">
+                          <Database className="w-5 h-5 text-indigo-600" />
+                          <span>HỆ THỐNG CƠ SỞ DỮ LIỆU ĐÁM MÂY CÁ NHÂN (FIREBASE CLOUD)</span>
+                          {firebaseActive ? (
+                            <span className="bg-green-600 text-white font-sans text-[10px] font-black px-2.5 py-0.5 rounded-full animate-pulse flex items-center gap-1">
+                              ● ĐÃ KẾT NỐI
+                            </span>
+                          ) : (
+                            <span className="bg-amber-600 text-white font-sans text-[10px] font-black px-2.5 py-0.5 rounded-full">
+                              NGOẠI TUYẾN (LOCAL STATE)
+                            </span>
+                          )}
+                        </div>
+                        <p className="font-sans text-[11px] text-slate-700 leading-relaxed max-w-2xl text-left">
+                          {firebaseActive ? (
+                            <span>
+                              Dữ liệu danh sách khách hàng, hợp đồng gói tập và lịch đặt sân vãng lai của bạn hiện đang được lưu trữ an toàn và lâu dài trên <strong>Cơ sở dữ liệu Firestore Đám mây</strong> của dự án Firebase cá nhân: <code className="bg-slate-200/80 px-1.5 py-0.5 rounded font-mono text-slate-800 font-bold">{firebaseProjectId}</code>.
+                            </span>
+                          ) : (
+                            <span>
+                              Cảnh báo: Hiện hệ thống đang lưu trữ dữ liệu cục bộ trong bộ nhớ cache trình duyệt. Hãy kết nối Firebase để đảm bảo dữ liệu không bị thất lạc khi xóa lịch sử web.
+                            </span>
+                          )}
+                        </p>
+                      </div>
+
+                      {firebaseActive && (
+                        <button
+                          onClick={handleFirebaseBulkSync}
+                          disabled={isBulkSyncing}
+                          className="bg-indigo-600 hover:bg-indigo-700 text-white font-sans font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-sm flex items-center justify-center gap-1.5 flex-shrink-0 disabled:opacity-50"
+                        >
+                          <RefreshCw className={`w-4 h-4 ${isBulkSyncing ? 'animate-spin' : ''}`} />
+                          {isBulkSyncing ? 'Đang đồng bộ...' : 'Đồng bộ hóa lại tất cả'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
                   {/* LIVE Status and User Alert Panel */}
                   <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 p-5 rounded-2xl text-xs space-y-3 shadow-sm">
                     <div className="font-bold flex items-center gap-2 text-emerald-950 text-sm">
@@ -2414,17 +2520,27 @@ export default function AdminPanel({
                             aiPasteResult.success ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-brand-red border border-brand-red-light/30'
                           }`}>
                             {aiPasteResult.success ? (
-                              <div className="text-left space-y-1">
+                              <div className="text-left space-y-1.5">
                                 <div className="font-bold text-green-950 flex items-center gap-1.5">
                                   ✓ Trích xuất &amp; Đồng bộ Google Sheets thành công!
                                 </div>
-                                <div className="grid grid-cols-2 gap-2 mt-2 bg-white/60 p-2.5 rounded-lg border border-green-100 font-sans text-[11px]">
-                                  <div><span className="text-brand-gray">Khách hàng:</span> <strong className="text-brand-dark">{aiPasteResult.booking?.fullName}</strong></div>
-                                  <div><span className="text-brand-gray">Số điện thoại:</span> <strong className="text-brand-dark">{aiPasteResult.booking?.phone}</strong></div>
-                                  <div><span className="text-brand-gray">Sân đấu:</span> <strong className="text-brand-dark">{aiPasteResult.booking?.courtName}</strong></div>
-                                  <div><span className="text-brand-gray">Khung giờ:</span> <strong className="text-brand-dark">{aiPasteResult.booking?.timeSlot}</strong></div>
-                                  <div><span className="text-brand-gray">Thành tiền:</span> <strong className="text-brand-dark text-[#0F9D58]">{aiPasteResult.booking?.price}</strong></div>
-                                  <div><span className="text-brand-gray">Ghi chú:</span> <strong className="text-brand-dark">{aiPasteResult.booking?.paymentStatus}</strong></div>
+                                <div className="text-[10px] text-green-700 font-semibold">
+                                  Đã phát hiện và ghi nhận {aiPasteResult.bookings?.length || 1} lượt đặt sân:
+                                </div>
+                                <div className="space-y-2 mt-2 max-h-60 overflow-y-auto pr-1">
+                                  {(aiPasteResult.bookings || [aiPasteResult.booking]).map((b: any, index: number) => (
+                                    <div key={index} className="bg-white/70 p-2.5 rounded-lg border border-green-100 font-sans text-[11px] grid grid-cols-2 gap-x-2 gap-y-1">
+                                      <div className="col-span-2 border-b border-green-200/50 pb-1 mb-1 font-bold text-green-900 flex justify-between">
+                                        <span>Lượt đặt #{index + 1}</span>
+                                        <span className="text-[#0F9D58]">{b.price}</span>
+                                      </div>
+                                      <div><span className="text-brand-gray">Khách hàng:</span> <strong className="text-brand-dark">{b.fullName}</strong></div>
+                                      <div><span className="text-brand-gray">Số điện thoại:</span> <strong className="text-brand-dark">{b.phone}</strong></div>
+                                      <div><span className="text-brand-gray">Sân đấu:</span> <strong className="text-brand-dark">{b.courtName}</strong></div>
+                                      <div><span className="text-brand-gray">Khung giờ:</span> <strong className="text-brand-dark">{b.timeSlot}</strong></div>
+                                      <div className="col-span-2 text-[10px] text-brand-gray/80 italic mt-0.5">{b.paymentStatus}</div>
+                                    </div>
+                                  ))}
                                 </div>
                               </div>
                             ) : (
@@ -3439,6 +3555,385 @@ function fillZero(num) {
 
                 </div>
               )}
+
+              {/* 9. Customer Lookup VIP Hub Tab */}
+              {activeTab === 'customer_lookup' && (() => {
+                // Extract all unique customers across bookings, memberRegistrations, and syncLogs
+                const customersMap: { [key: string]: {
+                  id: string;
+                  fullName: string;
+                  phone: string;
+                  bookings: Array<{
+                    date: string;
+                    timeSlot: string;
+                    courtName: string;
+                    price: number;
+                    priceStr?: string;
+                    source: 'Website' | 'Alobo Sync' | 'Đăng ký gói';
+                    status: string;
+                  }>;
+                  packages: MemberRegistration[];
+                  totalSpent: number;
+                } } = {};
+
+                // Process memberRegistrations (Gói tập)
+                memberRegistrations.forEach((m, idx) => {
+                  const rawPhone = m.phone || '';
+                  const key = (rawPhone || m.fullName || `member-${idx}`).trim().toLowerCase();
+                  if (!key) return;
+                  if (!customersMap[key]) {
+                    customersMap[key] = {
+                      id: m.id || `c-mem-${idx}`,
+                      fullName: m.fullName,
+                      phone: rawPhone,
+                      bookings: [],
+                      packages: [],
+                      totalSpent: 0
+                    };
+                  }
+                  customersMap[key].packages.push(m);
+                  customersMap[key].totalSpent += m.actualPaid || 0;
+                });
+
+                // Process website bookings
+                bookings.forEach((b, idx) => {
+                  if (b.status !== 'confirmed') return;
+                  const rawPhone = b.phone || '';
+                  const key = (rawPhone || b.fullName || `booking-${idx}`).trim().toLowerCase();
+                  if (!key) return;
+                  if (!customersMap[key]) {
+                    customersMap[key] = {
+                      id: b.id || `c-bk-${idx}`,
+                      fullName: b.fullName,
+                      phone: rawPhone,
+                      bookings: [],
+                      packages: [],
+                      totalSpent: 0
+                    };
+                  }
+                  customersMap[key].bookings.push({
+                    date: b.date,
+                    timeSlot: b.timeSlot,
+                    courtName: b.courtName,
+                    price: b.totalPrice || 150000,
+                    source: 'Website',
+                    status: b.status
+                  });
+                  customersMap[key].totalSpent += b.totalPrice || 0;
+                });
+
+                // Process Alobo sync logs
+                syncLogs.forEach((l, idx) => {
+                  const rawPhone = l.phone || '';
+                  const key = (rawPhone || l.fullName || `log-${idx}`).trim().toLowerCase();
+                  if (!key) return;
+                  if (l.fullName === 'Khách Alobo' && l.phone === 'Alobo App') return; // Ignore pure anonymous syncs
+                  if (!customersMap[key]) {
+                    customersMap[key] = {
+                      id: l.id || `c-log-${idx}`,
+                      fullName: l.fullName,
+                      phone: rawPhone,
+                      bookings: [],
+                      packages: [],
+                      totalSpent: 0
+                    };
+                  }
+                  
+                  let numericPrice = 0;
+                  if (l.price) {
+                    const cleaned = l.price.replace(/[^0-9]/g, '');
+                    numericPrice = parseInt(cleaned) || 0;
+                  }
+                  
+                  customersMap[key].bookings.push({
+                    date: l.date,
+                    timeSlot: l.timeSlot,
+                    courtName: l.courtName,
+                    price: numericPrice,
+                    priceStr: l.price,
+                    source: 'Alobo Sync',
+                    status: l.status === 'success' ? 'confirmed' : 'pending'
+                  });
+                  customersMap[key].totalSpent += numericPrice;
+                });
+
+                const allCustomersList = Object.values(customersMap);
+
+                // Filter matching search keywords
+                const filteredCustomers = allCustomersList.filter(c => {
+                  const keyword = customerSearchKeyword.trim().toLowerCase();
+                  if (!keyword) return true;
+                  return c.fullName.toLowerCase().includes(keyword) || c.phone.includes(keyword);
+                });
+
+                // Find currently selected customer
+                let selectedCustomer = filteredCustomers.find(c => c.id === selectedCustomerId);
+                if (!selectedCustomer && filteredCustomers.length > 0) {
+                  selectedCustomer = filteredCustomers[0];
+                }
+
+                return (
+                  <div className="space-y-6 animate-fadeIn text-left">
+                    <div>
+                      <h3 className="font-display font-black text-xl text-brand-dark flex items-center gap-2">
+                        <Users className="w-6 h-6 text-brand-red bg-brand-red-light/10 p-1 rounded-full" />
+                        Hồ Sơ &amp; Tra Cứu Khách Hàng (VIP)
+                      </h3>
+                      <p className="font-sans text-xs text-brand-gray mt-1">
+                        Tìm kiếm khách hàng, kiểm tra tần suất sử dụng sân đấu, lịch sử đặt sân từ Alobo/Website và tra cứu gói tập (combo) của hội viên.
+                      </p>
+                    </div>
+
+                    {/* Search & Statistics Bar */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center bg-brand-light-gray/60 p-4 rounded-2xl border border-brand-border/40">
+                      <div className="lg:col-span-5 relative">
+                        <Search className="w-4 h-4 text-brand-gray absolute left-3 top-1/2 transform -translate-y-1/2" />
+                        <input 
+                          type="text"
+                          value={customerSearchKeyword}
+                          onChange={(e) => {
+                            setCustomerSearchKeyword(e.target.value);
+                            setSelectedCustomerId(null); // Reset selection on search
+                          }}
+                          placeholder="Tìm nhanh theo Tên hoặc Số điện thoại..."
+                          className="w-full bg-white border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl pl-9 pr-4 py-2 text-xs font-semibold text-brand-dark outline-none transition-all"
+                        />
+                      </div>
+                      <div className="lg:col-span-7 flex flex-wrap gap-4 text-[11px] font-bold text-brand-dark uppercase tracking-wider justify-end">
+                        <span className="bg-white px-3 py-1.5 rounded-xl border border-brand-border/30 shadow-sm">
+                          Tổng số khách ghi nhận: <strong className="text-brand-red text-xs">{allCustomersList.length}</strong>
+                        </span>
+                        <span className="bg-white px-3 py-1.5 rounded-xl border border-brand-border/30 shadow-sm">
+                          Hội viên mua gói: <strong className="text-brand-blue text-xs">{allCustomersList.filter(c => c.packages.length > 0).length}</strong>
+                        </span>
+                        <span className="bg-white px-3 py-1.5 rounded-xl border border-brand-border/30 shadow-sm">
+                          Khách hàng thân thiết: <strong className="text-green-600 text-xs">{allCustomersList.filter(c => c.bookings.length >= 2).length}</strong>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Main UI Columns */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                      
+                      {/* Left Column: Customers List */}
+                      <div className="lg:col-span-4 bg-white border border-brand-border/40 rounded-2xl overflow-hidden shadow-sm flex flex-col max-h-[60vh]">
+                        <div className="bg-brand-light-gray px-4 py-3 font-display font-bold text-xs text-brand-gray border-b border-brand-border/40 flex justify-between">
+                          <span>Danh sách tìm thấy ({filteredCustomers.length})</span>
+                          <span>Chi tiêu</span>
+                        </div>
+
+                        <div className="overflow-y-auto divide-y divide-brand-border/20 flex-grow max-h-[50vh] dark-scroll">
+                          {filteredCustomers.length === 0 ? (
+                            <div className="p-8 text-center text-xs text-brand-gray">
+                              Không tìm thấy khách hàng nào khớp với từ khoá.
+                            </div>
+                          ) : (
+                            filteredCustomers.map((c) => {
+                              const hasActivePackage = c.packages.length > 0;
+                              const isLoyal = c.bookings.length >= 2;
+                              
+                              let badgeColor = "bg-gray-100 text-gray-600";
+                              let badgeText = "Khách mới";
+                              if (hasActivePackage) {
+                                badgeColor = "bg-brand-blue/10 text-brand-blue border border-brand-blue/20";
+                                badgeText = "💎 GÓI TẬP";
+                              } else if (isLoyal) {
+                                badgeColor = "bg-green-100 text-green-700 border border-green-200";
+                                badgeText = "🔥 THÂN THIẾT";
+                              }
+
+                              const isSelected = selectedCustomer?.id === c.id;
+
+                              return (
+                                <button
+                                  key={c.id}
+                                  onClick={() => setSelectedCustomerId(c.id)}
+                                  className={`w-full text-left p-3 flex items-center justify-between transition-colors cursor-pointer ${
+                                    isSelected ? 'bg-brand-red-light/30 border-l-4 border-brand-red' : 'hover:bg-brand-light-gray/40'
+                                  }`}
+                                >
+                                  <div className="space-y-1.5 pr-2 truncate">
+                                    <div className="font-bold text-xs text-brand-dark truncate">{c.fullName || "Ẩn danh"}</div>
+                                    <div className="font-mono text-[10px] text-brand-gray font-bold">{c.phone || "Không có SĐT"}</div>
+                                    <span className={`inline-block text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider ${badgeColor}`}>
+                                      {badgeText}
+                                    </span>
+                                  </div>
+                                  <div className="text-right font-mono font-black text-xs text-brand-dark whitespace-nowrap">
+                                    {c.totalSpent.toLocaleString('vi-VN')}đ
+                                  </div>
+                                </button>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right Column: Customer Detailed Profile */}
+                      <div className="lg:col-span-8 space-y-6">
+                        {selectedCustomer ? (
+                          <div className="space-y-6 animate-fadeIn">
+                            
+                            {/* Profile Header Box */}
+                            <div className="bg-gradient-to-br from-brand-dark to-brand-dark/95 text-white p-6 rounded-2xl relative overflow-hidden shadow-md">
+                              <div className="absolute right-0 bottom-0 text-white/5 font-display font-black text-8xl transform translate-x-8 translate-y-6 pointer-events-none">
+                                VIP
+                              </div>
+                              
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 relative z-10">
+                                <div className="space-y-2">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <h4 className="font-display font-black text-lg tracking-tight">{selectedCustomer.fullName || "Ẩn danh"}</h4>
+                                    
+                                    {selectedCustomer.packages.length > 0 ? (
+                                      <span className="bg-brand-blue text-white text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                                        💎 HỘI VIÊN GÓI VIP ACTIVE
+                                      </span>
+                                    ) : selectedCustomer.bookings.length >= 2 ? (
+                                      <span className="bg-green-600 text-white text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                                        🔥 KHÁCH HÀNG THÂN THIẾT (VIP)
+                                      </span>
+                                    ) : (
+                                      <span className="bg-white/10 text-white/80 text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                                        🆕 KHÁCH HÀNG MỚI
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-xs text-white/70 font-mono flex items-center gap-3">
+                                    <span>SĐT: <strong className="text-white font-bold">{selectedCustomer.phone || "N/A"}</strong></span>
+                                    <span className="text-white/30">|</span>
+                                    <span>Hạng: <strong className="text-green-400">Hạng Bạc</strong></span>
+                                  </div>
+                                </div>
+
+                                <div className="text-right sm:border-l sm:border-white/10 sm:pl-6">
+                                  <span className="block text-[10px] font-bold text-white/60 uppercase tracking-widest">Tổng chi tiêu</span>
+                                  <span className="text-xl font-display font-black text-green-400">{selectedCustomer.totalSpent.toLocaleString('vi-VN')}đ</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Statistical summaries box */}
+                            <div className="grid grid-cols-3 gap-4">
+                              <div className="p-3 bg-brand-light-gray rounded-xl border border-brand-border/40">
+                                <span className="block text-[9px] font-bold text-brand-gray uppercase tracking-wider">Số lần dùng sân</span>
+                                <strong className="text-lg font-display text-brand-dark">{selectedCustomer.bookings.length} lần</strong>
+                              </div>
+                              <div className="p-3 bg-brand-light-gray rounded-xl border border-brand-border/40">
+                                <span className="block text-[9px] font-bold text-brand-gray uppercase tracking-wider">Hợp đồng mua gói</span>
+                                <strong className="text-lg font-display text-brand-dark">{selectedCustomer.packages.length} HĐ</strong>
+                              </div>
+                              <div className="p-3 bg-brand-light-gray rounded-xl border border-brand-border/40">
+                                <span className="block text-[9px] font-bold text-brand-gray uppercase tracking-wider">Tỷ lệ hoàn thành</span>
+                                <strong className="text-lg font-display text-green-600">100%</strong>
+                              </div>
+                            </div>
+
+                            {/* Section: ACTIVE PACKAGES AND COMBOS (if any) */}
+                            {selectedCustomer.packages.length > 0 && (
+                              <div className="space-y-3 bg-brand-blue/5 border border-brand-blue/20 p-5 rounded-2xl">
+                                <h5 className="font-display font-black text-xs text-brand-blue uppercase tracking-widest flex items-center gap-1.5">
+                                  <Award className="w-4 h-4" />
+                                  HỢP ĐỒNG GÓI TẬP VÀ ĐÀO TẠO ĐANG CHẠY ({selectedCustomer.packages.length})
+                                </h5>
+                                <div className="space-y-4">
+                                  {selectedCustomer.packages.map((pkg, pidx) => (
+                                    <div key={pkg.id || pidx} className="bg-white p-4 rounded-xl border border-brand-blue/10 space-y-3 shadow-sm text-xs text-left">
+                                      <div className="flex justify-between items-start border-b border-brand-blue/5 pb-2">
+                                        <div>
+                                          <div className="font-bold text-brand-dark text-xs">{pkg.packageType}</div>
+                                          <div className="text-[10px] text-brand-gray mt-0.5">Mã HĐ: <strong className="font-mono text-brand-blue">{pkg.id}</strong> | Ký ngày: <strong className="font-mono">{pkg.contractDate}</strong></div>
+                                        </div>
+                                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                                          pkg.status === 'confirmed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                                        }`}>
+                                          {pkg.status === 'confirmed' ? 'Đang hoạt động' : 'Chờ xác nhận'}
+                                        </span>
+                                      </div>
+
+                                      <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-[11px]">
+                                        <div><span className="text-brand-gray">Lịch tập ưu tiên:</span> <strong className="text-brand-dark">{pkg.preferredTime}</strong></div>
+                                        <div><span className="text-brand-gray">Huấn luyện viên:</span> <strong className="text-brand-blue">{pkg.coachName}</strong></div>
+                                        <div><span className="text-brand-gray">Thời hạn:</span> <strong className="text-brand-dark">{pkg.durationMonths} tháng ({pkg.hoursCount})</strong></div>
+                                        <div><span className="text-brand-gray">Dịch vụ chính:</span> <strong className="text-brand-dark">{pkg.serviceType}</strong></div>
+                                      </div>
+
+                                      <div className="border-t border-brand-blue/5 pt-2 flex justify-between items-center bg-brand-blue/5 -mx-4 -mb-4 px-4 py-2.5 rounded-b-xl text-[11px]">
+                                        <div><span className="text-brand-gray">Tổng giá trị:</span> <strong className="text-brand-dark font-sans font-bold">{pkg.totalPrice.toLocaleString('vi-VN')}đ</strong></div>
+                                        <div><span className="text-brand-gray">Đã đóng:</span> <strong className="text-green-600 font-sans font-bold">{pkg.actualPaid.toLocaleString('vi-VN')}đ</strong></div>
+                                        <div><span className="text-brand-gray">Còn nợ:</span> <strong className="text-red-500 font-sans font-bold">{pkg.remainingAmount.toLocaleString('vi-VN')}đ</strong></div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Section: COURT BOOKING HISTORY */}
+                            <div className="space-y-3">
+                              <h5 className="font-display font-black text-xs text-brand-dark uppercase tracking-widest flex items-center gap-1.5">
+                                <Clock className="w-4 h-4 text-brand-red" />
+                                LỊCH SỬ SỬ DỤNG SÂN ĐẤU &amp; ĐẶT LỊCH ({selectedCustomer.bookings.length} lượt)
+                              </h5>
+
+                              <div className="bg-white border border-brand-border/40 rounded-xl overflow-hidden">
+                                <table className="w-full text-left text-xs border-collapse font-sans">
+                                  <thead>
+                                    <tr className="bg-brand-light-gray text-brand-gray font-bold border-b border-brand-border/40">
+                                      <th className="p-3">Ngày dùng sân</th>
+                                      <th className="p-3">Khung giờ</th>
+                                      <th className="p-3">Sân đấu</th>
+                                      <th className="p-3 text-right">Tiền sân</th>
+                                      <th className="p-3 text-center">Nguồn dữ liệu</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-brand-border/20 text-[11px]">
+                                    {selectedCustomer.bookings.length === 0 ? (
+                                      <tr>
+                                        <td colSpan={5} className="p-6 text-center text-brand-gray">
+                                          Chưa có dữ liệu đặt sân lẻ cho khách hàng này. Khách hàng có thể đang mua gói tập hội viên dài hạn ở trên.
+                                        </td>
+                                      </tr>
+                                    ) : (
+                                      selectedCustomer.bookings.map((bk, idx) => (
+                                        <tr key={idx} className="hover:bg-brand-light-gray/20">
+                                          <td className="p-3 font-mono font-bold text-brand-dark">
+                                            {bk.date.includes('-') ? bk.date.split('-').reverse().join('/') : bk.date}
+                                          </td>
+                                          <td className="p-3 text-brand-red font-bold">{bk.timeSlot}</td>
+                                          <td className="p-3 font-semibold text-brand-dark">{bk.courtName}</td>
+                                          <td className="p-3 font-bold text-brand-dark text-right">
+                                            {bk.price > 0 ? `${bk.price.toLocaleString('vi-VN')}đ` : (bk.priceStr || 'N/A')}
+                                          </td>
+                                          <td className="p-3 text-center">
+                                            <span className={`inline-block text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                                              bk.source === 'Website' ? 'bg-brand-red-light text-brand-red' : 'bg-blue-100 text-[#4285F4]'
+                                            }`}>
+                                              {bk.source}
+                                            </span>
+                                          </td>
+                                        </tr>
+                                      ))
+                                    )}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+
+                          </div>
+                        ) : (
+                          <div className="bg-brand-light-gray p-12 rounded-2xl border border-dashed border-brand-border/60 text-center text-xs text-brand-gray space-y-2">
+                            <Users className="w-12 h-12 text-brand-gray/30 mx-auto" />
+                            <p className="font-bold">Chưa chọn khách hàng</p>
+                            <p>Vui lòng nhấp chọn một khách hàng ở cột bên trái để xem đầy đủ thông tin chi tiết và lịch sử sử dụng sân.</p>
+                          </div>
+                        )}
+                      </div>
+
+                    </div>
+                  </div>
+                );
+              })()}
 
             </div>
           </div>

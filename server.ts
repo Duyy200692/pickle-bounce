@@ -585,7 +585,7 @@ async function getFirebaseSlots(dateStr: string): Promise<SyncedSlot[]> {
 
 // Helper to forward booking to Google Sheets via Apps Script Web App Webhook
 async function forwardToGoogleSheets(booking: any) {
-  const config = loadConfig();
+  const config = await getFirebaseConfig();
   const webhookUrl = config.googleSheetWebhookUrl;
   
   const logEntry = {
@@ -604,7 +604,7 @@ async function forwardToGoogleSheets(booking: any) {
   if (!webhookUrl) {
     console.log("[Google Sheets] Forwarding skipped: Webhook URL is empty.");
     config.forwardLogs = [logEntry, ...config.forwardLogs].slice(0, 50);
-    saveConfig(config);
+    await saveFirebaseConfig(config);
     return { success: false, error: "Chưa cấu hình Google Sheets Webhook URL trong hệ thống." };
   }
 
@@ -612,7 +612,7 @@ async function forwardToGoogleSheets(booking: any) {
   if (webhookUrl.includes("docs.google.com/spreadsheets")) {
     console.log("[Google Sheets] Forwarding skipped: Webhook URL contains a spreadsheet link instead of a Web App macro link.");
     config.forwardLogs = [logEntry, ...config.forwardLogs].slice(0, 50);
-    saveConfig(config);
+    await saveFirebaseConfig(config);
     return { success: false, error: "Lỗi cấu hình: Webhook URL là link bảng tính, không phải link Apps Script Web App." };
   }
 
@@ -670,14 +670,14 @@ async function forwardToGoogleSheets(booking: any) {
           logEntry.status = "failed";
           console.error("[Google Sheets] Apps Script returned error status:", respJson);
           config.forwardLogs = [logEntry, ...config.forwardLogs].slice(0, 50);
-          saveConfig(config);
+          await saveFirebaseConfig(config);
           return { success: false, error: `Lỗi Google Apps Script: ${respJson.message || respJson.error || JSON.stringify(respJson)}` };
         }
         
         logEntry.status = "success";
         console.log("[Google Sheets] Successfully forwarded booking!");
         config.forwardLogs = [logEntry, ...config.forwardLogs].slice(0, 50);
-        saveConfig(config);
+        await saveFirebaseConfig(config);
         return { success: true };
       } else {
         // If it is HTML, check for authentication or compilation error indications
@@ -694,34 +694,34 @@ async function forwardToGoogleSheets(booking: any) {
           }
           console.error("[Google Sheets] HTML response received:", friendlyError);
           config.forwardLogs = [logEntry, ...config.forwardLogs].slice(0, 50);
-          saveConfig(config);
+          await saveFirebaseConfig(config);
           return { success: false, error: friendlyError };
         }
 
         logEntry.status = "success";
         console.log("[Google Sheets] Forwarded but response was not JSON:", respText.substring(0, 100));
         config.forwardLogs = [logEntry, ...config.forwardLogs].slice(0, 50);
-        saveConfig(config);
+        await saveFirebaseConfig(config);
         return { success: true };
       }
     } else {
       const respText = await response.text();
       console.error("[Google Sheets] Server error from Apps Script webhook:", respText);
       config.forwardLogs = [logEntry, ...config.forwardLogs].slice(0, 50);
-      saveConfig(config);
+      await saveFirebaseConfig(config);
       return { success: false, error: `Lỗi máy chủ Google (${response.status}): ${respText.substring(0, 100)}` };
     }
   } catch (error: any) {
     console.error("[Google Sheets] Connection failed:", error);
     config.forwardLogs = [logEntry, ...config.forwardLogs].slice(0, 50);
-    saveConfig(config);
+    await saveFirebaseConfig(config);
     return { success: false, error: error.message || "Không thể kết nối tới Google Webhook." };
   }
 }
 
 // Sync newly detected booked slots to Sheets in background
 async function autoSyncNewBookingsToSheets(oldSlots: SyncedSlot[], newSlots: SyncedSlot[]) {
-  const config = loadConfig();
+  const config = await getFirebaseConfig();
   if (!config.googleSheetSyncedSlots) {
     config.googleSheetSyncedSlots = [];
   }
@@ -761,7 +761,7 @@ async function autoSyncNewBookingsToSheets(oldSlots: SyncedSlot[], newSlots: Syn
     if (config.googleSheetSyncedSlots.length > 1000) {
       config.googleSheetSyncedSlots = config.googleSheetSyncedSlots.slice(-1000);
     }
-    saveConfig(config);
+    await saveFirebaseConfig(config);
   }
 }
 
@@ -1365,7 +1365,7 @@ async function processParsedSlotsAndForwardToSheets(
   saveAloboBookings(updatedDb);
 
   // 2. Automatically forward bookings with actual customer details to Google Sheets
-  const config = loadConfig();
+  const config = await getFirebaseConfig();
   if (!config.googleSheetSyncedSlots) {
     config.googleSheetSyncedSlots = [];
   }
@@ -1414,7 +1414,7 @@ async function processParsedSlotsAndForwardToSheets(
     if (config.googleSheetSyncedSlots.length > 1000) {
       config.googleSheetSyncedSlots = config.googleSheetSyncedSlots.slice(-1000);
     }
-    saveConfig(config);
+    await saveFirebaseConfig(config);
   }
 }
 

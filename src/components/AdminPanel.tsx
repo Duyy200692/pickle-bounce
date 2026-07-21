@@ -7,6 +7,7 @@ import {
   Copy, ExternalLink, Database, AlertTriangle, Search, Award, UserCheck, CreditCard
 } from 'lucide-react';
 import { Court, Booking, OpenPlay, Tournament, TeamRegistration, SocialRevenue, MemberRegistration, LandingPageConfig } from '../types';
+import * as XLSX from 'xlsx';
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -258,7 +259,24 @@ export default function AdminPanel({
       };
       reader.readAsText(file);
     } else if (fileType === 'xlsx' || fileType === 'xls') {
-      setImportError('File Excel (.xlsx) chứa dữ liệu nhị phân không thể đọc trực tiếp. Hãy MỞ FILE EXCEL, COPY (Ctrl+C) các dòng/bảng rồi DÁN (Ctrl+V) trực tiếp vào ô văn bản phía dưới. Trợ lý AI sẽ trích xuất chuẩn xác ngay!');
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          if (event.target?.result) {
+            const data = new Uint8Array(event.target.result as ArrayBuffer);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            // Convert to CSV for standard Gemini parsing! This works beautifully!
+            const csvText = XLSX.utils.sheet_to_csv(worksheet);
+            setImportRawText(csvText);
+            setImportError('');
+          }
+        } catch (err: any) {
+          setImportError('Lỗi đọc file Excel: ' + (err.message || err));
+        }
+      };
+      reader.readAsArrayBuffer(file);
     } else {
       const reader = new FileReader();
       reader.onload = (event) => {

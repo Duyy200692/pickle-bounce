@@ -191,6 +191,9 @@ export default function AdminPanel({
   const [isParsingPaste, setIsParsingPaste] = useState(false);
   const [aiPasteResult, setAiPasteResult] = useState<{ success?: boolean; error?: string; booking?: any } | null>(null);
 
+  // Check if running on web environment
+  const isWebEnv = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+
   // AI Member Importer State
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importRawText, setImportRawText] = useState('');
@@ -390,6 +393,11 @@ export default function AdminPanel({
   };
 
   const handleTestConnection = async () => {
+    if (isWebEnv) {
+      setTestResult({ error: 'Tính năng kiểm tra kết nối trực tiếp đã bị khóa trên môi trường Web để bảo mật dữ liệu.' });
+      alert('Tính năng kiểm tra kết nối trực tiếp lên Google Sheets đã bị vô hiệu hóa trên môi trường Web để bảo mật dữ liệu.');
+      return;
+    }
     setIsTestingSheet(true);
     setTestResult(null);
     try {
@@ -405,13 +413,18 @@ export default function AdminPanel({
 
   const handleManualSend = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isWebEnv) {
+      setManualSendResult({ error: 'Tính năng gửi thủ công trực tiếp đã bị khóa trên môi trường Web để bảo mật dữ liệu.' });
+      alert('Tính năng gửi thủ công trực tiếp lên Google Sheets đã bị vô hiệu hóa trên môi trường Web để tránh làm xáo trộn dữ liệu thực tế.');
+      return;
+    }
     setIsManualSending(true);
     setManualSendResult(null);
     try {
       const res = await fetch('/api/alobo/forward-booking', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(manualBookingForm)
+        body: JSON.stringify({ ...manualBookingForm, isManual: true })
       });
       const data = await res.json();
       setManualSendResult(data.result || data);

@@ -982,6 +982,13 @@ app.post("/api/alobo/config/clear-logs", async (req, res) => {
 
 // Test Google Sheets Connection
 app.post("/api/alobo/test-sheet", async (req, res) => {
+  const isProd = process.env.NODE_ENV === "production" || process.env.NODE_ENV === "prod";
+  if (isProd) {
+    return res.status(403).json({
+      success: false,
+      error: "Tính năng kiểm tra kết nối trực tiếp đã bị khóa trên môi trường Web để bảo mật dữ liệu."
+    });
+  }
   try {
     const testBooking = {
       fullName: "Nguyễn Văn Test",
@@ -1003,7 +1010,15 @@ app.post("/api/alobo/test-sheet", async (req, res) => {
 // Direct Forward Booking Route
 app.post("/api/alobo/forward-booking", async (req, res) => {
   try {
-    const { action, fullName, phone } = req.body;
+    const { action, fullName, phone, isManual } = req.body;
+    const isProd = process.env.NODE_ENV === "production" || process.env.NODE_ENV === "prod";
+    
+    if (isProd && isManual) {
+      return res.status(403).json({
+        success: false,
+        error: "Tính năng gửi thủ công trực tiếp lên Google Sheets đã bị khóa trên môi trường Web để bảo mật dữ liệu."
+      });
+    }
     
     // If it's a registration or custom action, bypass simple booking validation
     if (action && action !== "addBooking") {
@@ -1832,6 +1847,32 @@ app.post("/api/member-registrations", async (req, res) => {
       member.createdAt = new Date().toLocaleString("vi-VN");
     }
     await saveFirebaseMember(member);
+
+    // Auto-forward this registration to Google Sheets!
+    const sheetData = {
+      action: "addRegistration",
+      contractId: member.id,
+      contractDate: member.contractDate || new Date().toLocaleDateString('vi-VN'),
+      fullName: member.fullName,
+      dob: member.dob,
+      phone: member.phone,
+      preferredTime: member.preferredTime || "",
+      hoursCount: member.hoursCount || "",
+      packageType: member.packageType || "",
+      durationMonths: member.durationMonths || 1,
+      coachName: member.coachName || "",
+      serviceType: member.serviceType || "",
+      totalPrice: member.totalPrice || 0,
+      depositAmount: member.depositAmount || 0,
+      remainingAmount: member.remainingAmount || 0,
+      actualPaid: member.actualPaid || 0
+    };
+
+    // Forward to Google Sheets in the background so it doesn't slow down the UI
+    forwardToGoogleSheets(sheetData).catch(err => {
+      console.error("[Google Sheets Auto-Sync] Error auto-forwarding new member registration:", err);
+    });
+
     res.json({ success: true, memberRegistration: member, isFirebaseActive });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });

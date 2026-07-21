@@ -151,7 +151,39 @@ export default function AloboLiveSync() {
         const { aloboApiUrl, isAutoSyncEnabled } = configData.config;
         if (!isAutoSyncEnabled || !aloboApiUrl) return;
 
-        console.log('[Landing Page Silent Auto-Sync] Triggering sync via server proxy...');
+        console.log('[Landing Page Silent Auto-Sync] Attempting browser-side fetch via CORS proxy...');
+        let fetchedData = null;
+        try {
+          // Try corsproxy.io (which is fast, free and has no rate limit for light browser use)
+          const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(aloboApiUrl)}`;
+          const proxyRes = await fetch(proxyUrl);
+          if (proxyRes.ok) {
+            fetchedData = await proxyRes.json();
+            console.log('[Landing Page Silent Auto-Sync] Successfully fetched via browser CORS proxy.');
+          }
+        } catch (err) {
+          console.warn('[Landing Page Silent Auto-Sync] Browser CORS proxy failed:', err);
+        }
+
+        if (fetchedData && active) {
+          // Send raw JSON directly to our sync-raw-json endpoint to update our system!
+          const syncRes = await fetch('/api/alobo/sync-raw-json', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              rawJson: fetchedData,
+              date: date
+            })
+          });
+          if (syncRes.ok && active) {
+            console.log('[Landing Page Silent Auto-Sync] Successfully parsed CORS proxy data on server.');
+            fetchSyncData(date, false);
+            return;
+          }
+        }
+
+        // Fallback to server proxy fetch
+        console.log('[Landing Page Silent Auto-Sync] Triggering fallback sync via server proxy...');
         const response = await fetch('/api/alobo/fetch-live-api', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

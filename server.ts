@@ -1341,6 +1341,7 @@ Only output the valid JSON array without any markdown wrappers or backticks.
 });
 
 // Helper function to update local DB and automatically forward actual customer bookings to Google Sheets
+// Helper function to update local DB and automatically forward actual customer bookings to Google Sheets
 async function processParsedSlotsAndForwardToSheets(
   parsedSlots: Array<{
     courtName: string;
@@ -1350,23 +1351,31 @@ async function processParsedSlotsAndForwardToSheets(
     phone?: string;
     price?: string;
     paymentStatus?: string;
+    date?: string;
   }>,
   formattedDate: string
 ) {
   if (!parsedSlots || parsedSlots.length === 0) return;
 
-  console.log(`[processParsedSlotsAndForwardToSheets] Received ${parsedSlots.length} slots for ${formattedDate}`);
+  console.log(`[processParsedSlotsAndForwardToSheets] Received ${parsedSlots.length} slots`);
 
   // 1. Update the local database
   let dbSlots = loadAloboBookings();
-  dbSlots = ensureSlotsForDate(dbSlots, formattedDate);
+
+  // Make sure we ensure slots for all dates found in parsed slots
+  const dates = Array.from(new Set(parsedSlots.map(ps => ps.date || formattedDate)));
+  for (const d of dates) {
+    dbSlots = ensureSlotsForDate(dbSlots, d);
+  }
 
   const updatedDb = dbSlots.map(dbSlot => {
-    if (dbSlot.date !== formattedDate) {
-      return dbSlot;
-    }
-
+    const slotDate = dbSlot.date;
+    
+    // Find matching item
     const matched = parsedSlots.find(ps => {
+      const psDate = ps.date || formattedDate;
+      if (slotDate !== psDate) return false;
+
       const namesMatch = dbSlot.courtName.toLowerCase() === ps.courtName.toLowerCase() ||
                          dbSlot.courtName.includes(ps.courtName) ||
                          ps.courtName.includes(dbSlot.courtName);
@@ -1393,6 +1402,7 @@ async function processParsedSlotsAndForwardToSheets(
   let sheetUpdated = false;
 
   for (const slot of parsedSlots) {
+    const slotDate = slot.date || formattedDate;
     if (slot.status === "booked") {
       const fullName = (slot.fullName || "Khách Alobo").trim();
       const phone = (slot.phone || "Alobo App").trim();
@@ -1402,17 +1412,17 @@ async function processParsedSlotsAndForwardToSheets(
       const hasRealPhone = phone !== "Alobo App" && phone !== "";
 
       if (hasRealName || hasRealPhone) {
-        const slotKey = `${formattedDate}|${slot.courtName}|${slot.timeSlot}`;
+        const slotKey = `${slotDate}|${slot.courtName}|${slot.timeSlot}`;
         
         // Check if already synced to avoid duplicate rows
         if (!config.googleSheetSyncedSlots.includes(slotKey)) {
-          console.log(`[Google Sheets Auto-Sync] Auto-forwarding detailed booking: ${fullName} (${phone}) on ${slot.courtName} at ${slot.timeSlot}`);
+          console.log(`[Google Sheets Auto-Sync] Auto-forwarding detailed booking: ${fullName} (${phone}) on ${slot.courtName} at ${slot.timeSlot} on ${slotDate}`);
           
           const booking = {
             fullName: fullName,
             phone: phone,
             courtName: slot.courtName,
-            date: formattedDate,
+            date: slotDate,
             timeSlot: slot.timeSlot,
             price: slot.price || "150.000 đ",
             paymentStatus: slot.paymentStatus || "Đã thanh toán (Alobo API)"
@@ -1577,9 +1587,11 @@ app.post("/api/alobo/sync-raw-json", async (req, res) => {
 
     const parsePrompt = `
       You are an expert sports booking JSON parser. Analyze this raw JSON data retrieved from alobo.vn's internal API.
-      Extract the court bookings / slot statuses for the pickleball facility (e.g. sport_pickle_bounce or courts Sân 1, Sân 2, Sân 3, Sân 4, Sân 5).
+      This JSON may contain court schedules, or a list of user accounts/customers and their booking transactions.
+      Extract all available booking slots and customer details.
       We are interested in booking slots between 06:00 and 22:00.
       For each slot, determine:
+      - date: The booking date in strictly YYYY-MM-DD format (extract from JSON, e.g. from transaction logs, booking details, or calendar fields). If no date is found, use "${formattedDate}".
       - courtName: Name of the court, e.g. "Sân 1", "Sân 2", etc.
       - timeSlot: The hourly time slot, e.g. "09:00 - 10:00", "07:00 - 08:00".
       - status: Must be strictly "booked" (occupied/reserved), "locked" (blocked by admin), or "free" (available).
@@ -1605,6 +1617,7 @@ app.post("/api/alobo/sync-raw-json", async (req, res) => {
           items: {
             type: Type.OBJECT,
             properties: {
+              date: { type: Type.STRING, description: "Booking date in strictly YYYY-MM-DD format" },
               courtName: { type: Type.STRING },
               timeSlot: { type: Type.STRING },
               status: { 
@@ -1623,7 +1636,7 @@ app.post("/api/alobo/sync-raw-json", async (req, res) => {
     });
 
     const parsedText = modelResponse.text?.trim() || "[]";
-    const parsedSlots = JSON.parse(parsedText) as Array<{ courtName: string; timeSlot: string; status: "booked" | "locked" | "free"; fullName?: string; phone?: string; price?: string; paymentStatus?: string }>;
+    const parsedSlots = JSON.parse(parsedText) as Array<{ date?: string; courtName: string; timeSlot: string; status: "booked" | "locked" | "free"; fullName?: string; phone?: string; price?: string; paymentStatus?: string }>;
 
     if (parsedSlots && parsedSlots.length > 0) {
       await processParsedSlotsAndForwardToSheets(parsedSlots, formattedDate);
@@ -1631,7 +1644,7 @@ app.post("/api/alobo/sync-raw-json", async (req, res) => {
       const dbSlots = loadAloboBookings();
       return res.json({
         success: true,
-        message: `Đồng bộ trực tiếp và tự động ghi nhận Google Sheets thành công cho ngày ${formattedDate}! Đã cập nhật ${parsedSlots.length} khung giờ.`,
+        message: `Đồng bộ trực tiếp và tự động ghi nhận Google Sheets thành công! Đã xử lý ${parsedSlots.length} khung giờ.`,
         slots: dbSlots.filter(slot => slot.date === formattedDate)
       });
     }

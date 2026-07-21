@@ -20,9 +20,16 @@ window.fetch = function(input, init) {
   
   if (typeof input === 'string') {
     return originalFetch(url, init);
+  } else if (input instanceof URL) {
+    return originalFetch(url.toString(), init);
   } else {
-    // If it's a URL or Request object, we pass the updated string url along with original options
-    return originalFetch(url, init || (input as any));
+    // If it is a Request object, we must clone/create a new Request with the modified url to avoid TypeError
+    try {
+      const newRequest = new Request(url, input);
+      return originalFetch(newRequest, init);
+    } catch (e) {
+      return originalFetch(url, init || undefined);
+    }
   }
 };
 

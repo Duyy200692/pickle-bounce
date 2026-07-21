@@ -137,6 +137,55 @@ export default function AloboLiveSync() {
     return () => clearInterval(interval);
   }, [date]);
 
+  // Silent Browser Auto-Sync on Landing Page
+  useEffect(() => {
+    let active = true;
+    let intervalId: any;
+
+    const runSilentSync = async () => {
+      try {
+        const configRes = await fetch('/api/alobo/config');
+        const configData = await configRes.json();
+        if (!active || !configData.success || !configData.config) return;
+
+        const { aloboApiUrl, isAutoSyncEnabled } = configData.config;
+        if (!isAutoSyncEnabled || !aloboApiUrl) return;
+
+        console.log('[Landing Page Silent Auto-Sync] Fetching Alobo API in background...');
+        const response = await fetch(aloboApiUrl);
+        if (!response.ok) return;
+        const rawJson = await response.json();
+        
+        await fetch('/api/alobo/sync-raw-json', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            rawJson,
+            date: new Date().toISOString().split('T')[0]
+          })
+        });
+        console.log('[Landing Page Silent Auto-Sync] Successfully background synced.');
+        
+        // Refresh local state
+        fetchSyncData(date, false);
+      } catch (e) {
+        console.warn('[Landing Page Silent Auto-Sync] Failed silently:', e);
+      }
+    };
+
+    // Run once on load after 4 seconds
+    const timeoutId = setTimeout(() => {
+      runSilentSync();
+      intervalId = setInterval(runSilentSync, 5 * 60 * 1000); // every 5 minutes
+    }, 4000);
+
+    return () => {
+      active = false;
+      clearTimeout(timeoutId);
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [date]);
+
   // Courts matching alobo.vn
   const courtsList = ["Sân 1", "Sân 2", "Sân 3", "Sân 4", "Sân 5"];
   

@@ -168,6 +168,11 @@ export default function AdminPanel({
   // Alobo & Google Sheets Sync State
   const [googleSheetWebhookUrl, setGoogleSheetWebhookUrl] = useState('');
   const [googleSheetUrl, setGoogleSheetUrl] = useState('');
+  const [aloboApiUrl, setAloboApiUrl] = useState('');
+  const [isAutoSyncEnabled, setIsAutoSyncEnabled] = useState(true);
+  const [aloboSyncIntervalMinutes, setAloboSyncIntervalMinutes] = useState(5);
+  const [isDirectSyncing, setIsDirectSyncing] = useState(false);
+  const [directSyncStatus, setDirectSyncStatus] = useState('');
   const [syncLogs, setSyncLogs] = useState<any[]>([]);
   const [isSavingConfig, setIsSavingConfig] = useState(false);
   const [isTestingSheet, setIsTestingSheet] = useState(false);
@@ -356,6 +361,9 @@ export default function AdminPanel({
       if (data.success && data.config) {
         setGoogleSheetWebhookUrl(data.config.googleSheetWebhookUrl || '');
         setGoogleSheetUrl(data.config.googleSheetUrl || '');
+        setAloboApiUrl(data.config.aloboApiUrl || '');
+        setIsAutoSyncEnabled(data.config.isAutoSyncEnabled !== false);
+        setAloboSyncIntervalMinutes(data.config.aloboSyncIntervalMinutes || 5);
         setSyncLogs(data.config.forwardLogs || []);
       }
     } catch (err) {
@@ -369,11 +377,17 @@ export default function AdminPanel({
       const res = await fetch('/api/alobo/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ googleSheetWebhookUrl, googleSheetUrl })
+        body: JSON.stringify({ 
+          googleSheetWebhookUrl, 
+          googleSheetUrl,
+          aloboApiUrl,
+          isAutoSyncEnabled,
+          aloboSyncIntervalMinutes
+        })
       });
       const data = await res.json();
       if (data.success) {
-        alert('Cấu hình Google Sheets đã được cập nhật thành công!');
+        alert('Cấu hình hệ thống đã được cập nhật thành công!');
         fetchConfig();
       } else {
         alert('Lỗi: ' + data.error);
@@ -384,6 +398,97 @@ export default function AdminPanel({
       setIsSavingConfig(false);
     }
   };
+
+  const handleDirectBrowserSync = async () => {
+    if (!aloboApiUrl) {
+      alert('Vui lòng điền link máy chủ Alobo (API URL) trước!');
+      return;
+    }
+    
+    setIsDirectSyncing(true);
+    setDirectSyncStatus('Đang kết nối tới máy chủ Alobo trực tiếp từ trình duyệt của bạn...');
+    
+    try {
+      // Direct browser-side fetch to bypass server clock/WAF issue
+      const response = await fetch(aloboApiUrl, {
+        headers: {
+          'Accept': 'application/json, text/plain, */*',
+          'Cache-Control': 'no-cache'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Alobo API trả về lỗi HTTP ${response.status}`);
+      }
+      
+      const rawJson = await response.json();
+      setDirectSyncStatus('Tải dữ liệu thành công! Đang gửi lên server để phân tích và ghi đè bằng AI...');
+      
+      // POST rawJson to our own server's sync-raw-json
+      const serverResponse = await fetch('/api/alobo/sync-raw-json', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          rawJson: rawJson,
+          date: new Date().toISOString().split('T')[0] // sync for today
+        })
+      });
+      
+      const serverData = await serverResponse.json();
+      if (serverData.success) {
+        setDirectSyncStatus('Đồng bộ thành công rực rỡ! Lịch đặt sân đã được cập nhật và lưu lên Google Sheets.');
+        alert('Chúc mừng! Đã hoàn thành đồng bộ tự động trực tiếp từ Alobo sang hệ thống và ghi vào Google Sheets thành công!');
+        fetchConfig();
+      } else {
+        throw new Error(serverData.error || 'Server không thể phân tích dữ liệu.');
+      }
+    } catch (err: any) {
+      console.error('[Direct Sync Error]', err);
+      setDirectSyncStatus(`Lỗi đồng bộ: ${err.message || 'Không thể lấy dữ liệu.'}`);
+      alert(`Đồng bộ thất bại: ${err.message || 'Vui lòng kiểm tra lại kết nối mạng của bạn.'}`);
+    } finally {
+      setIsDirectSyncing(false);
+    }
+  };
+
+  // Silent Browser Auto-Sync Hook
+  React.useEffect(() => {
+    if (!isAutoSyncEnabled || !aloboApiUrl) return;
+
+    const runSilentSync = async () => {
+      try {
+        console.log('[Silent Auto-Sync] Checking and fetching Alobo in background...');
+        const response = await fetch(aloboApiUrl);
+        if (!response.ok) return;
+        const rawJson = await response.json();
+        
+        await fetch('/api/alobo/sync-raw-json', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            rawJson,
+            date: new Date().toISOString().split('T')[0]
+          })
+        });
+        console.log('[Silent Auto-Sync] Successfully background synced to server.');
+      } catch (e) {
+        console.warn('[Silent Auto-Sync] Failed silently:', e);
+      }
+    };
+
+    // Run once on mount (with short delay to let page render)
+    const timeoutId = setTimeout(runSilentSync, 5000);
+
+    // Run periodically
+    const intervalId = setInterval(runSilentSync, aloboSyncIntervalMinutes * 60 * 1000);
+
+    return () => {
+      clearTimeout(timeoutId);
+      clearInterval(intervalId);
+    };
+  }, [isAutoSyncEnabled, aloboApiUrl, aloboSyncIntervalMinutes]);
 
   const clearSyncLogs = async () => {
     if (!confirm('Bạn có chắc chắn muốn xóa toàn bộ lịch sử đồng bộ?')) return;
@@ -2526,6 +2631,97 @@ export default function AdminPanel({
                               👉 Tự động điền link máy chủ này
                             </button>
                           </div>
+                        </div>
+                      </div>
+
+                      {/* Alobo Direct API Auto-Sync (No Tampermonkey) */}
+                      <div className="bg-[#f0f9ff] border border-blue-200 p-5 rounded-2xl shadow-sm space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-display font-bold text-sm text-brand-dark flex items-center gap-2">
+                            <span className={`w-2.5 h-2.5 rounded-full ${isAutoSyncEnabled ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></span>
+                            <span className="text-blue-950 font-extrabold uppercase">Đồng Bộ Alobo Tự Động (Không Cần Tampermonkey 🚀)</span>
+                          </h4>
+                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                            isAutoSyncEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                          }`}>
+                            {isAutoSyncEnabled ? 'Đang bật ngầm' : 'Đã tắt'}
+                          </span>
+                        </div>
+
+                        <div className="space-y-3 text-xs text-blue-950">
+                          <p className="text-[11px] leading-relaxed">
+                            <strong>Đồng bộ tự động hoàn toàn:</strong> Không cần Tampermonkey hay copy-paste thủ công. Hệ thống sẽ tự động chạy ngầm trên trình duyệt của bạn (và khách hàng) để kéo lịch đặt sân mới nhất từ Alobo và đồng bộ đồng thời lên hệ thống Pickle Bounce lẫn Google Sheets của bạn!
+                          </p>
+                          
+                          <div className="space-y-1">
+                            <label className="block text-[10px] font-bold uppercase tracking-wide">Đường dẫn API Của Alobo (Alobo API URL)</label>
+                            <input 
+                              type="text"
+                              value={aloboApiUrl}
+                              onChange={(e) => setAloboApiUrl(e.target.value)}
+                              placeholder="https://shop-api-new.alobo.vn/api/v1/user-account/..."
+                              className="w-full bg-white border border-blue-300 rounded-xl px-3 py-2 text-xs font-semibold text-brand-dark outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                            />
+                            <p className="text-[10px] text-blue-700 italic">
+                              Hệ thống đã cài đặt sẵn API shop của bạn theo yêu cầu. Bạn có thể bấm nút Đồng bộ ngay bên dưới để chạy thử.
+                            </p>
+                          </div>
+
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2 border-t border-blue-200">
+                            <div className="flex items-center gap-2">
+                              <input 
+                                type="checkbox"
+                                id="isAutoSyncEnabled"
+                                checked={isAutoSyncEnabled}
+                                onChange={(e) => setIsAutoSyncEnabled(e.target.checked)}
+                                className="w-4 h-4 text-blue-600 border-blue-300 rounded focus:ring-blue-500"
+                              />
+                              <label htmlFor="isAutoSyncEnabled" className="font-bold text-[11px] cursor-pointer">
+                                Bật đồng bộ tự động chạy ngầm (Khuyên dùng)
+                              </label>
+                            </div>
+                            
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] font-bold">Chu kỳ đồng bộ:</span>
+                              <select 
+                                value={aloboSyncIntervalMinutes}
+                                onChange={(e) => setAloboSyncIntervalMinutes(Number(e.target.value))}
+                                className="bg-white border border-blue-300 rounded-lg px-2 py-1 text-[11px] font-bold outline-none"
+                              >
+                                <option value={2}>2 phút</option>
+                                <option value={5}>5 phút</option>
+                                <option value={10}>10 phút</option>
+                                <option value={15}>15 phút</option>
+                                <option value={30}>30 phút</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2 pt-2">
+                            <button 
+                              onClick={saveConfig}
+                              disabled={isSavingConfig}
+                              className="bg-blue-600 hover:bg-blue-700 text-white font-sans font-bold text-xs px-4 py-2.5 rounded-xl cursor-pointer shadow-sm disabled:opacity-50"
+                            >
+                              {isSavingConfig ? 'Đang lưu...' : 'Lưu cài đặt tự động'}
+                            </button>
+
+                            <button 
+                              onClick={handleDirectBrowserSync}
+                              disabled={isDirectSyncing}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-sans font-bold text-xs px-4 py-2.5 rounded-xl cursor-pointer shadow-sm disabled:opacity-50 flex items-center gap-1.5"
+                            >
+                              <RefreshCw className={`w-3.5 h-3.5 ${isDirectSyncing ? 'animate-spin' : ''}`} />
+                              {isDirectSyncing ? 'Đang đồng bộ...' : 'Đồng bộ API ngay lập tức'}
+                            </button>
+                          </div>
+
+                          {directSyncStatus && (
+                            <div className="bg-white/80 p-2.5 border border-blue-100 rounded-lg font-mono text-[10px] text-blue-900 leading-normal animate-fadeIn">
+                              <span className="font-bold">Nhật ký đồng bộ trực tuyến:</span>
+                              <p className="mt-0.5 whitespace-pre-line">{directSyncStatus}</p>
+                            </div>
+                          )}
                         </div>
                       </div>
 

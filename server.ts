@@ -208,6 +208,9 @@ interface AloboConfig {
   googleSheetWebhookUrl: string;
   googleSheetUrl: string;
   googleSheetSyncedSlots?: string[]; // array of "date|courtName|timeSlot" keys to prevent duplicates
+  aloboApiUrl?: string;
+  isAutoSyncEnabled?: boolean;
+  aloboSyncIntervalMinutes?: number;
   forwardLogs: Array<{
     id: string;
     fullName: string;
@@ -226,6 +229,9 @@ const DEFAULT_CONFIG: AloboConfig = {
   googleSheetWebhookUrl: "",
   googleSheetUrl: "",
   googleSheetSyncedSlots: [],
+  aloboApiUrl: "https://shop-api-new.alobo.vn/api/v1/user-account/d0K5Ow*fHDKy8Vi4mEZg",
+  isAutoSyncEnabled: true,
+  aloboSyncIntervalMinutes: 5,
   forwardLogs: []
 };
 
@@ -968,12 +974,15 @@ app.get("/api/alobo/config", async (req, res) => {
 // Update Config
 app.post("/api/alobo/config", async (req, res) => {
   try {
-    const { googleSheetWebhookUrl, googleSheetUrl } = req.body;
+    const { googleSheetWebhookUrl, googleSheetUrl, aloboApiUrl, isAutoSyncEnabled, aloboSyncIntervalMinutes } = req.body;
     const config = await getFirebaseConfig();
-    config.googleSheetWebhookUrl = googleSheetWebhookUrl || "";
-    config.googleSheetUrl = googleSheetUrl || "";
+    if (googleSheetWebhookUrl !== undefined) config.googleSheetWebhookUrl = googleSheetWebhookUrl;
+    if (googleSheetUrl !== undefined) config.googleSheetUrl = googleSheetUrl;
+    if (aloboApiUrl !== undefined) config.aloboApiUrl = aloboApiUrl;
+    if (isAutoSyncEnabled !== undefined) config.isAutoSyncEnabled = isAutoSyncEnabled;
+    if (aloboSyncIntervalMinutes !== undefined) config.aloboSyncIntervalMinutes = Number(aloboSyncIntervalMinutes);
     await saveFirebaseConfig(config);
-    res.json({ success: true, message: "Đã lưu cấu hình Google Sheets thành công!", config });
+    res.json({ success: true, message: "Đã lưu cấu hình thành công!", config });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }

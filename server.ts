@@ -87,6 +87,17 @@ const PORT = 3000;
 
 app.use(express.json({ limit: "15mb" }));
 
+// Manual CORS Middleware
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 // Store alobo synced bookings in local JSON or memory
 const DB_PATH = path.join(process.cwd(), "alobo_bookings.json");
 
@@ -982,13 +993,6 @@ app.post("/api/alobo/config/clear-logs", async (req, res) => {
 
 // Test Google Sheets Connection
 app.post("/api/alobo/test-sheet", async (req, res) => {
-  const isProd = process.env.NODE_ENV === "production" || process.env.NODE_ENV === "prod";
-  if (isProd) {
-    return res.status(403).json({
-      success: false,
-      error: "Tính năng kiểm tra kết nối trực tiếp đã bị khóa trên môi trường Web để bảo mật dữ liệu."
-    });
-  }
   try {
     const testBooking = {
       fullName: "Nguyễn Văn Test",
@@ -1011,14 +1015,6 @@ app.post("/api/alobo/test-sheet", async (req, res) => {
 app.post("/api/alobo/forward-booking", async (req, res) => {
   try {
     const { action, fullName, phone, isManual } = req.body;
-    const isProd = process.env.NODE_ENV === "production" || process.env.NODE_ENV === "prod";
-    
-    if (isProd && isManual) {
-      return res.status(403).json({
-        success: false,
-        error: "Tính năng gửi thủ công trực tiếp lên Google Sheets đã bị khóa trên môi trường Web để bảo mật dữ liệu."
-      });
-    }
     
     // If it's a registration or custom action, bypass simple booking validation
     if (action && action !== "addBooking") {

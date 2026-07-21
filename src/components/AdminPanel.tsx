@@ -191,8 +191,14 @@ export default function AdminPanel({
   const [isParsingPaste, setIsParsingPaste] = useState(false);
   const [aiPasteResult, setAiPasteResult] = useState<{ success?: boolean; error?: string; booking?: any } | null>(null);
 
-  // Check if running on web environment
-  const isWebEnv = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+  // Check if running on static hosting (like Vercel) where there is no local backend server
+  const isStaticHosting = typeof window !== 'undefined' && !window.location.hostname.includes('run.app') && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+  
+  const [backendUrl, setBackendUrl] = useState(() => {
+    return typeof window !== 'undefined' ? localStorage.getItem('alobo_backend_url') || '' : '';
+  });
+
+  const hasNoBackend = isStaticHosting && !backendUrl;
 
   // AI Member Importer State
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -393,9 +399,9 @@ export default function AdminPanel({
   };
 
   const handleTestConnection = async () => {
-    if (isWebEnv) {
-      setTestResult({ error: 'Tính năng kiểm tra kết nối trực tiếp đã bị khóa trên môi trường Web để bảo mật dữ liệu.' });
-      alert('Tính năng kiểm tra kết nối trực tiếp lên Google Sheets đã bị vô hiệu hóa trên môi trường Web để bảo mật dữ liệu.');
+    if (hasNoBackend) {
+      setTestResult({ error: 'Bạn cần cấu hình đường dẫn máy chủ kết nối ở bên trái trước khi thực hiện thử nghiệm.' });
+      alert('Chưa kết nối máy chủ: Bạn đang chạy giao diện từ Vercel. Vui lòng dán link Máy chủ Cloud Run hoặc AI Studio vào mục "Cấu hình Máy chủ Backend (Dành cho Vercel)" ở cột bên trái trước.');
       return;
     }
     setIsTestingSheet(true);
@@ -413,9 +419,9 @@ export default function AdminPanel({
 
   const handleManualSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isWebEnv) {
-      setManualSendResult({ error: 'Tính năng gửi thủ công trực tiếp đã bị khóa trên môi trường Web để bảo mật dữ liệu.' });
-      alert('Tính năng gửi thủ công trực tiếp lên Google Sheets đã bị vô hiệu hóa trên môi trường Web để tránh làm xáo trộn dữ liệu thực tế.');
+    if (hasNoBackend) {
+      setManualSendResult({ error: 'Bạn cần cấu hình đường dẫn máy chủ kết nối ở bên trái trước khi thực hiện gửi.' });
+      alert('Chưa kết nối máy chủ: Bạn đang chạy giao diện từ Vercel. Vui lòng dán link Máy chủ Cloud Run hoặc AI Studio vào mục "Cấu hình Máy chủ Backend (Dành cho Vercel)" ở cột bên trái trước.');
       return;
     }
     setIsManualSending(true);
@@ -2459,7 +2465,70 @@ export default function AdminPanel({
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     {/* Left Column: Config, Test, and Manual Forward */}
                     <div className="lg:col-span-7 space-y-6">
-                      
+
+                      {/* Backend Server Config */}
+                      <div className="bg-amber-50/60 border border-amber-200/60 p-5 rounded-2xl shadow-sm space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-display font-bold text-sm text-brand-dark flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                            <span>Kết nối Máy chủ (Dành cho Vercel / Hosting ngoài)</span>
+                          </h4>
+                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                            backendUrl ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                          }`}>
+                            {backendUrl ? 'Đã kết nối' : 'Chạy Offline / Chưa thiết lập'}
+                          </span>
+                        </div>
+
+                        <div className="space-y-2 text-xs">
+                          <p className="text-brand-gray text-[11px] leading-relaxed">
+                            Nếu bạn chạy giao diện tại <strong>{typeof window !== 'undefined' ? window.location.hostname : 'Vercel'}</strong>, ứng dụng cần kết nối tới máy chủ Cloud Run hoặc AI Studio để lưu dữ liệu Firebase và gửi lên Google Sheets.
+                          </p>
+                          
+                          <label className="block text-[11px] font-bold text-brand-dark uppercase tracking-wide mt-2">Đường dẫn Máy chủ Backend (API BASE URL)</label>
+                          <div className="flex gap-2">
+                            <input 
+                              type="text"
+                              value={backendUrl}
+                              onChange={(e) => setBackendUrl(e.target.value)}
+                              placeholder="https://ais-pre-...asia-southeast1.run.app"
+                              className="flex-grow bg-white border border-brand-border/60 rounded-xl px-3 py-2 text-xs font-semibold text-brand-dark outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                            />
+                            <button
+                              onClick={() => {
+                                if (backendUrl.trim()) {
+                                  localStorage.setItem('alobo_backend_url', backendUrl.trim());
+                                  alert('Cấu hình đường dẫn Máy chủ đã được lưu thành công! Trang web sẽ tự động tải lại để đồng bộ cơ sở dữ liệu.');
+                                  window.location.reload();
+                                } else {
+                                  localStorage.removeItem('alobo_backend_url');
+                                  alert('Đã xóa cấu hình Máy chủ kết nối. Ứng dụng sẽ chạy bằng đường dẫn tương đối (Mặc định). Trang web sẽ tự động tải lại.');
+                                  window.location.reload();
+                                }
+                              }}
+                              className="bg-amber-600 hover:bg-amber-700 text-white font-sans font-bold px-4 py-2 rounded-xl transition-all cursor-pointer shadow-sm text-xs shrink-0"
+                            >
+                              Lưu kết nối
+                            </button>
+                          </div>
+                          
+                          <div className="bg-white/80 p-2.5 border border-amber-100 rounded-lg text-[11px] text-amber-800 space-y-1">
+                            <span className="font-bold block">💡 Gợi ý Máy chủ AI Studio chính thức của bạn:</span>
+                            <code className="block break-all font-mono font-bold bg-amber-100/60 p-1 rounded select-all text-[10px]">
+                              https://ais-pre-m4i6tghifj35swvbdvdnxq-197039547577.asia-southeast1.run.app
+                            </code>
+                            <button
+                              onClick={() => {
+                                setBackendUrl('https://ais-pre-m4i6tghifj35swvbdvdnxq-197039547577.asia-southeast1.run.app');
+                              }}
+                              className="text-[10px] text-amber-700 hover:text-amber-950 font-bold underline cursor-pointer inline-block mt-1"
+                            >
+                              👉 Tự động điền link máy chủ này
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
                       {/* Webhook URL Config */}
                       <div className="bg-white border border-brand-border/40 p-5 rounded-2xl shadow-sm space-y-4">
                         <div className="flex items-center justify-between">

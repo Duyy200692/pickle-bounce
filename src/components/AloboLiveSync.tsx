@@ -151,23 +151,20 @@ export default function AloboLiveSync() {
         const { aloboApiUrl, isAutoSyncEnabled } = configData.config;
         if (!isAutoSyncEnabled || !aloboApiUrl) return;
 
-        console.log('[Landing Page Silent Auto-Sync] Fetching Alobo API in background...');
-        const response = await fetch(aloboApiUrl);
-        if (!response.ok) return;
-        const rawJson = await response.json();
-        
-        await fetch('/api/alobo/sync-raw-json', {
+        console.log('[Landing Page Silent Auto-Sync] Triggering sync via server proxy...');
+        const response = await fetch('/api/alobo/fetch-live-api', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            rawJson,
-            date: new Date().toISOString().split('T')[0]
+            url: aloboApiUrl
           })
         });
-        console.log('[Landing Page Silent Auto-Sync] Successfully background synced.');
         
-        // Refresh local state
-        fetchSyncData(date, false);
+        if (response.ok && active) {
+          console.log('[Landing Page Silent Auto-Sync] Successfully background synced via server proxy.');
+          // Refresh local state
+          fetchSyncData(date, false);
+        }
       } catch (e) {
         console.warn('[Landing Page Silent Auto-Sync] Failed silently:', e);
       }

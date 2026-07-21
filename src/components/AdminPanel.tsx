@@ -406,39 +406,23 @@ export default function AdminPanel({
     }
     
     setIsDirectSyncing(true);
-    setDirectSyncStatus('Đang kết nối tới máy chủ Alobo trực tiếp từ trình duyệt của bạn...');
+    setDirectSyncStatus('Đang gửi yêu cầu đồng bộ an toàn qua máy chủ (Bypass CORS)...');
     
     try {
-      // Direct browser-side fetch to bypass server clock/WAF issue
-      const response = await fetch(aloboApiUrl, {
-        headers: {
-          'Accept': 'application/json, text/plain, */*',
-          'Cache-Control': 'no-cache'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Alobo API trả về lỗi HTTP ${response.status}`);
-      }
-      
-      const rawJson = await response.json();
-      setDirectSyncStatus('Tải dữ liệu thành công! Đang gửi lên server để phân tích và ghi đè bằng AI...');
-      
-      // POST rawJson to our own server's sync-raw-json
-      const serverResponse = await fetch('/api/alobo/sync-raw-json', {
+      // Fetch via server-side proxy to bypass browser CORS policy restrictions
+      const response = await fetch('/api/alobo/fetch-live-api', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          rawJson: rawJson,
-          date: new Date().toISOString().split('T')[0] // sync for today
+          url: aloboApiUrl
         })
       });
       
-      const serverData = await serverResponse.json();
+      const serverData = await response.json();
       if (serverData.success) {
-        setDirectSyncStatus('Đồng bộ thành công rực rỡ! Lịch đặt sân đã được cập nhật và lưu lên Google Sheets.');
+        setDirectSyncStatus('Đồng bộ thành công rực rỡ! Lịch đặt sân đã được cập nhật và lưu lên Google Sheets thông qua server.');
         alert('Chúc mừng! Đã hoàn thành đồng bộ tự động trực tiếp từ Alobo sang hệ thống và ghi vào Google Sheets thành công!');
         fetchConfig();
       } else {
@@ -447,7 +431,7 @@ export default function AdminPanel({
     } catch (err: any) {
       console.error('[Direct Sync Error]', err);
       setDirectSyncStatus(`Lỗi đồng bộ: ${err.message || 'Không thể lấy dữ liệu.'}`);
-      alert(`Đồng bộ thất bại: ${err.message || 'Vui lòng kiểm tra lại kết nối mạng của bạn.'}`);
+      alert(`Đồng bộ thất bại: ${err.message || 'Vui lòng kiểm tra lại kết nối mạng hoặc cài đặt API.'}`);
     } finally {
       setIsDirectSyncing(false);
     }
@@ -459,20 +443,15 @@ export default function AdminPanel({
 
     const runSilentSync = async () => {
       try {
-        console.log('[Silent Auto-Sync] Checking and fetching Alobo in background...');
-        const response = await fetch(aloboApiUrl);
-        if (!response.ok) return;
-        const rawJson = await response.json();
-        
-        await fetch('/api/alobo/sync-raw-json', {
+        console.log('[Silent Auto-Sync] Triggering background API sync via server proxy...');
+        await fetch('/api/alobo/fetch-live-api', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            rawJson,
-            date: new Date().toISOString().split('T')[0]
+            url: aloboApiUrl
           })
         });
-        console.log('[Silent Auto-Sync] Successfully background synced to server.');
+        console.log('[Silent Auto-Sync] Successfully background synced via server proxy.');
       } catch (e) {
         console.warn('[Silent Auto-Sync] Failed silently:', e);
       }

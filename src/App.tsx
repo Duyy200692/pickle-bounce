@@ -263,7 +263,13 @@ export default function App() {
 
   const [socialRevenues, setSocialRevenues] = useState<SocialRevenue[]>(() => {
     const saved = localStorage.getItem('pickle_social_revenues');
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Error parsing social revenues', e);
+      }
+    }
     return [
       {
         id: 'soc-1',
@@ -340,22 +346,49 @@ export default function App() {
 
   const [courts, setCourts] = useState<Court[]>(() => {
     const saved = localStorage.getItem('pickle_courts');
-    return saved ? JSON.parse(saved) : INITIAL_COURTS;
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Error parsing courts', e);
+      }
+    }
+    return INITIAL_COURTS;
   });
 
   const [openPlays, setOpenPlays] = useState<OpenPlay[]>(() => {
     const saved = localStorage.getItem('pickle_openplays');
-    return saved ? JSON.parse(saved) : INITIAL_OPEN_PLAYS;
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Error parsing open plays', e);
+      }
+    }
+    return INITIAL_OPEN_PLAYS;
   });
 
   const [tournaments, setTournaments] = useState<Tournament[]>(() => {
     const saved = localStorage.getItem('pickle_tournaments');
-    return saved ? JSON.parse(saved) : INITIAL_TOURNAMENTS;
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Error parsing tournaments', e);
+      }
+    }
+    return INITIAL_TOURNAMENTS;
   });
 
   const [teamRegistrations, setTeamRegistrations] = useState<TeamRegistration[]>(() => {
     const saved = localStorage.getItem('pickle_registrations');
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Error parsing team registrations', e);
+      }
+    }
     return [
       {
         id: 'reg-1',

@@ -166,9 +166,10 @@ export default function AdminPanel({
   };
 
   // Alobo & Google Sheets Sync State
+  const DEFAULT_ALOBO_API_URL = 'https://shop-api-new.alobo.vn/api/v1/user-account/d0K5Ow*fHDKy8Vi4mEZg';
   const [googleSheetWebhookUrl, setGoogleSheetWebhookUrl] = useState('');
   const [googleSheetUrl, setGoogleSheetUrl] = useState('');
-  const [aloboApiUrl, setAloboApiUrl] = useState('');
+  const [aloboApiUrl, setAloboApiUrl] = useState(DEFAULT_ALOBO_API_URL);
   const [isAutoSyncEnabled, setIsAutoSyncEnabled] = useState(true);
   const [aloboSyncIntervalMinutes, setAloboSyncIntervalMinutes] = useState(5);
   const [isDirectSyncing, setIsDirectSyncing] = useState(false);
@@ -361,7 +362,7 @@ export default function AdminPanel({
       if (data.success && data.config) {
         setGoogleSheetWebhookUrl(data.config.googleSheetWebhookUrl || '');
         setGoogleSheetUrl(data.config.googleSheetUrl || '');
-        setAloboApiUrl(data.config.aloboApiUrl || '');
+        setAloboApiUrl(data.config.aloboApiUrl || DEFAULT_ALOBO_API_URL);
         setIsAutoSyncEnabled(data.config.isAutoSyncEnabled !== false);
         setAloboSyncIntervalMinutes(data.config.aloboSyncIntervalMinutes || 5);
         setSyncLogs(data.config.forwardLogs || []);
@@ -2527,18 +2528,53 @@ export default function AdminPanel({
 
                         <div className="space-y-4 text-xs">
                           <div>
-                            <label className="block text-[11px] font-bold text-brand-dark uppercase tracking-wider mb-1.5">
-                              Đường dẫn API Alobo (Alobo API Endpoint)
-                            </label>
+                            <div className="flex justify-between items-center mb-1.5">
+                              <label className="block text-[11px] font-bold text-brand-dark uppercase tracking-wider">
+                                Đường dẫn API Alobo (Alobo API Endpoint)
+                              </label>
+                              <div className="flex items-center gap-2 text-[11px]">
+                                <button
+                                  type="button"
+                                  onClick={() => setAloboApiUrl(DEFAULT_ALOBO_API_URL)}
+                                  className="text-brand-blue font-bold hover:underline cursor-pointer"
+                                  title="Đặt lại về API mặc định của hệ thống"
+                                >
+                                  ↺ Mặc định
+                                </button>
+                                <span className="text-brand-border">|</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(aloboApiUrl || DEFAULT_ALOBO_API_URL);
+                                    alert("Đã sao chép đường dẫn API Alobo vào bộ nhớ tạm!");
+                                  }}
+                                  className="text-brand-dark font-bold hover:underline cursor-pointer"
+                                >
+                                  📋 Sao chép API
+                                </button>
+                                <span className="text-brand-border">|</span>
+                                <a
+                                  href={aloboApiUrl || DEFAULT_ALOBO_API_URL}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-emerald-700 font-bold hover:underline"
+                                >
+                                  🔗 Mở API (Tab mới)
+                                </a>
+                              </div>
+                            </div>
                             <input 
                               type="text"
                               value={aloboApiUrl}
                               onChange={(e) => setAloboApiUrl(e.target.value)}
                               placeholder="https://shop-api-new.alobo.vn/api/v1/user-account/..."
-                              className="w-full bg-brand-light-gray border border-brand-border/60 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-brand-dark outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
+                              className="w-full bg-brand-light-gray border border-brand-border/60 rounded-xl px-3.5 py-2.5 text-xs font-mono font-semibold text-brand-dark outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
                             />
-                            <p className="text-[11px] text-brand-gray mt-1.5">
-                              Dữ liệu lịch đặt sân sẽ được tự động lấy về trực tiếp từ API shop của bạn.
+                            <p className="text-[11px] text-brand-gray mt-1.5 flex items-center justify-between">
+                              <span>Dữ liệu lịch đặt sân sẽ được tự động lấy về trực tiếp từ API shop của bạn.</span>
+                              <span className="font-mono font-bold text-[10px] text-brand-blue bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                                Active: {aloboApiUrl ? aloboApiUrl.substring(0, 42) + '...' : 'Chưa cấu hình'}
+                              </span>
                             </p>
                           </div>
 

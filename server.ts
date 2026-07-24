@@ -386,18 +386,28 @@ if (!fs.existsSync(LANDING_PAGE_PATH)) {
 
 // Firebase Config Helpers
 async function getFirebaseConfig(): Promise<AloboConfig> {
+  let loaded = DEFAULT_CONFIG;
   if (isFirebaseActive && firestoreDb) {
     try {
       const docRef = doc(firestoreDb, "settings", "alobo_config");
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
-        return docSnap.data() as AloboConfig;
+        loaded = { ...DEFAULT_CONFIG, ...(docSnap.data() as AloboConfig) };
+      } else {
+        loaded = loadConfig();
       }
     } catch (err) {
       console.error("[Firebase] Error fetching alobo_config:", err);
+      loaded = loadConfig();
     }
+  } else {
+    loaded = loadConfig();
   }
-  return loadConfig();
+
+  if (!loaded.aloboApiUrl || loaded.aloboApiUrl.trim() === '') {
+    loaded.aloboApiUrl = DEFAULT_CONFIG.aloboApiUrl;
+  }
+  return loaded;
 }
 
 async function saveFirebaseConfig(config: AloboConfig) {

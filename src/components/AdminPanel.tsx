@@ -407,41 +407,49 @@ export default function AdminPanel({
     }
     
     setIsDirectSyncing(true);
-    setDirectSyncStatus('Đang thử kết nối đồng bộ trực tiếp bằng Browser-Side CORS Proxy (Khuyên dùng)...');
+    setDirectSyncStatus('Đang gửi yêu cầu đồng bộ tới Máy chủ Backend...');
     
     try {
-      let fetchedData = null;
-      let usedProxy = '';
+      // Direct call to Backend Alobo proxy
+      const response = await fetch('/api/alobo/fetch-live-api', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          url: aloboApiUrl
+        })
+      });
+      
+      const serverData = await response.json().catch(() => null);
 
-      // Try proxy 1: corsproxy.io
+      if (serverData && serverData.success) {
+        setDirectSyncStatus('✓ Đồng bộ thành công rực rỡ!');
+        alert('Chúc mừng! Đã hoàn thành đồng bộ tự động trực tiếp từ Alobo sang hệ thống thành công!');
+        fetchConfig();
+        return;
+      }
+
+      if (serverData && serverData.error) {
+        throw new Error(serverData.error);
+      }
+
+      // Try browser proxies as fallback
+      setDirectSyncStatus('Đang thử kết nối đồng bộ trực tiếp qua CORS Proxy...');
+      let fetchedData = null;
+
       try {
-        usedProxy = 'corsproxy.io';
         const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(aloboApiUrl)}`;
         const proxyRes = await fetch(proxyUrl);
         if (proxyRes.ok) {
           fetchedData = await proxyRes.json();
         }
-      } catch (err) {
-        console.warn('corsproxy.io failed, trying allorigins...', err);
-      }
-
-      // Try proxy 2: allorigins if first failed
-      if (!fetchedData) {
-        try {
-          usedProxy = 'allorigins.win';
-          const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(aloboApiUrl)}`;
-          const proxyRes = await fetch(proxyUrl);
-          if (proxyRes.ok) {
-            fetchedData = await proxyRes.json();
-          }
-        } catch (err) {
-          console.warn('allorigins failed...', err);
-        }
+      } catch (e) {
+        console.warn('corsproxy.io failed:', e);
       }
 
       if (fetchedData) {
-        setDirectSyncStatus(`Lấy dữ liệu thô thành công qua ${usedProxy}! Đang gửi về máy chủ để phân tích bằng AI Gemini...`);
-        
+        setDirectSyncStatus('Lấy dữ liệu thành công qua CORS Proxy! Đang phân tích bằng AI...');
         const syncRes = await fetch('/api/alobo/sync-raw-json', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -453,8 +461,8 @@ export default function AdminPanel({
 
         const syncData = await syncRes.json();
         if (syncData.success) {
-          setDirectSyncStatus('✓ Đồng bộ hoàn tất thành công rực rỡ! Dữ liệu đã được nạp và ghi lên Google Sheets.');
-          alert('Đồng bộ thành công! Lịch đặt sân và hồ sơ khách hàng đã được cập nhật thành công lên website và Google Sheets.');
+          setDirectSyncStatus('✓ Đồng bộ hoàn tất thành công!');
+          alert('Đồng bộ thành công! Lịch đặt sân đã được cập nhật.');
           fetchConfig();
           return;
         } else {
@@ -462,31 +470,14 @@ export default function AdminPanel({
         }
       }
 
-      // Fallback to server proxy fetch
-      setDirectSyncStatus('CORS Proxy trình duyệt bị chặn. Đang thử đồng bộ qua Máy chủ Backend (Có thể lỗi do sai lệch múi giờ)...');
-      
-      const response = await fetch('/api/alobo/fetch-live-api', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          url: aloboApiUrl
-        })
-      });
-      
-      const serverData = await response.json();
-      if (serverData.success) {
-        setDirectSyncStatus('✓ Đồng bộ thành công rực rỡ thông qua Máy chủ!');
-        alert('Chúc mừng! Đã hoàn thành đồng bộ tự động trực tiếp từ Alobo sang hệ thống thành công!');
-        fetchConfig();
-      } else {
-        throw new Error(serverData.error || 'Cả CORS Proxy và Máy chủ đều không thể đồng bộ.');
-      }
+      throw new Error('Máy chủ Alobo (alobo.vn) yêu cầu chạy trực tiếp từ trình duyệt. Hãy sử dụng mã Tampermonkey Userscript bên dưới để tự động kéo dữ liệu 100% chuẩn xác!');
     } catch (err: any) {
       console.error('[Direct Sync Error]', err);
-      setDirectSyncStatus(`Lỗi đồng bộ: ${err.message || 'Không thể lấy dữ liệu.'}`);
-      alert(`Đồng bộ thất bại: ${err.message || 'Không thể kết nối. Hãy thử sử dụng Tiện ích Bookmarklet 1-Click hoặc Copy-Paste để thay thế.'}`);
+      let errMsg = err.message || 'Không thể lấy dữ liệu.';
+      if (errMsg.includes('Failed to fetch') || errMsg.includes('fetch failed')) {
+        errMsg = 'Máy chủ Alobo (alobo.vn) chặn gọi trực tiếp. Hãy dùng mã Tampermonkey Userscript bên dưới để đồng bộ tự động ngầm 100% thành công!';
+      }
+      setDirectSyncStatus(`Lỗi đồng bộ: ${errMsg}`);
     } finally {
       setIsDirectSyncing(false);
     }

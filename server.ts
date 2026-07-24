@@ -669,12 +669,13 @@ async function forwardToGoogleSheets(booking: any) {
     console.log(`[Google Sheets] Forwarding to webhook: ${webhookUrl}`, formattedData);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 seconds timeout
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 seconds timeout for Google Apps Script
 
     const response = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(formattedData),
+      redirect: "follow",
       signal: controller.signal
     });
 
@@ -740,9 +741,13 @@ async function forwardToGoogleSheets(booking: any) {
     }
   } catch (error: any) {
     console.error("[Google Sheets] Connection failed:", error);
+    let friendlyError = error.message || "Không thể kết nối tới Google Webhook.";
+    if (friendlyError.includes("Failed to fetch") || friendlyError.includes("fetch failed") || friendlyError.includes("aborted")) {
+      friendlyError = "Không thể kết nối tới Google Apps Script Webhook. Vui lòng kiểm tra lại đường dẫn Webhook URL (phải kết thúc bằng /exec và được Triển khai công khai dưới dạng 'Bất kỳ ai / Anyone').";
+    }
     config.forwardLogs = [logEntry, ...config.forwardLogs].slice(0, 50);
     await saveFirebaseConfig(config);
-    return { success: false, error: error.message || "Không thể kết nối tới Google Webhook." };
+    return { success: false, error: friendlyError };
   }
 }
 
@@ -1485,9 +1490,13 @@ app.post("/api/alobo/fetch-live-api", async (req, res) => {
     
     if (!fetchResponse.ok) {
       const errorText = await fetchResponse.text();
+      let friendlyMsg = `Máy chủ Alobo phản hồi mã lỗi ${fetchResponse.status}: ${errorText.substring(0, 200)}`;
+      if (errorText.includes("thời gian") || fetchResponse.status === 400) {
+        friendlyMsg = "Máy chủ Alobo (alobo.vn) chặn gọi trực tiếp qua API Endpoint. Hãy sử dụng mã Tampermonkey Userscript ở bên dưới để đồng bộ tự động trực tiếp trên trình duyệt!";
+      }
       return res.status(fetchResponse.status).json({
         success: false,
-        error: `Máy chủ Alobo phản hồi mã lỗi ${fetchResponse.status}: ${errorText.substring(0, 200)}`
+        error: friendlyMsg
       });
     }
 

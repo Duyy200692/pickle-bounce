@@ -31,6 +31,18 @@
   ],
   "forwardLogs": [
     {
+      "id": "gsl-msnn31rfx",
+      "fullName": "Nguyễn Văn Test",
+      "phone": "0909888888",
+      "courtName": "Sân 3",
+      "date": "2026-07-18",
+      "timeSlot": "17:00 - 18:00",
+      "price": "150.000 đ",
+      "paymentStatus": "Đã thanh toán (Kiểm tra hệ thống)",
+      "syncedAt": "04:16:36 24/7/2026",
+      "status": "success"
+    },
+    {
       "id": "gsl-9vbccew3t",
       "fullName": "Anh sử",
       "phone": "0867133066",
@@ -54,5 +66,6 @@
       "syncedAt": "07:07:31 20/7/2026",
       "status": "success"
     }
-  ]
+  ],
+  "aloboApiUrl": "https://shop-api-new.alobo.vn/api/v1/user-account/d0K5Ow*fHDKy8Vi4mEZg"
 }

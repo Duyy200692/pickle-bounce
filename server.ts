@@ -669,11 +669,11 @@ async function forwardToGoogleSheets(booking: any) {
     console.log(`[Google Sheets] Forwarding to webhook: ${webhookUrl}`, formattedData);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 seconds timeout for Google Apps Script
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 seconds timeout for Google Apps Script
 
     const response = await fetch(webhookUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(formattedData),
       redirect: "follow",
       signal: controller.signal

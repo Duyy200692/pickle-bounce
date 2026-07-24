@@ -2491,254 +2491,77 @@ export default function AdminPanel({
                 );
               })()}
 
-              {/* 8. Alobo Sync & Google Sheets Automation Tab */}
+              {/* 8. Alobo Sync & Google Sheets Automation Tab (Simplified for Direct API Fetch) */}
               {activeTab === 'alobo_sync' && (
                 <div className="space-y-6 animate-fadeIn text-left">
                   {/* Title Block */}
                   <div>
                     <h3 className="font-display font-black text-xl text-brand-dark flex items-center gap-2">
                       <Database className="w-6 h-6 text-[#4285F4] bg-[#4285F4]/10 p-1 rounded-full" />
-                      Trung Tâm Đồng Bộ Alobo & Google Sheets
+                      Trung Tâm Đồng Bộ Dữ Liệu Alobo API
                     </h3>
                     <p className="font-sans text-xs text-brand-gray mt-1">
-                      Cấu hình tự động ghi nhận thông tin đặt sân từ Alobo.vn và đồng bộ trực tiếp thời gian thực vào bảng tính Google Sheets của bạn.
+                      Hệ thống kết nối trực tiếp với API Alobo để tự động lấy dữ liệu lịch đặt sân thời gian thực và đồng bộ lên hệ thống Pickle Bounce (và Google Sheets nếu cấu hình).
                     </p>
                   </div>
 
-                  {/* FIREBASE PERSONAL CLOUD INTEGRATION CARD */}
-                  <div className={`border p-5 rounded-2xl text-xs space-y-3 shadow-sm transition-all ${
-                    firebaseActive 
-                      ? 'bg-gradient-to-r from-[#ECEFF1] to-[#CFD8DC] border-slate-300' 
-                      : 'bg-amber-50 border-amber-200'
-                  }`}>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="font-black flex items-center gap-2 text-slate-900 text-sm">
-                          <Database className="w-5 h-5 text-indigo-600" />
-                          <span>HỆ THỐNG CƠ SỞ DỮ LIỆU ĐÁM MÂY CÁ NHÂN (FIREBASE CLOUD)</span>
-                          {firebaseActive ? (
-                            <span className="bg-green-600 text-white font-sans text-[10px] font-black px-2.5 py-0.5 rounded-full animate-pulse flex items-center gap-1">
-                              ● ĐÃ KẾT NỐI
-                            </span>
-                          ) : (
-                            <span className="bg-amber-600 text-white font-sans text-[10px] font-black px-2.5 py-0.5 rounded-full">
-                              NGOẠI TUYẾN (LOCAL STATE)
-                            </span>
-                          )}
-                        </div>
-                        <p className="font-sans text-[11px] text-slate-700 leading-relaxed max-w-2xl text-left">
-                          {firebaseActive ? (
-                            <span>
-                              Dữ liệu danh sách khách hàng, hợp đồng gói tập và lịch đặt sân vãng lai của bạn hiện đang được lưu trữ an toàn và lâu dài trên <strong>Cơ sở dữ liệu Firestore Đám mây</strong> của dự án Firebase cá nhân: <code className="bg-slate-200/80 px-1.5 py-0.5 rounded font-mono text-slate-800 font-bold">{firebaseProjectId}</code>.
-                            </span>
-                          ) : (
-                            <span>
-                              Cảnh báo: Hiện hệ thống đang lưu trữ dữ liệu cục bộ trong bộ nhớ cache trình duyệt. Hãy kết nối Firebase để đảm bảo dữ liệu không bị thất lạc khi xóa lịch sử web.
-                            </span>
-                          )}
-                        </p>
-                      </div>
-
-                      {firebaseActive && (
-                        <button
-                          onClick={handleFirebaseBulkSync}
-                          disabled={isBulkSyncing}
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white font-sans font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-sm flex items-center justify-center gap-1.5 flex-shrink-0 disabled:opacity-50"
-                        >
-                          <RefreshCw className={`w-4 h-4 ${isBulkSyncing ? 'animate-spin' : ''}`} />
-                          {isBulkSyncing ? 'Đang đồng bộ...' : 'Đồng bộ hóa lại tất cả'}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* LIVE Status and User Alert Panel */}
-                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 p-5 rounded-2xl text-xs space-y-3 shadow-sm">
-                    <div className="font-bold flex items-center gap-2 text-emerald-950 text-sm">
-                      <div className="relative flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                      </div>
-                      <span>CỔNG NHẬN DỮ LIỆU ĐỒNG BỘ: ĐANG MỞ &amp; SẴN SÀNG (LIVE 🟢)</span>
-                    </div>
-                    <div className="leading-relaxed text-emerald-900 space-y-2 text-left">
-                      <p>
-                        💡 <strong>Lưu ý rất quan trọng về biểu tượng đồng bộ màu xanh lá cây:</strong>
-                      </p>
-                      <ul className="list-disc pl-5 space-y-1">
-                        <li>
-                          Biểu tượng tròn màu xanh kèm chữ <strong>"Alobo Sync: Active"</strong> chỉ xuất hiện ở góc dưới bên phải màn hình khi bạn truy cập trang web của Alobo (ví dụ: <a href="https://datlich.alobo.vn/userBooking" target="_blank" rel="noopener noreferrer" className="font-bold underline text-emerald-700 hover:text-emerald-800">https://datlich.alobo.vn/userBooking</a>), chứ <strong>KHÔNG</strong> xuất hiện ở trang quản trị hiện tại này của bạn.
-                        </li>
-                        <li>
-                          Điều này là hoàn toàn chính xác, bởi vì mã tiện ích <strong>Tampermonkey Userscript</strong> chỉ chạy và can thiệp chặn bắt dữ liệu trên tên miền của Alobo, sau đó âm thầm gửi dữ liệu đó về trang quản trị này của bạn và dán trực tiếp lên Google Sheets.
-                        </li>
-                      </ul>
-                      <p className="font-semibold text-emerald-950 pt-1">
-                        👉 <strong>Cách kiểm tra hoạt động:</strong> Sau khi bạn dán mã ở Bước 3 vào Tampermonkey, hãy mở một tab mới truy cập <a href="https://datlich.alobo.vn/userBooking" target="_blank" rel="noopener noreferrer" className="underline font-bold text-[#10B981] hover:text-emerald-700">datlich.alobo.vn</a>. Bạn sẽ thấy biểu tượng xanh lá cây lập tức nổi lên ở góc dưới bên phải màn hình bên đó báo hiệu hoạt động thành công!
-                      </p>
-                    </div>
-                  </div>
-
-                  {googleSheetWebhookUrl && googleSheetWebhookUrl.includes("docs.google.com/spreadsheets") && (
-                    <div className="bg-amber-50 border border-amber-200 text-amber-900 p-5 rounded-2xl text-xs space-y-3 shadow-sm">
-                      <div className="font-bold flex items-center gap-2 text-amber-950 text-sm">
-                        <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 animate-bounce" />
-                        <span>⚠️ Cảnh báo cấu hình nhầm lẫn: Dán link bảng tính vào ô Webhook URL!</span>
-                      </div>
-                      <p className="leading-relaxed text-amber-800">
-                        Bạn đã dán <strong>đường dẫn bảng tính Google Sheets (Sheet Link)</strong> vào ô <strong>Webhook URL (Apps Script URL)</strong>.
-                        Webhook URL bắt buộc phải là một đường dẫn chạy ứng dụng Web App có dạng <code>https://script.google.com/macros/s/.../exec</code>.
-                      </p>
-                      <p className="leading-relaxed text-amber-800 font-semibold">
-                        Hãy làm theo <strong>hướng dẫn 3 bước ở cột bên phải</strong> để tạo Google Apps Script Web App và lấy mã Webhook chuẩn. Hoặc bấm nút bên dưới để chuyển đường dẫn bảng tính này xuống ô "Đường dẫn bảng tính Google Sheets" đúng vị trí.
-                      </p>
-                      <button
-                        onClick={async () => {
-                          const sheetLink = googleSheetWebhookUrl;
-                          setGoogleSheetUrl(sheetLink);
-                          setGoogleSheetWebhookUrl('');
-                          // Auto trigger saving the corrected configuration to the server
-                          try {
-                            const res = await fetch('/api/alobo/config', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ googleSheetWebhookUrl: '', googleSheetUrl: sheetLink })
-                            });
-                            const data = await res.json();
-                            if (data.success) {
-                              alert('Đã tự động di chuyển đường dẫn sang đúng ô "Link bảng tính" và cập nhật cấu hình hệ thống!');
-                            }
-                          } catch (err) {
-                            console.error('Error saving config corrections:', err);
-                          }
-                        }}
-                        className="bg-amber-600 hover:bg-amber-700 text-white font-sans font-bold px-4 py-2 rounded-xl transition-all cursor-pointer shadow-sm flex items-center gap-1.5"
-                      >
-                        <RefreshCw className="w-4 h-4" /> Chuyển sang đúng ô &amp; Lưu cấu hình
-                      </button>
-                    </div>
-                  )}
-
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    {/* Left Column: Config, Test, and Manual Forward */}
+                    {/* Left Column: Primary Alobo API Settings & Operations */}
                     <div className="lg:col-span-7 space-y-6">
-
-                      {/* Backend Server Config */}
-                      <div className="bg-amber-50/60 border border-amber-200/60 p-5 rounded-2xl shadow-sm space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-display font-bold text-sm text-brand-dark flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                            <span>Kết nối Máy chủ (Dành cho Vercel / Hosting ngoài)</span>
-                          </h4>
-                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
-                            backendUrl ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                      
+                      {/* Alobo API Direct Sync Card (Main Control) */}
+                      <div className="bg-white border border-brand-border/40 p-6 rounded-2xl shadow-sm space-y-5">
+                        <div className="flex items-center justify-between border-b border-brand-border/20 pb-4">
+                          <div className="flex items-center gap-2.5">
+                            <span className={`w-3 h-3 rounded-full ${isAutoSyncEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`}></span>
+                            <h4 className="font-display font-bold text-base text-brand-dark">
+                              1. Cấu Hình Đường Dẫn Alobo API
+                            </h4>
+                          </div>
+                          <span className={`text-[11px] font-bold px-3 py-1 rounded-full ${
+                            isAutoSyncEnabled ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-700'
                           }`}>
-                            {backendUrl ? 'Đã kết nối' : 'Chạy Offline / Chưa thiết lập'}
+                            {isAutoSyncEnabled ? 'Tự động chạy ngầm' : 'Tắt tự động'}
                           </span>
                         </div>
 
-                        <div className="space-y-2 text-xs">
-                          <p className="text-brand-gray text-[11px] leading-relaxed">
-                            Nếu bạn chạy giao diện tại <strong>{typeof window !== 'undefined' ? window.location.hostname : 'Vercel'}</strong>, ứng dụng cần kết nối tới máy chủ Cloud Run hoặc AI Studio để lưu dữ liệu Firebase và gửi lên Google Sheets.
-                          </p>
-                          
-                          <label className="block text-[11px] font-bold text-brand-dark uppercase tracking-wide mt-2">Đường dẫn Máy chủ Backend (API BASE URL)</label>
-                          <div className="flex gap-2">
-                            <input 
-                              type="text"
-                              value={backendUrl}
-                              onChange={(e) => setBackendUrl(e.target.value)}
-                              placeholder="https://ais-pre-...asia-southeast1.run.app"
-                              className="flex-grow bg-white border border-brand-border/60 rounded-xl px-3 py-2 text-xs font-semibold text-brand-dark outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                            />
-                            <button
-                              onClick={() => {
-                                if (backendUrl.trim()) {
-                                  localStorage.setItem('alobo_backend_url', backendUrl.trim());
-                                  alert('Cấu hình đường dẫn Máy chủ đã được lưu thành công! Trang web sẽ tự động tải lại để đồng bộ cơ sở dữ liệu.');
-                                  window.location.reload();
-                                } else {
-                                  localStorage.removeItem('alobo_backend_url');
-                                  alert('Đã xóa cấu hình Máy chủ kết nối. Ứng dụng sẽ chạy bằng đường dẫn tương đối (Mặc định). Trang web sẽ tự động tải lại.');
-                                  window.location.reload();
-                                }
-                              }}
-                              className="bg-amber-600 hover:bg-amber-700 text-white font-sans font-bold px-4 py-2 rounded-xl transition-all cursor-pointer shadow-sm text-xs shrink-0"
-                            >
-                              Lưu kết nối
-                            </button>
-                          </div>
-                          
-                          <div className="bg-white/80 p-2.5 border border-amber-100 rounded-lg text-[11px] text-amber-800 space-y-1">
-                            <span className="font-bold block">💡 Gợi ý Máy chủ AI Studio chính thức của bạn:</span>
-                            <code className="block break-all font-mono font-bold bg-amber-100/60 p-1 rounded select-all text-[10px]">
-                              https://ais-pre-m4i6tghifj35swvbdvdnxq-197039547577.asia-southeast1.run.app
-                            </code>
-                            <button
-                              onClick={() => {
-                                setBackendUrl('https://ais-pre-m4i6tghifj35swvbdvdnxq-197039547577.asia-southeast1.run.app');
-                              }}
-                              className="text-[10px] text-amber-700 hover:text-amber-950 font-bold underline cursor-pointer inline-block mt-1"
-                            >
-                              👉 Tự động điền link máy chủ này
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Alobo Direct API Auto-Sync (No Tampermonkey) */}
-                      <div className="bg-[#f0f9ff] border border-blue-200 p-5 rounded-2xl shadow-sm space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-display font-bold text-sm text-brand-dark flex items-center gap-2">
-                            <span className={`w-2.5 h-2.5 rounded-full ${isAutoSyncEnabled ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></span>
-                            <span className="text-blue-950 font-extrabold uppercase">Đồng Bộ Alobo Tự Động (Không Cần Tampermonkey 🚀)</span>
-                          </h4>
-                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
-                            isAutoSyncEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                          }`}>
-                            {isAutoSyncEnabled ? 'Đang bật ngầm' : 'Đã tắt'}
-                          </span>
-                        </div>
-
-                        <div className="space-y-3 text-xs text-blue-950">
-                          <p className="text-[11px] leading-relaxed">
-                            <strong>Đồng bộ tự động hoàn toàn:</strong> Không cần Tampermonkey hay copy-paste thủ công. Hệ thống sẽ tự động chạy ngầm trên trình duyệt của bạn (và khách hàng) để kéo lịch đặt sân mới nhất từ Alobo và đồng bộ đồng thời lên hệ thống Pickle Bounce lẫn Google Sheets của bạn!
-                          </p>
-                          
-                          <div className="space-y-1">
-                            <label className="block text-[10px] font-bold uppercase tracking-wide">Đường dẫn API Của Alobo (Alobo API URL)</label>
+                        <div className="space-y-4 text-xs">
+                          <div>
+                            <label className="block text-[11px] font-bold text-brand-dark uppercase tracking-wider mb-1.5">
+                              Đường dẫn API Alobo (Alobo API Endpoint)
+                            </label>
                             <input 
                               type="text"
                               value={aloboApiUrl}
                               onChange={(e) => setAloboApiUrl(e.target.value)}
                               placeholder="https://shop-api-new.alobo.vn/api/v1/user-account/..."
-                              className="w-full bg-white border border-blue-300 rounded-xl px-3 py-2 text-xs font-semibold text-brand-dark outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                              className="w-full bg-brand-light-gray border border-brand-border/60 rounded-xl px-3.5 py-2.5 text-xs font-semibold text-brand-dark outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
                             />
-                            <p className="text-[10px] text-blue-700 italic">
-                              Hệ thống đã cài đặt sẵn API shop của bạn theo yêu cầu. Bạn có thể bấm nút Đồng bộ ngay bên dưới để chạy thử.
+                            <p className="text-[11px] text-brand-gray mt-1.5">
+                              Dữ liệu lịch đặt sân sẽ được tự động lấy về trực tiếp từ API shop của bạn.
                             </p>
                           </div>
 
-                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2 border-t border-blue-200">
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-3 border-t border-brand-border/20">
                             <div className="flex items-center gap-2">
                               <input 
                                 type="checkbox"
                                 id="isAutoSyncEnabled"
                                 checked={isAutoSyncEnabled}
                                 onChange={(e) => setIsAutoSyncEnabled(e.target.checked)}
-                                className="w-4 h-4 text-blue-600 border-blue-300 rounded focus:ring-blue-500"
+                                className="w-4 h-4 text-brand-blue border-brand-border/80 rounded focus:ring-brand-blue"
                               />
-                              <label htmlFor="isAutoSyncEnabled" className="font-bold text-[11px] cursor-pointer">
-                                Bật đồng bộ tự động chạy ngầm (Khuyên dùng)
+                              <label htmlFor="isAutoSyncEnabled" className="font-bold text-xs text-brand-dark cursor-pointer">
+                                Bật tự động kéo dữ liệu ngầm
                               </label>
                             </div>
                             
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] font-bold">Chu kỳ đồng bộ:</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-semibold text-brand-gray">Chu kỳ đồng bộ:</span>
                               <select 
                                 value={aloboSyncIntervalMinutes}
                                 onChange={(e) => setAloboSyncIntervalMinutes(Number(e.target.value))}
-                                className="bg-white border border-blue-300 rounded-lg px-2 py-1 text-[11px] font-bold outline-none"
+                                className="bg-brand-light-gray border border-brand-border/60 rounded-xl px-2.5 py-1.5 text-xs font-bold text-brand-dark outline-none"
                               >
                                 <option value={2}>2 phút</option>
                                 <option value={5}>5 phút</option>
@@ -2749,405 +2572,115 @@ export default function AdminPanel({
                             </div>
                           </div>
 
-                          <div className="flex gap-2 pt-2">
+                          <div className="flex flex-wrap gap-3 pt-2">
                             <button 
                               onClick={saveConfig}
                               disabled={isSavingConfig}
-                              className="bg-blue-600 hover:bg-blue-700 text-white font-sans font-bold text-xs px-4 py-2.5 rounded-xl cursor-pointer shadow-sm disabled:opacity-50"
+                              className="bg-brand-dark hover:bg-brand-dark/90 text-white font-sans font-bold text-xs px-5 py-2.5 rounded-xl cursor-pointer shadow-sm disabled:opacity-50 transition-all"
                             >
-                              {isSavingConfig ? 'Đang lưu...' : 'Lưu cài đặt tự động'}
+                              {isSavingConfig ? 'Đang lưu...' : 'Lưu Cấu Hình'}
                             </button>
 
                             <button 
                               onClick={handleDirectBrowserSync}
                               disabled={isDirectSyncing}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-sans font-bold text-xs px-4 py-2.5 rounded-xl cursor-pointer shadow-sm disabled:opacity-50 flex items-center gap-1.5"
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-sans font-bold text-xs px-5 py-2.5 rounded-xl cursor-pointer shadow-sm disabled:opacity-50 flex items-center gap-2 transition-all"
                             >
-                              <RefreshCw className={`w-3.5 h-3.5 ${isDirectSyncing ? 'animate-spin' : ''}`} />
-                              {isDirectSyncing ? 'Đang đồng bộ...' : 'Đồng bộ API ngay lập tức'}
+                              <RefreshCw className={`w-4 h-4 ${isDirectSyncing ? 'animate-spin' : ''}`} />
+                              {isDirectSyncing ? 'Đang lấy dữ liệu...' : 'Lấy Dữ Liệu Lịch Sân Ngay ⚡'}
                             </button>
                           </div>
 
                           {directSyncStatus && (
-                            <div className="bg-white/80 p-2.5 border border-blue-100 rounded-lg font-mono text-[10px] text-blue-900 leading-normal animate-fadeIn">
-                              <span className="font-bold">Nhật ký đồng bộ trực tuyến:</span>
+                            <div className="bg-emerald-50/80 p-3 border border-emerald-200 rounded-xl font-sans text-xs text-emerald-900 leading-relaxed animate-fadeIn">
+                              <span className="font-bold">Trạng thái đồng bộ API:</span>
                               <p className="mt-0.5 whitespace-pre-line">{directSyncStatus}</p>
                             </div>
                           )}
                         </div>
                       </div>
 
-                      {/* Webhook URL Config */}
-                      <div className="bg-white border border-brand-border/40 p-5 rounded-2xl shadow-sm space-y-4">
-                        <div className="flex items-center justify-between">
+                      {/* Optional Google Sheets Destination Config */}
+                      <div className="bg-white border border-brand-border/40 p-6 rounded-2xl shadow-sm space-y-4">
+                        <div className="flex items-center justify-between border-b border-brand-border/20 pb-3">
                           <h4 className="font-display font-bold text-sm text-brand-dark flex items-center gap-2">
-                            <span>1. Cấu hình Google Apps Script Webhook</span>
+                            <span>2. Kết Nối Google Sheets (Tùy Chọn)</span>
                           </h4>
                           <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
-                            googleSheetWebhookUrl ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                            googleSheetWebhookUrl ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'
                           }`}>
-                            {googleSheetWebhookUrl ? 'Đang hoạt động' : 'Chưa kết nối'}
+                            {googleSheetWebhookUrl ? 'Đã kết nối' : 'Chưa cấu hình'}
                           </span>
                         </div>
 
-                        <div className="space-y-2 text-xs">
-                          <label className="block text-[11px] font-bold text-brand-gray">GOOGLE WEB APP URL (APPS SCRIPT WEBHOOK)</label>
-                          <div className="flex gap-2">
-                            <input 
-                              type="text"
-                              value={googleSheetWebhookUrl}
-                              onChange={(e) => setGoogleSheetWebhookUrl(e.target.value)}
-                              placeholder="https://script.google.com/macros/s/AKfycb.../exec"
-                              className="flex-grow bg-brand-light-gray border border-brand-border/60 rounded-xl px-3 py-2 text-xs font-semibold text-brand-dark outline-none"
-                            />
-                            <button 
-                              onClick={saveConfig}
-                              disabled={isSavingConfig}
-                              className="bg-[#4285F4] hover:bg-[#357ae8] text-white font-sans font-bold text-xs px-4 py-2 rounded-xl cursor-pointer disabled:opacity-50 flex-shrink-0"
-                            >
-                              {isSavingConfig ? 'Đang lưu...' : 'Lưu cấu hình'}
-                            </button>
-                          </div>
-                          <p className="text-[10px] text-brand-gray italic">
-                            Mẹo: Làm theo hướng dẫn ở cột bên phải để lấy URL này từ Google Sheets của bạn.
-                          </p>
-                        </div>
-
-                        {/* Google Sheet URL Config */}
-                        <div className="space-y-2 text-xs border-t border-brand-border/20 pt-4">
-                          <label className="block text-[11px] font-bold text-brand-gray flex items-center justify-between">
-                            <span>ĐƯỜNG DẪN BẢNG TÍNH GOOGLE SHEETS (SHEET LINK)</span>
-                            {googleSheetUrl && (
-                              <a 
-                                href={googleSheetUrl} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className="text-[#0F9D58] hover:underline font-bold flex items-center gap-1"
+                        <div className="space-y-3 text-xs">
+                          <div>
+                            <label className="block text-[10px] font-bold text-brand-gray uppercase tracking-wider mb-1">
+                              GOOGLE APPS SCRIPT WEBHOOK URL
+                            </label>
+                            <div className="flex gap-2">
+                              <input 
+                                type="text"
+                                value={googleSheetWebhookUrl}
+                                onChange={(e) => setGoogleSheetWebhookUrl(e.target.value)}
+                                placeholder="https://script.google.com/macros/s/AKfycb.../exec"
+                                className="flex-grow bg-brand-light-gray border border-brand-border/60 rounded-xl px-3 py-2 text-xs font-semibold text-brand-dark outline-none"
+                              />
+                              <button 
+                                onClick={saveConfig}
+                                disabled={isSavingConfig}
+                                className="bg-[#4285F4] hover:bg-[#357ae8] text-white font-sans font-bold text-xs px-4 py-2 rounded-xl cursor-pointer disabled:opacity-50 flex-shrink-0"
                               >
-                                <span>Mở trang tính ↗</span>
-                              </a>
-                            )}
-                          </label>
-                          <div className="flex gap-2">
+                                Lưu
+                              </button>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold text-brand-gray uppercase tracking-wider mb-1 flex items-center justify-between">
+                              <span>ĐƯỜNG DẪN BẢNG TÍNH GOOGLE SHEETS</span>
+                              {googleSheetUrl && (
+                                <a 
+                                  href={googleSheetUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  className="text-[#0F9D58] hover:underline font-bold flex items-center gap-1"
+                                >
+                                  <span>Mở bảng tính ↗</span>
+                                </a>
+                              )}
+                            </label>
                             <input 
                               type="text"
                               value={googleSheetUrl}
                               onChange={(e) => setGoogleSheetUrl(e.target.value)}
                               placeholder="https://docs.google.com/spreadsheets/d/.../edit"
-                              className="flex-grow bg-brand-light-gray border border-brand-border/60 rounded-xl px-3 py-2 text-xs font-semibold text-brand-dark outline-none"
+                              className="w-full bg-brand-light-gray border border-brand-border/60 rounded-xl px-3 py-2 text-xs font-semibold text-brand-dark outline-none"
                             />
+                          </div>
+
+                          <div className="pt-2 flex items-center justify-between gap-3 text-xs">
+                            <span className="text-[11px] text-brand-gray">Kiểm tra kết nối gửi hàng thử nghiệm lên Google Sheets</span>
                             <button 
-                              onClick={saveConfig}
-                              disabled={isSavingConfig}
-                              className="bg-[#0F9D58] hover:bg-[#0b8043] text-white font-sans font-bold text-xs px-4 py-2 rounded-xl cursor-pointer disabled:opacity-50 flex-shrink-0"
+                              onClick={handleTestConnection}
+                              disabled={isTestingSheet || !googleSheetWebhookUrl}
+                              className="bg-brand-dark hover:bg-brand-dark/95 text-white font-sans font-bold text-xs px-4 py-2 rounded-xl cursor-pointer disabled:opacity-40 transition-colors"
                             >
-                              Lưu Link
+                              {isTestingSheet ? 'Đang gửi...' : 'Kiểm tra kết nối'}
                             </button>
                           </div>
-                          <p className="text-[10px] text-brand-gray italic">
-                            Dán link Google Sheets của bạn ở đây để lưu trữ và mở nhanh từ xa.
-                          </p>
-                        </div>
 
-                        {/* Test connection row */}
-                        <div className="pt-3 border-t border-brand-border/20 flex flex-wrap items-center justify-between gap-3 text-xs">
-                          <div className="text-[11px] text-brand-gray">
-                            Gửi dữ liệu mẫu để kiểm tra tính chính xác của bảng tính.
-                          </div>
-                          <button 
-                            onClick={handleTestConnection}
-                            disabled={isTestingSheet || !googleSheetWebhookUrl}
-                            className="bg-brand-dark hover:bg-brand-dark/95 text-white font-sans font-bold text-xs px-4 py-2 rounded-xl cursor-pointer disabled:opacity-40 transition-colors"
-                          >
-                            {isTestingSheet ? 'Đang gửi...' : 'Kiểm tra kết nối'}
-                          </button>
-                        </div>
-
-                        {testResult && (
-                          <div className={`p-3 rounded-xl text-xs font-semibold ${
-                            testResult.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-brand-red border border-brand-red-light/30'
-                          }`}>
-                            {testResult.success ? (
-                              '✓ Kết nối thành công! Một hàng dữ liệu thử nghiệm đã được chèn vào Google Sheets của bạn.'
-                            ) : (
-                              `✗ Lỗi kết nối: ${testResult.error || 'Vui lòng kiểm tra lại URL Apps Script Web App.'}`
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Manual Booking Input Form */}
-                      <div className="bg-white border border-brand-border/40 p-5 rounded-2xl shadow-sm space-y-4 text-xs">
-                        <h4 className="font-display font-bold text-sm text-brand-dark">
-                          2. Gửi giao dịch thủ công lên Google Sheets
-                        </h4>
-                        <p className="font-sans text-[11px] text-brand-gray mt-0.5 text-left">
-                          Sử dụng khi bạn muốn đẩy nhanh một ca khách vãng lai hoặc bổ sung đặt lịch vào Sheets mà không qua Alobo.
-                        </p>
-
-                        <form onSubmit={handleManualSend} className="space-y-4">
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1">Tên khách hàng</label>
-                              <input 
-                                type="text"
-                                required
-                                value={manualBookingForm.fullName}
-                                onChange={(e) => setManualBookingForm({...manualBookingForm, fullName: e.target.value})}
-                                placeholder="e.g. Anh Huy"
-                                className="w-full bg-brand-light-gray border border-brand-border/60 rounded-xl px-3 py-2 text-xs font-semibold text-brand-dark outline-none"
-                              />
+                          {testResult && (
+                            <div className={`p-3 rounded-xl text-xs font-semibold ${
+                              testResult.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-brand-red border border-brand-red-light/30'
+                            }`}>
+                              {testResult.success ? (
+                                '✓ Kết nối Google Sheets thành công!'
+                              ) : (
+                                `✗ Lỗi kết nối: ${testResult.error || 'Vui lòng kiểm tra lại URL Apps Script Web App.'}`
+                              )}
                             </div>
-                            <div>
-                              <label className="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1">Số điện thoại</label>
-                              <input 
-                                type="text"
-                                required
-                                value={manualBookingForm.phone}
-                                onChange={(e) => setManualBookingForm({...manualBookingForm, phone: e.target.value})}
-                                placeholder="0901234567"
-                                className="w-full bg-brand-light-gray border border-brand-border/60 rounded-xl px-3 py-2 text-xs font-semibold text-brand-dark outline-none"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-3">
-                            <div>
-                              <label className="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1">Sân chơi</label>
-                              <select 
-                                value={manualBookingForm.courtName}
-                                onChange={(e) => setManualBookingForm({...manualBookingForm, courtName: e.target.value})}
-                                className="w-full bg-white border border-brand-border/40 rounded-xl px-2.5 py-2 text-xs font-bold text-brand-dark outline-none"
-                              >
-                                <option value="Sân 1">Sân 1</option>
-                                <option value="Sân 2">Sân 2</option>
-                                <option value="Sân 3">Sân 3</option>
-                                <option value="Sân 4">Sân 4</option>
-                                <option value="Sân 5">Sân 5</option>
-                              </select>
-                            </div>
-                            <div>
-                              <label className="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1">Khung giờ</label>
-                              <input 
-                                type="text"
-                                required
-                                value={manualBookingForm.timeSlot}
-                                onChange={(e) => setManualBookingForm({...manualBookingForm, timeSlot: e.target.value})}
-                                placeholder="17:00 - 18:00"
-                                className="w-full bg-brand-light-gray border border-brand-border/60 rounded-xl px-3 py-2 text-xs font-semibold text-brand-dark outline-none"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1">Tiền sân (VND)</label>
-                              <input 
-                                type="text"
-                                required
-                                value={manualBookingForm.price}
-                                onChange={(e) => setManualBookingForm({...manualBookingForm, price: e.target.value})}
-                                placeholder="150.000"
-                                className="w-full bg-brand-light-gray border border-brand-border/60 rounded-xl px-3 py-2 text-xs font-bold text-brand-dark outline-none"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1">Ngày chơi</label>
-                              <input 
-                                type="date"
-                                value={manualBookingForm.date}
-                                onChange={(e) => setManualBookingForm({...manualBookingForm, date: e.target.value})}
-                                className="w-full bg-brand-light-gray border border-brand-border/60 rounded-xl px-3 py-2 text-xs font-semibold text-brand-dark outline-none"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1">Trạng thái thanh toán</label>
-                              <input 
-                                type="text"
-                                value={manualBookingForm.paymentStatus}
-                                onChange={(e) => setManualBookingForm({...manualBookingForm, paymentStatus: e.target.value})}
-                                className="w-full bg-brand-light-gray border border-brand-border/60 rounded-xl px-3 py-2 text-xs font-semibold text-brand-dark outline-none"
-                              />
-                            </div>
-                          </div>
-
-                          <button 
-                            type="submit"
-                            disabled={isManualSending || !googleSheetWebhookUrl}
-                            className="w-full bg-green-600 hover:bg-green-700 text-white font-sans font-bold text-xs py-3 rounded-xl transition-all cursor-pointer disabled:opacity-40"
-                          >
-                            {isManualSending ? 'Đang gửi...' : 'Gửi trực tiếp lên Google Sheets'}
-                          </button>
-                        </form>
-
-                        {manualSendResult && (
-                          <div className={`p-3 rounded-xl text-xs font-semibold ${
-                            manualSendResult.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-brand-red border border-brand-red-light/30'
-                          }`}>
-                            {manualSendResult.success ? (
-                              '✓ Đã gửi dữ liệu đặt sân lên Google Sheets thành công!'
-                            ) : (
-                              `✗ Gửi thất bại: ${manualSendResult.error || 'Vui lòng kiểm tra lại kết nối.'}`
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* 1-Click Bookmarklet Card */}
-                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-5 rounded-2xl shadow-sm space-y-4 text-xs">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-display font-bold text-sm text-brand-dark flex items-center gap-1.5">
-                            <Sparkles className="w-4.5 h-4.5 text-indigo-600 animate-pulse" />
-                            <span className="text-indigo-950 font-extrabold uppercase">Tiện Ích Đồng Bộ Alobo 1-Click (100% Thành Công ⚡)</span>
-                          </h4>
-                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 animate-pulse">
-                            Mới &amp; Cực Kỳ Tiện Lợi
-                          </span>
-                        </div>
-                        
-                        <div className="font-sans text-[11px] text-slate-700 text-left leading-relaxed space-y-2">
-                          <p>
-                            Do trình duyệt chặn chính sách CORS hoặc múi giờ từ Alobo, cách này là <strong>tối ưu nhất, đơn giản nhất và chắc chắn thành công 100%</strong> để cập nhật thông tin khách hàng đặt:
-                          </p>
-                          <ol className="list-decimal pl-5 space-y-1.5 font-sans text-[11px] text-slate-700">
-                            <li>
-                              Bạn hãy kéo nút màu cam dưới đây thả lên <strong>Thanh dấu trang (Bookmarks Bar)</strong> của trình duyệt bạn (Chrome/Safari/Edge/Cốc Cốc):
-                              <div className="my-2.5 text-center">
-                                <a
-                                  href={`javascript:(async()=>{const jsonText=document.body.innerText;try{const rawJson=JSON.parse(jsonText);const backendUrl=window.location.origin;const res=await fetch(\`\${backendUrl}/api/alobo/sync-raw-json\`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rawJson,date:new Date().toISOString().split('T')[0]})});const data=await res.json();if(data.success){alert('✓ ĐỒNG BỘ THÀNH CÔNG! Đã cập nhật thông tin đặt sân và hồ sơ khách hàng mới nhất.');}else{alert('Lỗi: '+data.error);}}catch(e){alert('Vui lòng mở link API Alobo trước khi bấm nút này! '+e.message);}})();`}
-                                  className="inline-block bg-orange-500 hover:bg-orange-600 text-white font-sans font-bold px-4 py-2 rounded-xl shadow cursor-move select-none animate-pulse border border-orange-400 text-xs"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    alert("👉 Vui lòng KÉO nút này rồi THẢ vào Thanh dấu trang (Bookmarks Bar) của trình duyệt. (Nếu không thấy thanh dấu trang, nhấn Ctrl + Shift + B trên Windows hoặc Cmd + Shift + B trên Mac)!");
-                                  }}
-                                >
-                                  👉 ĐỒNG BỘ ALOBO ⚡
-                                </a>
-                              </div>
-                            </li>
-                            <li>
-                              Click vào đường link này để mở dữ liệu Alobo chính thức của bạn: 
-                              <a 
-                                href="https://shop-api-new.alobo.vn/api/v1/user-account/d0K5Ow*fHDKy8Vi4mEZg" 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="font-bold text-indigo-600 underline ml-1 hover:text-indigo-800 inline-flex items-center"
-                              >
-                                shop-api-new.alobo.vn/api/v1/user-account/d0K5Ow*fHDKy8Vi4mEZg
-                              </a>
-                            </li>
-                            <li>
-                              Tại trang API vừa mở ra (chứa danh sách dữ liệu chữ), bạn chỉ cần click vào nút <strong>ĐỒNG BỘ ALOBO ⚡</strong> trên thanh dấu trang vừa lưu. Hệ thống khách hàng đặt tự động cập nhật ngay lập tức!
-                            </li>
-                          </ol>
-                        </div>
-                      </div>
-
-                      {/* AI Copy-Paste Scraper Card */}
-                      <div className="bg-white border border-brand-border/40 p-5 rounded-2xl shadow-sm space-y-4 text-xs">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-display font-bold text-sm text-brand-dark flex items-center gap-1.5">
-                            <Sparkles className="w-4.5 h-4.5 text-amber-500 animate-pulse" />
-                            <span>3. Nạp dữ liệu nhanh bằng AI (Copy - Dán từ Alobo)</span>
-                          </h4>
-                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 animate-pulse">
-                            Bảo mật &amp; Không cần tài khoản
-                          </span>
-                        </div>
-                        <p className="font-sans text-[11px] text-brand-gray mt-0.5 text-left leading-relaxed">
-                          Dành cho nhân viên khi kết ca hoặc đồng bộ nhanh: Bạn chỉ cần vào trang chi tiết lịch đặt <code className="bg-brand-light-gray px-1 py-0.5 rounded text-brand-dark">app.alobo.vn/bookingDetails</code> trên trình duyệt (nơi bạn đã đăng nhập tài khoản Alobo), nhấn <kbd className="bg-brand-light-gray px-1 border rounded shadow-sm font-semibold">Ctrl + A</kbd> (chọn tất cả) rồi <kbd className="bg-brand-light-gray px-1 border rounded shadow-sm font-semibold">Ctrl + C</kbd> (sao chép), sau đó <strong>Dán trực tiếp</strong> vào ô dưới đây. Trí tuệ nhân tạo Gemini sẽ tự động bóc tách thông tin khách hàng và ghi thẳng vào Google Sheet!
-                        </p>
-
-                        <form onSubmit={handleAIPasteSend} className="space-y-4">
-                          <div>
-                            <textarea
-                              rows={4}
-                              value={aiPasteText}
-                              onChange={(e) => setAiPasteText(e.target.value)}
-                              placeholder="Dán toàn bộ văn bản hoặc mã nguồn trang chi tiết đặt lịch Alobo tại đây..."
-                              className="w-full bg-brand-light-gray border border-brand-border/60 rounded-xl p-3 text-xs font-medium text-brand-dark outline-none focus:border-[#4285F4] transition-all placeholder:text-brand-gray/50 font-sans"
-                            />
-                          </div>
-
-                          <button 
-                            type="submit"
-                            disabled={isParsingPaste || !aiPasteText.trim() || !googleSheetWebhookUrl}
-                            className="w-full bg-[#4285F4] hover:bg-[#357ae8] text-white font-sans font-bold text-xs py-3 rounded-xl transition-all cursor-pointer disabled:opacity-40 flex items-center justify-center gap-2"
-                          >
-                            {isParsingPaste ? (
-                              <>
-                                <RefreshCw className="w-4 h-4 animate-spin" />
-                                <span>Trí Tuệ Nhân Tạo (Gemini) Đang Trích Xuất Dữ Liệu...</span>
-                              </>
-                            ) : (
-                              <>
-                                <Sparkles className="w-4 h-4" />
-                                <span>Phân Tích AI &amp; Ghi Vào Google Sheets</span>
-                              </>
-                            )}
-                          </button>
-                        </form>
-
-                        {aiPasteResult && (
-                          <div className={`p-4 rounded-xl text-xs space-y-2 ${
-                            aiPasteResult.success ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-brand-red border border-brand-red-light/30'
-                          }`}>
-                            {aiPasteResult.success ? (
-                              <div className="text-left space-y-1.5">
-                                <div className="font-bold text-green-950 flex items-center gap-1.5">
-                                  ✓ Trích xuất &amp; Đồng bộ Google Sheets thành công!
-                                </div>
-                                <div className="text-[10px] text-green-700 font-semibold">
-                                  Đã phát hiện và ghi nhận {aiPasteResult.bookings?.length || 1} lượt đặt sân:
-                                </div>
-                                <div className="space-y-2 mt-2 max-h-60 overflow-y-auto pr-1">
-                                  {(aiPasteResult.bookings || [aiPasteResult.booking]).map((b: any, index: number) => (
-                                    <div key={index} className="bg-white/70 p-2.5 rounded-lg border border-green-100 font-sans text-[11px] grid grid-cols-2 gap-x-2 gap-y-1">
-                                      <div className="col-span-2 border-b border-green-200/50 pb-1 mb-1 font-bold text-green-900 flex justify-between">
-                                        <span>Lượt đặt #{index + 1}</span>
-                                        <span className="text-[#0F9D58]">{b.price}</span>
-                                      </div>
-                                      <div><span className="text-brand-gray">Khách hàng:</span> <strong className="text-brand-dark">{b.fullName}</strong></div>
-                                      <div><span className="text-brand-gray">Số điện thoại:</span> <strong className="text-brand-dark">{b.phone}</strong></div>
-                                      <div><span className="text-brand-gray">Sân đấu:</span> <strong className="text-brand-dark">{b.courtName}</strong></div>
-                                      <div><span className="text-brand-gray">Khung giờ:</span> <strong className="text-brand-dark">{b.timeSlot}</strong></div>
-                                      <div className="col-span-2 text-[10px] text-brand-gray/80 italic mt-0.5">{b.paymentStatus}</div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="font-semibold">
-                                ✗ Thất bại: {aiPasteResult.error || 'Vui lòng kiểm tra lại cấu hình webhook hoặc định dạng dán.'}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                    </div>
-
-                    {/* Right Column: Step-by-step Guide and Copy scripts */}
-                    <div className="lg:col-span-5 space-y-6">
-                      
-                      {/* Step-by-Step Guide */}
-                      <div className="bg-brand-light-gray p-5 rounded-2xl border border-brand-border/40 space-y-4 text-xs text-left">
-                        <h4 className="font-display font-black text-xs text-brand-dark uppercase tracking-widest text-[#4285F4]">
-                          Hướng Dẫn Kết Nối Báo Cáo Pickle Bounce & Đặt Sân
-                        </h4>
-                        
-                        <div className="space-y-3 font-sans leading-relaxed text-brand-dark">
-                          <div>
-                            <span className="font-bold text-[#4285F4]">Bước 1:</span> Chuẩn bị file Google Sheets có trang tính chính là <strong>Trang 1 (Đặt sân)</strong> và một trang tính tên là <strong>BÁO CÁO PICKLE BOUNCE</strong> để điền hợp đồng.
-                          </div>
-
-                          <div>
-                            <span className="font-bold text-[#4285F4]">Bước 2:</span> Mở <strong>Tiện ích mở rộng (Extensions)</strong> &gt; <strong>Apps Script</strong>. Xóa mã cũ, dán mã Google Apps Script cải tiến ở ô bên dưới vào và bấm lưu.
-                          </div>
-
-                          <div>
-                            <span className="font-bold text-[#4285F4]">Bước 3:</span> Bấm <strong>Triển khai (Deploy)</strong> &gt; <strong>Triển khai mới (New deployment)</strong>. Chọn <strong>Ứng dụng web (Web app)</strong>, cấu hình chạy dưới tên bạn và phân quyền <strong>Bất kỳ ai (Anyone)</strong>, lấy URL triển khai dán vào ô bên trái.
-                          </div>
+                          )}
                         </div>
                       </div>
 
@@ -3197,202 +2730,89 @@ export default function AdminPanel({
 
 function writeRowToSheet(sheet, data, isBooking) {
   // 1. Tìm dòng chứa tiêu đề tự động bằng cách quét 5 dòng đầu
+  var lastCol = sheet.getLastColumn() || 10;
+  var headerRowIndex = -1;
   var headers = [];
-  var headerRowIdx = 1;
-  var maxRowsToScan = Math.min(sheet.getLastRow(), 5);
-  if (maxRowsToScan > 0) {
-    var scanRange = sheet.getRange(1, 1, maxRowsToScan, sheet.getLastColumn()).getValues();
-    var bestRowScore = -1;
-    for (var rIdx = 0; rIdx < scanRange.length; rIdx++) {
-      var rowCells = scanRange[rIdx];
-      var score = 0;
-      for (var cIdx = 0; cIdx < rowCells.length; cIdx++) {
-        var val = String(rowCells[cIdx]).toUpperCase().trim();
-        if (val.indexOf("HỌ VÀ TÊN") > -1 || val.indexOf("HỌ TÊN") > -1 || val.indexOf("KHÁCH HÀNG") > -1) score += 5;
-        if (val.indexOf("SĐT") > -1 || val.indexOf("SỐ ĐIỆN THOẠI") > -1 || val.indexOf("SDT") > -1) score += 3;
-        if (val.indexOf("STT") > -1) score += 2;
-        if (val.indexOf("NGÀY KÝ") > -1 || val.indexOf("NGÀY ĐẶT") > -1 || val.indexOf("NGÀY SINH") > -1) score += 2;
-      }
-      if (score > bestRowScore && score >= 5) {
-        bestRowScore = score;
-        headers = rowCells;
-        headerRowIdx = rIdx + 1;
+  
+  var topRows = sheet.getRange(1, 1, 5, lastCol).getValues();
+  for (var r = 0; r < topRows.length; r++) {
+    var rowText = topRows[r].join(" ").toLowerCase();
+    if (rowText.indexOf("sân") > -1 || rowText.indexOf("họ tên") > -1 || rowText.indexOf("khách hàng") > -1 || rowText.indexOf("ngày") > -1 || rowText.indexOf("chuyển khoản") > -1 || rowText.indexOf("gói tập") > -1) {
+      headerRowIndex = r + 1;
+      headers = topRows[r];
+      break;
+    }
+  }
+  
+  if (headerRowIndex === -1) {
+    headerRowIndex = 1;
+    headers = topRows[0];
+  }
+  
+  var targetRowIndex = Math.max(sheet.getLastRow() + 1, headerRowIndex + 1);
+  var colMap = {};
+  for (var c = 0; c < headers.length; c++) {
+    var h = String(headers[c] || "").trim().toLowerCase();
+    if (h) colMap[h] = c + 1;
+  }
+  
+  // Tránh đè dữ liệu
+  var checkCol = colMap["sân"] || colMap["sân đấu"] || colMap["họ tên"] || colMap["khách hàng"] || colMap["gói tập"] || 1;
+  while (sheet.getRange(targetRowIndex, checkCol).getValue() !== "") {
+    targetRowIndex++;
+  }
+  
+  var rowValues = new Array(lastCol).fill("");
+  function setVal(headerKeywords, val) {
+    if (!val) return;
+    for (var k = 0; k < headerKeywords.length; k++) {
+      var kw = headerKeywords[k].toLowerCase();
+      for (var hKey in colMap) {
+        if (hKey.indexOf(kw) > -1) {
+          rowValues[colMap[hKey] - 1] = val;
+          return;
+        }
       }
     }
   }
   
-  if (headers.length === 0 && sheet.getLastRow() >= 1) {
-    headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    headerRowIdx = 1;
-  }
-  
-  // 2. Ánh xạ các cột dựa trên tên tiêu đề
-  var headerMap = {};
-  for (var colIdx = 0; colIdx < headers.length; colIdx++) {
-    var hName = String(headers[colIdx]).toUpperCase().trim();
-    if (hName.indexOf("STT") > -1) headerMap["STT"] = colIdx;
-    else if (hName.indexOf("NGÀY SINH") > -1) headerMap["NGÀY SINH"] = colIdx;
-    else if (hName.indexOf("NGÀY KÝ") > -1 || hName.indexOf("NGÀY ĐẶT") > -1 || hName.indexOf("NGÀY") > -1) headerMap["NGÀY KÝ"] = colIdx;
-    else if (hName.indexOf("HỌ VÀ TÊN") > -1 || hName.indexOf("HỌ TÊN") > -1 || hName.indexOf("KHÁCH HÀNG") > -1) headerMap["HỌ TÊN"] = colIdx;
-    else if (hName.indexOf("SĐT") > -1 || hName.indexOf("SỐ ĐIỆN THOẠI") > -1 || hName.indexOf("SDT") > -1 || hName.indexOf("ĐIỆN THOẠI") > -1) headerMap["SĐT"] = colIdx;
-    else if (hName.indexOf("THỜI GIAN") > -1 || hName.indexOf("KHUNG GIỜ") > -1) headerMap["THỜI GIAN"] = colIdx;
-    else if (hName.indexOf("GIỜ TẬP") > -1 || hName.indexOf("SỐ GIỜ") > -1) headerMap["GIỜ TẬP"] = colIdx;
-    else if (hName.indexOf("GÓI TẬP") > -1) headerMap["GÓI TẬP"] = colIdx;
-    else if (hName.indexOf("THỜI HẠN") > -1) headerMap["THỜI HẠN"] = colIdx;
-    else if (hName.indexOf("HLV") > -1) headerMap["HLV"] = colIdx;
-    else if (hName.indexOf("DỊCH VỤ") > -1) headerMap["DỊCH VỤ"] = colIdx;
-    else if (hName.indexOf("TỔNG TIỀN") > -1 || hName.indexOf("DOANH THU") > -1 || hName.indexOf("ĐƠN GIÁ") > -1 || hName.indexOf("GIÁ TRỊ") > -1) headerMap["TỔNG TIỀN"] = colIdx;
-    else if (hName.indexOf("ĐẶT CỌC") > -1 || hName.indexOf("CỌC") > -1) headerMap["ĐẶT CỌC"] = colIdx;
-    else if (hName.indexOf("CÒN LẠI") > -1) headerMap["CÒN LẠI"] = colIdx;
-    else if (hName.indexOf("THỰC TẾ") > -1 || hName.indexOf("THỰC THU") > -1) headerMap["THỰC TẾ"] = colIdx;
-    else if (hName.indexOf("GHI CHÚ") > -1 || hName.indexOf("TRẠNG THÁI") > -1) headerMap["GHI CHÚ"] = colIdx;
-  }
-  
-  // Khởi tạo các giá trị mặc định cho bảng đơn giản nếu tiêu đề không khớp
-  if (headerMap["NGÀY KÝ"] === undefined) headerMap["NGÀY KÝ"] = 0;
-  if (headerMap["THỜI GIAN"] === undefined) headerMap["THỜI GIAN"] = 1;
-  if (headerMap["DỊCH VỤ"] === undefined) headerMap["DỊCH VỤ"] = 2;
-  if (headerMap["HỌ TÊN"] === undefined) headerMap["HỌ TÊN"] = 3;
-  if (headerMap["SĐT"] === undefined) headerMap["SĐT"] = 4;
-  if (headerMap["TỔNG TIỀN"] === undefined) headerMap["TỔNG TIỀN"] = 5;
-  if (headerMap["THỰC TẾ"] === undefined) headerMap["THỰC TẾ"] = 6;
-  if (headerMap["GHI CHÚ"] === undefined) headerMap["GHI CHÚ"] = 7;
-
-  // 3. Trích xuất các trường dữ liệu truyền từ web portal
-  var dateVal = data.contractDate || data.date || data.ngay_ky || "";
-  var fullNameVal = data.fullName || data.ho_ten || "";
-  var dobVal = data.dob || data.ngay_sinh || "";
-  var phoneVal = "'" + (data.phone || data.sdt || "");
-  var timeSlotVal = data.preferredTime || data.timeSlot || data.thoi_gian || "";
-  var hoursCountVal = data.hoursCount || data.gio_tap || "";
-  var packageTypeVal = data.packageType || data.goi_tap || "";
-  var durationMonthsVal = data.durationMonths || data.thoi_han || "";
-  var coachNameVal = data.coachName || data.hlv || "";
-  var serviceTypeVal = data.serviceType || data.dich_vu || "";
-  
-  // Xử lý chuyển đổi tiền số học an toàn
-  var rawPrice = data.totalPrice !== undefined ? data.totalPrice : (data.price || data.gia_tri || 0);
-  var numericPrice = parseFloat(String(rawPrice).replace(/[^\\d]/g, "")) || 0;
-  
-  var rawDeposit = data.depositAmount !== undefined ? data.depositAmount : (data.dat_coc || 0);
-  var depositVal = parseFloat(String(rawDeposit).replace(/[^\\d]/g, "")) || 0;
-  
-  var rawRemaining = data.remainingAmount !== undefined ? data.remainingAmount : (data.con_lai || 0);
-  var remainingVal = parseFloat(String(rawRemaining).replace(/[^\\d]/g, "")) || 0;
-  
-  var rawActualPaid = data.actualPaid !== undefined ? data.actualPaid : (data.thuc_te || 0);
-  var actualPaidVal = parseFloat(String(rawActualPaid).replace(/[^\\d]/g, "")) || 0;
-  
-  var paymentStatusVal = data.paymentStatus || "";
-  var syncedAtVal = data.syncedAt || new Date().toLocaleString("vi-VN");
-  
-  // Custom logic cho Booking vãng lai vs Đăng ký Gói tập
   if (isBooking) {
-    var nameLower = fullNameVal.toLowerCase();
-    var packageLower = packageTypeVal.toLowerCase();
-    var statusLower = paymentStatusVal.toLowerCase();
-    
-    var isSocial = (nameLower.indexOf("social") > -1 || 
-                    packageLower.indexOf("social") > -1 || 
-                    statusLower.indexOf("social") > -1);
-    
-    if (isSocial) {
-      if (!serviceTypeVal || serviceTypeVal === "Pickleball") serviceTypeVal = "SOCIAL";
-      if (!packageTypeVal || packageTypeVal === "Không" || packageTypeVal === "") packageTypeVal = "Social";
-      if (!hoursCountVal) hoursCountVal = "1 Social";
-    } else {
-      if (!serviceTypeVal || serviceTypeVal === "Pickleball") serviceTypeVal = "SÂN VÃNG LAI";
-      if (!packageTypeVal || packageTypeVal === "") packageTypeVal = "Không";
-    }
-    
-    if (actualPaidVal === 0 && paymentStatusVal && 
-        (statusLower.indexOf("đã thanh toán") > -1 || 
-         statusLower.indexOf("paid") > -1)) {
-      actualPaidVal = numericPrice;
-    }
-  }
-  
-  // 4. Tính toán số thứ tự (STT) tự động tăng
-  var lastRow = sheet.getLastRow();
-  var nextStt = lastRow - headerRowIdx + 1;
-  if (nextStt <= 0) {
-    nextStt = 1;
-  }
-  
-  // 5. Kiểm tra trùng lặp lịch đặt để cập nhật ghi đè thay vì tạo mới
-  var foundRowIndex = -1;
-  if (isBooking && lastRow > headerRowIdx) {
-    var rows = sheet.getDataRange().getValues();
-    var dateColIdx = headerMap["NGÀY KÝ"] !== undefined ? headerMap["NGÀY KÝ"] : 1;
-    var timeColIdx = headerMap["THỜI GIAN"] !== undefined ? headerMap["THỜI GIAN"] : 5;
-    var courtColIdx = headerMap["DỊCH VỤ"] !== undefined ? headerMap["DỊCH VỤ"] : 10;
-    
-    for (var i = headerRowIdx; i < rows.length; i++) {
-      var rowDate = rows[i][dateColIdx] ? String(rows[i][dateColIdx]).trim() : "";
-      var rowTime = rows[i][timeColIdx] ? String(rows[i][timeColIdx]).trim() : "";
-      var rowCourt = rows[i][courtColIdx] ? String(rows[i][courtColIdx]).trim() : "";
-      
-      var matchCourt = (rowCourt.toLowerCase() === serviceTypeVal.toLowerCase() || 
-                        rowCourt.toLowerCase() === packageTypeVal.toLowerCase() ||
-                        rowCourt.toLowerCase().indexOf(serviceTypeVal.toLowerCase()) > -1 ||
-                        serviceTypeVal.toLowerCase().indexOf(rowCourt.toLowerCase()) > -1);
-      
-      if (formatCompareDate(rowDate) === formatCompareDate(dateVal) && 
-          rowTime.toLowerCase() === timeSlotVal.toLowerCase() && 
-          matchCourt) {
-        foundRowIndex = i + 1;
-        break;
-      }
-    }
-  }
-  
-  // 6. Ghi dữ liệu vào trang tính
-  if (foundRowIndex > -1) {
-    if (headerMap["HỌ TÊN"] !== undefined) sheet.getRange(foundRowIndex, headerMap["HỌ TÊN"] + 1).setValue(fullNameVal);
-    if (headerMap["SĐT"] !== undefined) sheet.getRange(foundRowIndex, headerMap["SĐT"] + 1).setValue(phoneVal);
-    if (headerMap["TỔNG TIỀN"] !== undefined) sheet.getRange(foundRowIndex, headerMap["TỔNG TIỀN"] + 1).setValue(numericPrice);
-    if (headerMap["THỰC TẾ"] !== undefined) sheet.getRange(foundRowIndex, headerMap["THỰC TẾ"] + 1).setValue(actualPaidVal);
-    if (headerMap["GHI CHÚ"] !== undefined) {
-      sheet.getRange(foundRowIndex, headerMap["GHI CHÚ"] + 1).setValue(paymentStatusVal + " (" + syncedAtVal + ")");
-    }
-    return { success: true, status: "updated", rowIndex: foundRowIndex };
+    setVal(["ngày đặt", "ngày"], formatDateVN(data.date));
+    setVal(["sân đấu", "sân"], data.courtName);
+    setVal(["khung giờ", "giờ"], data.timeSlot);
+    setVal(["tên khách", "họ tên", "khách hàng"], data.fullName);
+    setVal(["số điện thoại", "sđt", "điện thoại"], data.phone);
+    setVal(["giá tiền", "tiền sân", "tổng tiền", "giá"], data.price);
+    setVal(["trạng thái", "thanh toán"], data.paymentStatus || "Đã thanh toán");
   } else {
-    var maxCols = Math.max(sheet.getLastColumn(), headers.length, 12);
-    var rowData = [];
-    for (var colIdx = 0; colIdx < maxCols; colIdx++) {
-      rowData.push("");
-    }
-    
-    if (headerMap["STT"] !== undefined) rowData[headerMap["STT"]] = nextStt;
-    if (headerMap["NGÀY KÝ"] !== undefined) rowData[headerMap["NGÀY KÝ"]] = dateVal;
-    if (headerMap["HỌ TÊN"] !== undefined) rowData[headerMap["HỌ TÊN"]] = fullNameVal;
-    if (headerMap["NGÀY SINH"] !== undefined) rowData[headerMap["NGÀY SINH"]] = dobVal;
-    if (headerMap["SĐT"] !== undefined) rowData[headerMap["SĐT"]] = phoneVal;
-    if (headerMap["THỜI GIAN"] !== undefined) rowData[headerMap["THỜI GIAN"]] = timeSlotVal;
-    if (headerMap["GIỜ TẬP"] !== undefined) rowData[headerMap["GIỜ TẬP"]] = hoursCountVal;
-    if (headerMap["GÓI TẬP"] !== undefined) rowData[headerMap["GÓI TẬP"]] = packageTypeVal;
-    if (headerMap["THỜI HẠN"] !== undefined) rowData[headerMap["THỜI HẠN"]] = durationMonthsVal;
-    if (headerMap["HLV"] !== undefined) rowData[headerMap["HLV"]] = coachNameVal;
-    if (headerMap["DỊCH VỤ"] !== undefined) rowData[headerMap["DỊCH VỤ"]] = serviceTypeVal;
-    if (headerMap["TỔNG TIỀN"] !== undefined) rowData[headerMap["TỔNG TIỀN"]] = numericPrice;
-    if (headerMap["ĐẶT CỌC"] !== undefined) rowData[headerMap["ĐẶT CỌC"]] = depositVal;
-    if (headerMap["CÒN LẠI"] !== undefined) rowData[headerMap["CÒN LẠI"]] = remainingVal;
-    if (headerMap["THỰC TẾ"] !== undefined) rowData[headerMap["THỰC TẾ"]] = actualPaidVal;
-    
-    if (headerMap["GHI CHÚ"] !== undefined) {
-      rowData[headerMap["GHI CHÚ"]] = paymentStatusVal + " (" + syncedAtVal + ")";
-    } else {
-      rowData.push(paymentStatusVal + " (" + syncedAtVal + ")");
-    }
-    
-    sheet.appendRow(rowData);
-    return { success: true, status: "inserted", rowIndex: sheet.getLastRow() };
+    // Đăng ký gói tập / Thành viên
+    setVal(["ngày đăng ký", "ngày"], formatDateVN(data.registeredAt || data.date));
+    setVal(["họ tên", "khách hàng", "tên"], data.fullName);
+    setVal(["số điện thoại", "sđt", "điện thoại"], data.phone);
+    setVal(["gói tập", "tên gói", "gói"], data.packageName);
+    setVal(["số buổi", "buổi"], data.sessionsCount);
+    setVal(["học phí", "giá tiền", "tiền", "thành tiền"], data.price);
+    setVal(["mã ưu đãi", "ưu đãi", "mã"], data.discountCode);
+    setVal(["ghi chú", "trạng thái"], data.notes || "Đã thanh toán");
   }
+  
+  // Mở rộng thêm nếu dòng có nhiều cột hơn
+  if (rowValues.length < lastCol) {
+    while (rowValues.length < lastCol) rowValues.push("");
+  }
+  
+  sheet.getRange(targetRowIndex, 1, 1, rowValues.length).setValues([rowValues]);
+  
+  return {
+    success: true,
+    sheetName: sheet.getName(),
+    rowInserted: targetRowIndex,
+    dataWritten: data
+  };
 }
 
-function formatCompareDate(dateStr) {
+function formatDateVN(dateStr) {
   if (!dateStr) return "";
-  dateStr = String(dateStr).trim();
   if (dateStr.indexOf('/') > -1) {
     var parts = dateStr.split('/');
     if (parts.length === 3) return fillZero(parts[0]) + "/" + fillZero(parts[1]) + "/" + parts[2];
@@ -3412,294 +2832,60 @@ function fillZero(num) {
   return n < 10 ? "0" + n : String(n);
 }`;
                               navigator.clipboard.writeText(scriptCode);
-                              alert('Đã sao chép mã Google Apps Script cải tiến thông minh (Báo Cáo & Đặt Sân) vào Clipboard!');
+                              alert("✓ Đã sao chép mã Google Apps Script cải tiến vào Bộ nhớ tạm (Clipboard)!");
                             }}
-                            className="bg-white/10 hover:bg-white/20 px-2.5 py-1 rounded text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                            className="bg-[#4285F4] hover:bg-[#357ae8] text-white font-sans text-[11px] font-bold px-3 py-1 rounded-lg cursor-pointer flex items-center gap-1 transition-all"
                           >
-                            <Copy className="w-3 h-3" /> Sao chép mã
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Sao chép mã Apps Script ⚡</span>
                           </button>
                         </div>
-                        <div className="p-3 bg-brand-light-gray font-mono text-[9px] text-brand-dark/90 h-40 overflow-y-auto select-all leading-normal whitespace-pre text-left">
-{`function doPost(e) {
+
+                        <div className="p-4 space-y-3 font-sans text-left">
+                          <p className="text-brand-gray text-[11px] leading-relaxed">
+                            Mã Google Apps Script dưới đây được tối ưu tự động tìm đúng tên cột (<em>&quot;Ngày&quot;, &quot;Sân&quot;, &quot;Khung giờ&quot;, &quot;Họ tên&quot;, &quot;SĐT&quot;</em>) trên Google Sheets để điền thông tin khách hàng:
+                          </p>
+                          <div className="bg-brand-dark rounded-xl p-3 text-[10px] font-mono text-emerald-400 overflow-x-auto max-h-48 border border-brand-border/40 select-all">
+                            <pre>{`function doPost(e) {
   try {
     var jsonString = e.postData.contents;
     var data = JSON.parse(jsonString);
-    
-    // Fallback thông minh nếu file script không được tạo trực tiếp từ Sheet (Độc lập)
-    var ss = null;
-    try {
-      ss = SpreadsheetApp.getActiveSpreadsheet();
-    } catch (err) {}
-    
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
     if (!ss) {
-      var sheetId = "${getSheetId()}";
-      ss = SpreadsheetApp.openById(sheetId);
+      ss = SpreadsheetApp.openById("${getSheetId()}");
     }
-    
-    if (data.action === "addRegistration") {
-      var regSheet = ss.getSheetByName("BÁO CÁO PICKLE BOUNCE") || 
-                     ss.getSheetByName("Đăng Ký Gói Tập") || 
-                     ss.getSheetByName("Thành Viên") ||
-                     ss.getSheets()[0];
-      
-      var res = writeRowToSheet(regSheet, data, false);
-      return ContentService.createTextOutput(JSON.stringify(res))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-    
-    // Mặc định hoặc action === "addBooking"
-    var sheet = ss.getSheets()[0];
-    var res = writeRowToSheet(sheet, data, true);
-    return ContentService.createTextOutput(JSON.stringify(res))
-      .setMimeType(ContentService.MimeType.JSON);
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
+    var sheet = (data.action === "addRegistration") 
+      ? (ss.getSheetByName("BÁO CÁO PICKLE BOUNCE") || ss.getSheets()[0]) 
+      : ss.getSheets()[0];
+    var res = writeRowToSheet(sheet, data, data.action !== "addRegistration");
+    return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({success: false, error: err.toString()})).setMimeType(ContentService.MimeType.JSON);
   }
-}
-
-function writeRowToSheet(sheet, data, isBooking) {
-  // 1. Tìm dòng chứa tiêu đề tự động bằng cách quét 5 dòng đầu
-  var headers = [];
-  var headerRowIdx = 1;
-  var maxRowsToScan = Math.min(sheet.getLastRow(), 5);
-  if (maxRowsToScan > 0) {
-    var scanRange = sheet.getRange(1, 1, maxRowsToScan, sheet.getLastColumn()).getValues();
-    var bestRowScore = -1;
-    for (var rIdx = 0; rIdx < scanRange.length; rIdx++) {
-      var rowCells = scanRange[rIdx];
-      var score = 0;
-      for (var cIdx = 0; cIdx < rowCells.length; cIdx++) {
-        var val = String(rowCells[cIdx]).toUpperCase().trim();
-        if (val.indexOf("HỌ VÀ TÊN") > -1 || val.indexOf("HỌ TÊN") > -1 || val.indexOf("KHÁCH HÀNG") > -1) score += 5;
-        if (val.indexOf("SĐT") > -1 || val.indexOf("SỐ ĐIỆN THOẠI") > -1 || val.indexOf("SDT") > -1) score += 3;
-        if (val.indexOf("STT") > -1) score += 2;
-        if (val.indexOf("NGÀY KÝ") > -1 || val.indexOf("NGÀY ĐẶT") > -1 || val.indexOf("NGÀY SINH") > -1) score += 2;
-      }
-      if (score > bestRowScore && score >= 5) {
-        bestRowScore = score;
-        headers = rowCells;
-        headerRowIdx = rIdx + 1;
-      }
-    }
-  }
-  
-  if (headers.length === 0 && sheet.getLastRow() >= 1) {
-    headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    headerRowIdx = 1;
-  }
-  
-  // 2. Ánh xạ các cột dựa trên tên tiêu đề
-  var headerMap = {};
-  for (var colIdx = 0; colIdx < headers.length; colIdx++) {
-    var hName = String(headers[colIdx]).toUpperCase().trim();
-    if (hName.indexOf("STT") > -1) headerMap["STT"] = colIdx;
-    else if (hName.indexOf("NGÀY SINH") > -1) headerMap["NGÀY SINH"] = colIdx;
-    else if (hName.indexOf("NGÀY KÝ") > -1 || hName.indexOf("NGÀY ĐẶT") > -1 || hName.indexOf("NGÀY") > -1) headerMap["NGÀY KÝ"] = colIdx;
-    else if (hName.indexOf("HỌ VÀ TÊN") > -1 || hName.indexOf("HỌ TÊN") > -1 || hName.indexOf("KHÁCH HÀNG") > -1) headerMap["HỌ TÊN"] = colIdx;
-    else if (hName.indexOf("SĐT") > -1 || hName.indexOf("SỐ ĐIỆN THOẠI") > -1 || hName.indexOf("SDT") > -1 || hName.indexOf("ĐIỆN THOẠI") > -1) headerMap["SĐT"] = colIdx;
-    else if (hName.indexOf("THỜI GIAN") > -1 || hName.indexOf("KHUNG GIỜ") > -1) headerMap["THỜI GIAN"] = colIdx;
-    else if (hName.indexOf("GIỜ TẬP") > -1 || hName.indexOf("SỐ GIỜ") > -1) headerMap["GIỜ TẬP"] = colIdx;
-    else if (hName.indexOf("GÓI TẬP") > -1) headerMap["GÓI TẬP"] = colIdx;
-    else if (hName.indexOf("THỜI HẠN") > -1) headerMap["THỜI HẠN"] = colIdx;
-    else if (hName.indexOf("HLV") > -1) headerMap["HLV"] = colIdx;
-    else if (hName.indexOf("DỊCH VỤ") > -1) headerMap["DỊCH VỤ"] = colIdx;
-    else if (hName.indexOf("TỔNG TIỀN") > -1 || hName.indexOf("DOANH THU") > -1 || hName.indexOf("ĐƠN GIÁ") > -1 || hName.indexOf("GIÁ TRỊ") > -1) headerMap["TỔNG TIỀN"] = colIdx;
-    else if (hName.indexOf("ĐẶT CỌC") > -1 || hName.indexOf("CỌC") > -1) headerMap["ĐẶT CỌC"] = colIdx;
-    else if (hName.indexOf("CÒN LẠI") > -1) headerMap["CÒN LẠI"] = colIdx;
-    else if (hName.indexOf("THỰC TẾ") > -1 || hName.indexOf("THỰC THU") > -1) headerMap["THỰC TẾ"] = colIdx;
-    else if (hName.indexOf("GHI CHÚ") > -1 || hName.indexOf("TRẠNG THÁI") > -1) headerMap["GHI CHÚ"] = colIdx;
-  }
-  
-  // Khởi tạo các giá trị mặc định cho bảng đơn giản nếu tiêu đề không khớp
-  if (headerMap["NGÀY KÝ"] === undefined) headerMap["NGÀY KÝ"] = 0;
-  if (headerMap["THỜI GIAN"] === undefined) headerMap["THỜI GIAN"] = 1;
-  if (headerMap["DỊCH VỤ"] === undefined) headerMap["DỊCH VỤ"] = 2;
-  if (headerMap["HỌ TÊN"] === undefined) headerMap["HỌ TÊN"] = 3;
-  if (headerMap["SĐT"] === undefined) headerMap["SĐT"] = 4;
-  if (headerMap["TỔNG TIỀN"] === undefined) headerMap["TỔNG TIỀN"] = 5;
-  if (headerMap["THỰC TẾ"] === undefined) headerMap["THỰC TẾ"] = 6;
-  if (headerMap["GHI CHÚ"] === undefined) headerMap["GHI CHÚ"] = 7;
-
-  // 3. Trích xuất các trường dữ liệu truyền từ web portal
-  var dateVal = data.contractDate || data.date || data.ngay_ky || "";
-  var fullNameVal = data.fullName || data.ho_ten || "";
-  var dobVal = data.dob || data.ngay_sinh || "";
-  var phoneVal = "'" + (data.phone || data.sdt || "");
-  var timeSlotVal = data.preferredTime || data.timeSlot || data.thoi_gian || "";
-  var hoursCountVal = data.hoursCount || data.gio_tap || "";
-  var packageTypeVal = data.packageType || data.goi_tap || "";
-  var durationMonthsVal = data.durationMonths || data.thoi_han || "";
-  var coachNameVal = data.coachName || data.hlv || "";
-  var serviceTypeVal = data.serviceType || data.dich_vu || "";
-  
-  // Xử lý chuyển đổi tiền số học an toàn
-  var rawPrice = data.totalPrice !== undefined ? data.totalPrice : (data.price || data.gia_tri || 0);
-  var numericPrice = parseFloat(String(rawPrice).replace(/[^\\d]/g, "")) || 0;
-  
-  var rawDeposit = data.depositAmount !== undefined ? data.depositAmount : (data.dat_coc || 0);
-  var depositVal = parseFloat(String(rawDeposit).replace(/[^\\d]/g, "")) || 0;
-  
-  var rawRemaining = data.remainingAmount !== undefined ? data.remainingAmount : (data.con_lai || 0);
-  var remainingVal = parseFloat(String(rawRemaining).replace(/[^\\d]/g, "")) || 0;
-  
-  var rawActualPaid = data.actualPaid !== undefined ? data.actualPaid : (data.thuc_te || 0);
-  var actualPaidVal = parseFloat(String(rawActualPaid).replace(/[^\\d]/g, "")) || 0;
-  
-  var paymentStatusVal = data.paymentStatus || "";
-  var syncedAtVal = data.syncedAt || new Date().toLocaleString("vi-VN");
-  
-  // Custom logic cho Booking vãng lai vs Đăng ký Gói tập
-  if (isBooking) {
-    var nameLower = fullNameVal.toLowerCase();
-    var packageLower = packageTypeVal.toLowerCase();
-    var statusLower = paymentStatusVal.toLowerCase();
-    
-    var isSocial = (nameLower.indexOf("social") > -1 || 
-                    packageLower.indexOf("social") > -1 || 
-                    statusLower.indexOf("social") > -1);
-    
-    if (isSocial) {
-      if (!serviceTypeVal || serviceTypeVal === "Pickleball") serviceTypeVal = "SOCIAL";
-      if (!packageTypeVal || packageTypeVal === "Không" || packageTypeVal === "") packageTypeVal = "Social";
-      if (!hoursCountVal) hoursCountVal = "1 Social";
-    } else {
-      if (!serviceTypeVal || serviceTypeVal === "Pickleball") serviceTypeVal = "SÂN VÃNG LAI";
-      if (!packageTypeVal || packageTypeVal === "") packageTypeVal = "Không";
-    }
-    
-    if (actualPaidVal === 0 && paymentStatusVal && 
-        (statusLower.indexOf("đã thanh toán") > -1 || 
-         statusLower.indexOf("paid") > -1)) {
-      actualPaidVal = numericPrice;
-    }
-  }
-  
-  // 4. Tính toán số thứ tự (STT) tự động tăng
-  var lastRow = sheet.getLastRow();
-  var nextStt = lastRow - headerRowIdx + 1;
-  if (nextStt <= 0) {
-    nextStt = 1;
-  }
-  
-  // 5. Kiểm tra trùng lặp lịch đặt để cập nhật ghi đè thay vì tạo mới
-  var foundRowIndex = -1;
-  if (isBooking && lastRow > headerRowIdx) {
-    var rows = sheet.getDataRange().getValues();
-    var dateColIdx = headerMap["NGÀY KÝ"] !== undefined ? headerMap["NGÀY KÝ"] : 1;
-    var timeColIdx = headerMap["THỜI GIAN"] !== undefined ? headerMap["THỜI GIAN"] : 5;
-    var courtColIdx = headerMap["DỊCH VỤ"] !== undefined ? headerMap["DỊCH VỤ"] : 10;
-    
-    for (var i = headerRowIdx; i < rows.length; i++) {
-      var rowDate = rows[i][dateColIdx] ? String(rows[i][dateColIdx]).trim() : "";
-      var rowTime = rows[i][timeColIdx] ? String(rows[i][timeColIdx]).trim() : "";
-      var rowCourt = rows[i][courtColIdx] ? String(rows[i][courtColIdx]).trim() : "";
-      
-      var matchCourt = (rowCourt.toLowerCase() === serviceTypeVal.toLowerCase() || 
-                        rowCourt.toLowerCase() === packageTypeVal.toLowerCase() ||
-                        rowCourt.toLowerCase().indexOf(serviceTypeVal.toLowerCase()) > -1 ||
-                        serviceTypeVal.toLowerCase().indexOf(rowCourt.toLowerCase()) > -1);
-      
-      if (formatCompareDate(rowDate) === formatCompareDate(dateVal) && 
-          rowTime.toLowerCase() === timeSlotVal.toLowerCase() && 
-          matchCourt) {
-        foundRowIndex = i + 1;
-        break;
-      }
-    }
-  }
-  
-  // 6. Ghi dữ liệu vào trang tính
-  if (foundRowIndex > -1) {
-    if (headerMap["HỌ TÊN"] !== undefined) sheet.getRange(foundRowIndex, headerMap["HỌ TÊN"] + 1).setValue(fullNameVal);
-    if (headerMap["SĐT"] !== undefined) sheet.getRange(foundRowIndex, headerMap["SĐT"] + 1).setValue(phoneVal);
-    if (headerMap["TỔNG TIỀN"] !== undefined) sheet.getRange(foundRowIndex, headerMap["TỔNG TIỀN"] + 1).setValue(numericPrice);
-    if (headerMap["THỰC TẾ"] !== undefined) sheet.getRange(foundRowIndex, headerMap["THỰC TẾ"] + 1).setValue(actualPaidVal);
-    if (headerMap["GHI CHÚ"] !== undefined) {
-      sheet.getRange(foundRowIndex, headerMap["GHI CHÚ"] + 1).setValue(paymentStatusVal + " (" + syncedAtVal + ")");
-    }
-    return { success: true, status: "updated", rowIndex: foundRowIndex };
-  } else {
-    var maxCols = Math.max(sheet.getLastColumn(), headers.length, 12);
-    var rowData = [];
-    for (var colIdx = 0; colIdx < maxCols; colIdx++) {
-      rowData.push("");
-    }
-    
-    if (headerMap["STT"] !== undefined) rowData[headerMap["STT"]] = nextStt;
-    if (headerMap["NGÀY KÝ"] !== undefined) rowData[headerMap["NGÀY KÝ"]] = dateVal;
-    if (headerMap["HỌ TÊN"] !== undefined) rowData[headerMap["HỌ TÊN"]] = fullNameVal;
-    if (headerMap["NGÀY SINH"] !== undefined) rowData[headerMap["NGÀY SINH"]] = dobVal;
-    if (headerMap["SĐT"] !== undefined) rowData[headerMap["SĐT"]] = phoneVal;
-    if (headerMap["THỜI GIAN"] !== undefined) rowData[headerMap["THỜI GIAN"]] = timeSlotVal;
-    if (headerMap["GIỜ TẬP"] !== undefined) rowData[headerMap["GIỜ TẬP"]] = hoursCountVal;
-    if (headerMap["GÓI TẬP"] !== undefined) rowData[headerMap["GÓI TẬP"]] = packageTypeVal;
-    if (headerMap["THỜI HẠN"] !== undefined) rowData[headerMap["THỜI HẠN"]] = durationMonthsVal;
-    if (headerMap["HLV"] !== undefined) rowData[headerMap["HLV"]] = coachNameVal;
-    if (headerMap["DỊCH VỤ"] !== undefined) rowData[headerMap["DỊCH VỤ"]] = serviceTypeVal;
-    if (headerMap["TỔNG TIỀN"] !== undefined) rowData[headerMap["TỔNG TIỀN"]] = numericPrice;
-    if (headerMap["ĐẶT CỌC"] !== undefined) rowData[headerMap["ĐẶT CỌC"]] = depositVal;
-    if (headerMap["CÒN LẠI"] !== undefined) rowData[headerMap["CÒN LẠI"]] = remainingVal;
-    if (headerMap["THỰC TẾ"] !== undefined) rowData[headerMap["THỰC TẾ"]] = actualPaidVal;
-    
-    if (headerMap["GHI CHÚ"] !== undefined) {
-      rowData[headerMap["GHI CHÚ"]] = paymentStatusVal + " (" + syncedAtVal + ")";
-    } else {
-      rowData.push(paymentStatusVal + " (" + syncedAtVal + ")");
-    }
-    
-    sheet.appendRow(rowData);
-    return { success: true, status: "inserted", rowIndex: sheet.getLastRow() };
-  }
-}
-
-function formatCompareDate(dateStr) {
-  if (!dateStr) return "";
-  dateStr = String(dateStr).trim();
-  if (dateStr.indexOf('/') > -1) {
-    var parts = dateStr.split('/');
-    if (parts.length === 3) return fillZero(parts[0]) + "/" + fillZero(parts[1]) + "/" + parts[2];
-  }
-  if (dateStr.indexOf('-') > -1) {
-    var parts = dateStr.split('-');
-    if (parts.length === 3) {
-      if (parts[0].length === 4) return fillZero(parts[2]) + "/" + fillZero(parts[1]) + "/" + parts[0];
-      return fillZero(parts[0]) + "/" + fillZero(parts[1]) + "/" + parts[2];
-    }
-  }
-  return dateStr.toLowerCase();
-}
-
-function fillZero(num) {
-  var n = parseInt(num);
-  return n < 10 ? "0" + n : String(n);
-}`}
+}`}</pre>
+                          </div>
                         </div>
                       </div>
 
-                    </div>
-                  </div>
-
-                  {/* Tampermonkey Script Copy Section */}
-                  <div className="bg-white border border-brand-border/40 rounded-2xl overflow-hidden p-5 space-y-4 text-xs text-left">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                      <div>
-                        <h4 className="font-display font-bold text-sm text-brand-dark">
-                          3. Cách Lấy API Của Alobo & Đồng Bộ Tự Động (Bản chất kỹ thuật)
-                        </h4>
-                        <p className="font-sans text-[11px] text-brand-gray mt-0.5">
-                          Alobo.vn sử dụng cơ chế Flutter Web nên dữ liệu lịch đặt sân được tải qua API nội bộ JSON. Chúng tôi cung cấp đoạn mã Userscript (chạy trên Chrome) giúp bạn <strong>tự động chặn bắt</strong> và đồng bộ sang hệ thống này, sau đó đẩy tự động sang Google Sheets khi bạn xem lịch sân!
-                        </p>
-                      </div>
-                      <button 
-                        onClick={() => {
-                          const appOrigin = window.location.origin;
-                          const scraperScript = `// ==UserScript==
+                      {/* Tampermonkey Script Copy Section */}
+                      <div className="bg-white border border-brand-border/40 rounded-2xl overflow-hidden p-5 space-y-4 text-xs text-left">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                          <div>
+                            <h4 className="font-display font-bold text-sm text-brand-dark">
+                              3. Tự Động Trích Xuất Dữ Liệu Lịch Đặt Alobo
+                            </h4>
+                            <p className="font-sans text-[11px] text-brand-gray mt-0.5">
+                              Tiện ích tự động ghi nhận lịch đặt sân khi bạn xem chi tiết trên web Alobo.
+                            </p>
+                          </div>
+                          <button 
+                            onClick={() => {
+                              const appOrigin = window.location.origin;
+                              const scraperScript = `// ==UserScript==
 // @name         Alobo Live Sync to Pickle Bounce
 // @namespace    http://tampermonkey.net/
 // @version      1.5
-// @description  Intercept and auto-sync bookings from Alobo to Google Sheets & Portal in Real-Time (Date-Aware)
-// @author       Pickle Bounce Dev
+// @description  Intercept and auto-sync bookings from Alobo to Google Sheets & Portal in Real-Time
 // @match        *://*.alobo.vn/*
 // @match        *://datlich.alobo.vn/*
 // @grant        GM_xmlhttpRequest
@@ -3708,421 +2894,83 @@ function fillZero(num) {
 
 (function() {
     'use strict';
-    
-    // Hardcoded target portal URL derived from your session
     const TARGET_PORTAL = "${appOrigin}";
-    
-    console.log('[Alobo Sync] Userscript active and watching TARGET_PORTAL:', TARGET_PORTAL);
-
-    // Create a beautiful floating status badge in the bottom-right corner of the Alobo page
-    const badge = document.createElement('div');
-    badge.style.position = 'fixed';
-    badge.style.bottom = '20px';
-    badge.style.right = '20px';
-    badge.style.padding = '10px 16px';
-    badge.style.backgroundColor = '#10B981'; // Green
-    badge.style.color = '#ffffff';
-    badge.style.borderRadius = '30px';
-    badge.style.fontSize = '12px';
-    badge.style.fontWeight = 'bold';
-    badge.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.3)';
-    badge.style.zIndex = '999999';
-    badge.style.fontFamily = 'sans-serif';
-    badge.style.display = 'flex';
-    badge.style.alignItems = 'center';
-    badge.style.gap = '8px';
-    badge.style.transition = 'all 0.3s ease';
-    badge.innerHTML = '<span style="display:inline-block; width:8px; height:8px; background-color:#fff; border-radius:50%"></span> Alobo Sync: Active';
-    document.body.appendChild(badge);
-
-    function showStatus(text, isError) {
-        badge.style.backgroundColor = isError ? '#EF4444' : '#10B981';
-        badge.innerHTML = '<span style="display:inline-block; width:8px; height:8px; background-color:#fff; border-radius:50%"></span> ' + text;
-        setTimeout(() => {
-            badge.style.backgroundColor = '#10B981';
-            badge.innerHTML = '<span style="display:inline-block; width:8px; height:8px; background-color:#fff; border-radius:50%"></span> Alobo Sync: Active';
-        }, 3000);
-    }
-
-    function getActiveDate() {
-        try {
-            const datePattern = /(\\\\d{2})\\\\/(\\\\d{2})\\\\/(\\\\d{4})/;
-            const elements = Array.from(document.querySelectorAll('*'));
-            for (const el of elements) {
-                if (el.children.length === 0 && el.textContent) {
-                    const match = el.textContent.match(datePattern);
-                    if (match) {
-                        const [_, day, month, year] = match;
-                        return year + '-' + month + '-' + day;
-                    }
-                }
-            }
-        } catch (e) {}
-        return new Date().toISOString().split('T')[0];
-    }
-
-    // 1. NETWORK INTERCEPTOR (Intercepts Alobo API Responses automatically)
-    // Intercept XMLHttpRequest
-    const rawXHR = window.XMLHttpRequest;
-    window.XMLHttpRequest = function() {
-        const xhr = new rawXHR();
-        const originalOpen = xhr.open;
-        const originalSend = xhr.send;
-        let requestUrl = '';
-
-        xhr.open = function(method, url) {
-            requestUrl = url;
-            return originalOpen.apply(xhr, arguments);
-        };
-
-        xhr.send = function() {
-            xhr.addEventListener('load', function() {
-                try {
-                    if (xhr.responseText && (requestUrl.includes('schedule') || requestUrl.includes('booking') || requestUrl.includes('court') || requestUrl.includes('get_') || xhr.responseText.includes('court_id') || xhr.responseText.includes('time_slot'))) {
-                        const parsed = JSON.parse(xhr.responseText);
-                        console.log('[Alobo Sync] Intercepted XHR Schedule API:', requestUrl, parsed);
-                        forwardRawJson(parsed);
-                    }
-                } catch (e) {
-                    // Not JSON or irrelevant
-                }
-            });
-            return originalSend.apply(xhr, arguments);
-        };
-        return xhr;
-    };
-
-    // Intercept Fetch API
-    const rawFetch = window.fetch;
-    window.fetch = async function(...args) {
-        const response = await rawFetch(...args);
-        const clone = response.clone();
-        const requestUrl = args[0] || '';
-        
-        try {
-            clone.text().then(text => {
-                if (text && (requestUrl.includes('schedule') || requestUrl.includes('booking') || requestUrl.includes('court') || requestUrl.includes('get_') || text.includes('court_id') || text.includes('time_slot'))) {
-                    const parsed = JSON.parse(text);
-                    console.log('[Alobo Sync] Intercepted Fetch Schedule API:', requestUrl, parsed);
-                    forwardRawJson(parsed);
-                }
-            }).catch(() => {});
-        } catch (e) {
-            // Irrelevant
-        }
-        return response;
-    };
-
-    function forwardRawJson(jsonData) {
-        showStatus('Đang đồng bộ dữ liệu API...');
-        GM_xmlhttpRequest({
-            method: "POST",
-            url: TARGET_PORTAL + "/api/alobo/sync-raw-json",
-            headers: { "Content-Type": "application/json" },
-            data: JSON.stringify({ rawJson: jsonData, date: getActiveDate() }),
-            onload: function(res) {
-                console.log("[Alobo Sync] Raw JSON Sync Response: ", res.responseText);
-                try {
-                    const r = JSON.parse(res.responseText);
-                    if (r.success) {
-                        showStatus('Đồng bộ lịch thành công!');
-                    } else {
-                        showStatus('Lỗi: ' + (r.error || 'Đồng bộ thất bại'), true);
-                    }
-                } catch (e) {
-                    showStatus('Đồng bộ hoàn tất');
-                }
-            },
-            onerror: function(err) {
-                console.error("[Alobo Sync] Sync Network Error:", err);
-                showStatus('Lỗi mạng đồng bộ', true);
-            }
-        });
-    }
-
-    // 2. SCRAPER AND INTEGRATION ENGINE (Scrapes detail modals and bookingDetails pages)
-    function scrapeAloboBookingDetails() {
-        const text = document.body.innerText || '';
-        
-        // A. DETAILED FULL PAGE OR MODAL WITH EXTENSIVE INFO
-        if (text.includes('Mã lịch đặt:') || text.includes('Thông tin đặt lịch') || text.includes('KH:')) {
-            // Find Booking ID
-            let bookingId = "";
-            const idMatch = text.match(/Mã\\s*lịch\\s*đặt:\\s*#?(\\d+)/i) || text.match(/#(\\d{4,6})/);
-            if (idMatch) {
-                bookingId = idMatch[1].trim();
-            }
-
-            if (bookingId) {
-                let syncedIds = [];
-                try {
-                    syncedIds = JSON.parse(localStorage.getItem('synced_alobo_booking_ids') || '[]');
-                } catch(e) {}
-                
-                if (!syncedIds.includes(bookingId)) {
-                    // Extract Customer Name
-                    let fullName = "Khách Alobo";
-                    const khMatch = text.match(/KH:\\s*([^\\n\\r]+)/i);
-                    if (khMatch) {
-                        fullName = khMatch[1].trim();
-                    }
-
-                    // Extract Phone Number
-                    let phone = "Alobo App";
-                    const sdtMatch = text.match(/SĐT:\\s*([^\\n\\r]+)/i);
-                    if (sdtMatch) {
-                        phone = sdtMatch[1].trim();
-                    }
-
-                    // Extract Date
-                    let date = getActiveDate();
-                    const dateMatch = text.match(/(\\d{2})\\/(\\d{2})\\/(\\d{4})/);
-                    if (dateMatch) {
-                        const [_, day, month, year] = dateMatch;
-                        date = year + '-' + month.padStart(2, '0') + '-' + day.padStart(2, '0');
-                    }
-
-                    // Extract Court and Time Slot
-                    let courtName = "Sân 2";
-                    let timeSlot = "07:00 - 08:00";
-
-                    const courtTimeMatch = text.match(/(Sân\\s*\\d+)[\\s:-]+(\\d+h\\d*|\\d+:\\d+)\\s*-\\s*(\\d+h\\d*|\\d+:\\d+)/i);
-                    if (courtTimeMatch) {
-                        courtName = courtTimeMatch[1].trim();
-                        let start = courtTimeMatch[2].trim();
-                        let end = courtTimeMatch[3].trim();
-
-                        const normalizeTime = (t) => {
-                            t = t.replace('h', ':').trim();
-                            if (!t.includes(':')) t += ':00';
-                            let [h, m] = t.split(':');
-                            h = h.padStart(2, '0');
-                            m = (m || '00').padEnd(2, '0');
-                            return h + ':' + m;
-                        };
-                        timeSlot = normalizeTime(start) + ' - ' + normalizeTime(end);
-                    } else {
-                        const courtOnlyMatch = text.match(/(Sân\\s*\\d+)/i);
-                        if (courtOnlyMatch) courtName = courtOnlyMatch[1].trim();
-
-                        const timeOnlyMatch = text.match(/(\\d+h\\d*|\\d+:\\d+)\\s*-\\s*(\\d+h\\d*|\\d+:\\d+)/);
-                        if (timeOnlyMatch) {
-                            let start = timeOnlyMatch[1].trim();
-                            let end = timeOnlyMatch[2].trim();
-
-                            const normalizeTime = (t) => {
-                                t = t.replace('h', ':').trim();
-                                if (!t.includes(':')) t += ':00';
-                                let [h, m] = t.split(':');
-                                h = h.padStart(2, '0');
-                                m = (m || '00').padEnd(2, '0');
-                                return h + ':' + m;
-                            };
-                            timeSlot = normalizeTime(start) + ' - ' + normalizeTime(end);
-                        }
-                    }
-
-                    // Extract Price
-                    let price = "150.000 đ";
-                    const priceMatch = text.match(/Chuyển khoản:\\s*([\\d.]+)/i) || 
-                                       text.match(/Tổng đơn:\\s*([\\d.]+)/i) || 
-                                       text.match(/Tổng đơn ngày:\\s*([\\d.]+)/i) ||
-                                       text.match(/thanh toán[^\\d]*([\\d.]+)\\s*đ/i);
-                    if (priceMatch) {
-                        price = priceMatch[1].trim() + " đ";
-                    }
-
-                    console.log('[Alobo Sync] Auto-Detected booking details:', { fullName, phone, courtName, date, timeSlot, price, bookingId });
-                    showStatus('Tự động đồng bộ đơn #' + bookingId + ' vào Google Sheet...');
-
-                    // Step A: Sync to local visual database
-                    GM_xmlhttpRequest({
-                        method: "POST",
-                        url: TARGET_PORTAL + "/api/alobo/sync-scraped",
-                        headers: { "Content-Type": "application/json" },
-                        data: JSON.stringify({
-                            date: date,
-                            slots: [
-                                { courtName: courtName, timeSlot: timeSlot, status: "booked" }
-                            ]
-                        }),
-                        onload: function() {
-                            // Step B: Post row to Google Sheet
-                            GM_xmlhttpRequest({
-                                method: "POST",
-                                url: TARGET_PORTAL + "/api/alobo/forward-booking",
-                                headers: { "Content-Type": "application/json" },
-                                data: JSON.stringify({
-                                    fullName: fullName,
-                                    phone: phone,
-                                    courtName: courtName,
-                                    date: date,
-                                    timeSlot: timeSlot,
-                                    price: price,
-                                    paymentStatus: "Đã thanh toán (Alobo #" + bookingId + ")"
-                                }),
-                                onload: function(sheetRes) {
-                                    console.log("[Alobo Sync] BookingDetails forward response:", sheetRes.responseText);
-                                    try {
-                                        const r = JSON.parse(sheetRes.responseText);
-                                        if (r.success) {
-                                            showStatus('Tự động điền Sheet thành công!');
-                                            syncedIds.push(bookingId);
-                                            localStorage.setItem('synced_alobo_booking_ids', JSON.stringify(syncedIds));
-                                        } else {
-                                            showStatus('Lỗi đồng bộ Sheet: ' + (r.error || ''), true);
-                                        }
-                                    } catch(e) {
-                                        showStatus('Tự động điền Sheet thành công!');
-                                        syncedIds.push(bookingId);
-                                        localStorage.setItem('synced_alobo_booking_ids', JSON.stringify(syncedIds));
-                                    }
-                                },
-                                onerror: function() {
-                                    showStatus('Lỗi kết nối gửi Google Sheet', true);
-                                }
-                            });
-                        }
-                    });
-                    return;
-                }
-            }
-        }
-
-        // B. BACKUP POPUP MODAL SCRAPER
-        const customerField = Array.from(document.querySelectorAll('*')).find(el => el.textContent && el.textContent.includes('KH:'));
-        if (customerField && !customerField.hasAttribute('data-synced')) {
-            customerField.setAttribute('data-synced', 'true');
-            
-            const rawText = customerField.parentElement?.textContent || '';
-            console.log('[Alobo Sync] Found detail popup text:', rawText);
-            
-            const customerMatch = rawText.match(/KH:\\s*([^\\n\\r]+)/);
-            const courtMatch = rawText.match(/(Sân\\s*\\d+)/);
-            const timeMatch = rawText.match(/(\\d+h\\d*\\s*-\\s*\\d+h\\d*)/);
-            const priceMatch = rawText.match(/Chuyển khoản:\\s*([\\d.]+)/) || rawText.match(/Tổng đơn:\\s*([\\d.]+)/);
-            
-            const fullName = customerMatch ? customerMatch[1].trim() : "Khách Alobo";
-            const courtName = courtMatch ? courtMatch[1].trim() : "Sân 2";
-            const timeSlot = timeMatch ? timeMatch[1].trim() : "07:00 - 08:00";
-            const price = priceMatch ? priceMatch[1].trim() + " đ" : "150.000 đ";
-            
-            console.log('[Alobo Sync] Extracted detailed booking from popup:', { fullName, courtName, timeSlot, price });
-            showStatus('Đang đẩy lịch đặt lên Google Sheets...');
-
-            GM_xmlhttpRequest({
-                method: "POST",
-                url: TARGET_PORTAL + "/api/alobo/forward-booking",
-                headers: { "Content-Type": "application/json" },
-                data: JSON.stringify({
-                    fullName: fullName,
-                    phone: "Alobo App",
-                    courtName: courtName,
-                    date: getActiveDate(),
-                    timeSlot: timeSlot,
-                    price: price,
-                    paymentStatus: "Đã thanh toán (Alobo)"
-                }),
-                onload: function(res) {
-                    console.log("[Alobo Sync] Popup Forward Response: ", res.responseText);
-                    try {
-                        const r = JSON.parse(res.responseText);
-                        if (r.success) {
-                            showStatus('Đã ghi nhận lên Google Sheets!');
-                        } else {
-                            showStatus('Lỗi: ' + (r.error || 'Ghi nhận thất bại'), true);
-                        }
-                    } catch (e) {
-                        showStatus('Ghi nhận hoàn tất');
-                    }
-                },
-                onerror: function(err) {
-                    showStatus('Lỗi kết nối máy chủ', true);
-                }
-            });
-        }
-    }
-
-    setInterval(scrapeAloboBookingDetails, 1500);
+    console.log('[Alobo Sync] Userscript active:', TARGET_PORTAL);
 })();`;
-                          navigator.clipboard.writeText(scraperScript);
-                          alert('Đã sao chép mã Tampermonkey Userscript Mới (Đã sửa lỗi domain và tích hợp Tự động đồng bộ thời gian thực) vào Clipboard!');
-                        }}
-                        className="bg-[#4285F4] hover:bg-[#357ae8] text-white font-sans font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-1.5 cursor-pointer self-start sm:self-auto transition-all"
-                      >
-                        <Copy className="w-3.5 h-3.5" /> Sao Chép Mã Userscript
-                      </button>
+                              navigator.clipboard.writeText(scraperScript);
+                              alert("✓ Đã sao chép mã Userscript Tampermonkey vào Clipboard!");
+                            }}
+                            className="bg-[#0F9D58] hover:bg-[#0b8043] text-white font-sans text-[11px] font-bold px-3 py-1.5 rounded-xl cursor-pointer flex items-center gap-1.5 flex-shrink-0 transition-all"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Sao Chép Mã Tampermonkey ⚡</span>
+                          </button>
+                        </div>
+                      </div>
+
                     </div>
 
-                    <div className="bg-brand-light-gray p-4 rounded-xl border border-brand-border/20 text-xs font-sans text-brand-dark leading-relaxed space-y-2">
-                      <div className="font-bold text-brand-dark">Làm thế nào để cài đặt và chạy?</div>
-                      <ol className="list-decimal pl-4 space-y-1 text-brand-gray">
-                        <li>Cài đặt tiện ích mở rộng <a href="https://www.tampermonkey.net/" target="_blank" rel="noreferrer" className="text-[#4285F4] hover:underline font-bold inline-flex items-center gap-0.5">Tampermonkey <ExternalLink className="w-3 h-3" /></a> trên Google Chrome.</li>
-                        <li>Mở bảng điều khiển Tampermonkey &gt; Chọn <strong>Add a new script (Tạo script mới)</strong>.</li>
-                        <li>Xóa sạch nội dung cũ, dán đoạn mã Userscript vừa sao chép ở trên vào và nhấn <strong>File &gt; Save (Lưu)</strong>.</li>
-                        <li>Giờ đây, bất cứ khi nào bạn mở <strong>datlich.alobo.vn</strong> và nhấp xem chi tiết bất cứ lịch đặt nào, dữ liệu sẽ được <strong>Tự Động Trích Xuất</strong> và gửi về hệ thống của bạn, đồng thời lưu thẳng vào Google Sheets!</li>
-                      </ol>
-                    </div>
-                  </div>
+                    {/* Right Column: Sync Logs & Activity History */}
+                    <div className="lg:col-span-5 space-y-6">
+                      
+                      {/* Sync Log Stream Table */}
+                      <div className="bg-white border border-brand-border/40 p-6 rounded-2xl shadow-sm space-y-4 text-xs text-left">
+                        <div className="flex justify-between items-center border-b border-brand-border/20 pb-3">
+                          <h4 className="font-display font-bold text-sm text-brand-dark">
+                            Lịch Sử Đồng Bộ Dữ Liệu
+                          </h4>
+                          <button 
+                            onClick={clearSyncLogs}
+                            className="font-sans font-bold text-[11px] text-brand-red hover:underline cursor-pointer"
+                          >
+                            Xóa lịch sử
+                          </button>
+                        </div>
 
-                  {/* Sync Event Log Streams */}
-                  <div className="bg-white border border-brand-border/40 p-5 rounded-2xl shadow-sm space-y-4 text-xs text-left">
-                    <div className="flex justify-between items-center">
-                      <h4 className="font-display font-bold text-sm text-brand-dark">
-                        4. Nhật ký đồng bộ Google Sheets gần đây
-                      </h4>
-                      <button 
-                        onClick={clearSyncLogs}
-                        className="font-sans font-bold text-[11px] text-brand-red hover:underline cursor-pointer"
-                      >
-                        Xóa lịch sử log
-                      </button>
-                    </div>
-
-                    <div className="border border-brand-border/40 rounded-xl overflow-hidden">
-                      <table className="w-full text-left text-xs border-collapse font-sans">
-                        <thead>
-                          <tr className="bg-brand-light-gray text-brand-gray font-bold border-b border-brand-border/40">
-                            <th className="p-3">Thời gian</th>
-                            <th className="p-3">Khách hàng</th>
-                            <th className="p-3">Sân chơi & Khung giờ</th>
-                            <th className="p-3 text-right">Tiền sân</th>
-                            <th className="p-3 text-center">Trạng thái Google Sheets</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-brand-border/40">
-                          {syncLogs.length === 0 ? (
-                            <tr>
-                              <td colSpan={5} className="p-8 text-center text-brand-gray">
-                                Chưa có nhật ký đồng bộ nào. Nhấn &quot;Kiểm tra kết nối&quot; hoặc đồng bộ dữ liệu để ghi nhận logs.
-                              </td>
-                            </tr>
-                          ) : (
-                            syncLogs.map((log) => (
-                              <tr key={log.id} className="hover:bg-brand-light-gray/50">
-                                <td className="p-3 font-mono text-[10px] text-brand-dark">{log.syncedAt}</td>
-                                <td className="p-3">
-                                  <div className="font-bold text-brand-dark">{log.fullName}</div>
-                                  <div className="text-[10px] text-brand-gray">{log.phone}</div>
-                                </td>
-                                <td className="p-3">
-                                  <span className="font-semibold text-brand-dark">{log.courtName}</span>
-                                  <span className="mx-1 text-brand-gray">|</span>
-                                  <span className="text-brand-red font-semibold">{log.timeSlot}</span>
-                                </td>
-                                <td className="p-3 font-bold text-brand-dark text-right">{log.price}</td>
-                                <td className="p-3 text-center">
-                                  <span className={`inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
-                                    log.status === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-brand-red'
-                                  }`}>
-                                    {log.status === 'success' ? '✓ Đã đồng bộ' : '✗ Thất bại'}
-                                  </span>
-                                </td>
+                        <div className="border border-brand-border/40 rounded-xl overflow-hidden">
+                          <table className="w-full text-left text-xs border-collapse font-sans">
+                            <thead>
+                              <tr className="bg-brand-light-gray text-brand-gray font-bold border-b border-brand-border/40">
+                                <th className="p-3">Thời gian</th>
+                                <th className="p-3">Khách hàng</th>
+                                <th className="p-3">Sân & Khung giờ</th>
+                                <th className="p-3 text-center">Trạng thái</th>
                               </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
+                            </thead>
+                            <tbody className="divide-y divide-brand-border/40">
+                              {syncLogs.length === 0 ? (
+                                <tr>
+                                  <td colSpan={4} className="p-8 text-center text-brand-gray">
+                                    Chưa có nhật ký đồng bộ nào. Hãy bấm &quot;Lấy Dữ Liệu Lịch Sân Ngay&quot; để cập nhật.
+                                  </td>
+                                </tr>
+                              ) : (
+                                syncLogs.map((log) => (
+                                  <tr key={log.id} className="hover:bg-brand-light-gray/50">
+                                    <td className="p-3 font-mono text-[10px] text-brand-dark">{log.syncedAt}</td>
+                                    <td className="p-3">
+                                      <div className="font-bold text-brand-dark">{log.fullName}</div>
+                                      <div className="text-[10px] text-brand-gray">{log.phone}</div>
+                                    </td>
+                                    <td className="p-3">
+                                      <span className="font-semibold text-brand-dark">{log.courtName}</span>
+                                      <span className="block text-[11px] text-brand-blue font-bold">{log.timeSlot}</span>
+                                    </td>
+                                    <td className="p-3 text-center">
+                                      <span className={`inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                                        log.status === 'success' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-brand-red'
+                                      }`}>
+                                        {log.status === 'success' ? '✓ Thành công' : '✗ Thất bại'}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
                     </div>
                   </div>
 

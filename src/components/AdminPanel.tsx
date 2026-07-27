@@ -919,8 +919,8 @@ export default function AdminPanel({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-[32px] w-full max-w-5xl h-[90vh] shadow-2xl border border-brand-border/40 overflow-hidden relative flex flex-col">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto">
+      <div className="bg-white rounded-[24px] sm:rounded-[32px] w-full max-w-5xl h-[92vh] shadow-2xl border border-brand-border/40 overflow-hidden relative flex flex-col my-auto">
         
         {/* Header Block */}
         <div className="bg-brand-dark p-5 text-white flex justify-between items-center relative overflow-hidden flex-shrink-0">

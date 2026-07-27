@@ -61,7 +61,7 @@ export default function Hero({ onOpenBooking, onOpenMatchLobby, promoConfig }: H
         </div>
 
         {/* Content Overlay */}
-        <div className="absolute inset-0 flex flex-col justify-end p-8 sm:p-12 md:p-16">
+        <div className="absolute inset-0 flex flex-col justify-end p-5 sm:p-12 md:p-16">
           <div className="max-w-2xl text-white">
             
             {/* Tag */}

@@ -26,7 +26,7 @@ export default function Sponsors({ sponsors }: SponsorsProps) {
         </div>
 
         {/* Brand/Sponsor Grid - clean, minimalist grey badges, highlight red on hover */}
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-4 items-center">
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2 sm:gap-4 items-center">
           {sponsors.map((sponsor) => {
             const isImageUrl = sponsor.logo && (
               sponsor.logo.startsWith('http://') || 

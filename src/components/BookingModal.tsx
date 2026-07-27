@@ -101,11 +101,11 @@ export default function BookingModal({ isOpen, onClose, courts, onAddBooking }: 
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl border border-brand-border/40 overflow-hidden relative">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto">
+      <div className="bg-white rounded-[24px] sm:rounded-[32px] w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl border border-brand-border/40 overflow-hidden relative my-auto">
         
         {/* Header decoration */}
-        <div className="bg-brand-red p-6 text-white flex justify-between items-center relative overflow-hidden">
+        <div className="bg-brand-red p-5 sm:p-6 text-white flex justify-between items-center relative overflow-hidden flex-shrink-0">
           {/* Subtle logo background print */}
           <div className="absolute right-0 top-0 text-white/5 font-display font-black text-9xl transform translate-x-12 -translate-y-8 pointer-events-none">
             P

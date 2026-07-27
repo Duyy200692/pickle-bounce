@@ -72,11 +72,11 @@ export default function MatchLobby({ isOpen, onClose, openPlays, courts, onJoinO
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-[32px] w-full max-w-3xl shadow-2xl border border-brand-border/40 overflow-hidden relative my-8">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto">
+      <div className="bg-white rounded-[24px] sm:rounded-[32px] w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl border border-brand-border/40 overflow-hidden relative my-auto">
         
         {/* Header Block */}
-        <div className="bg-brand-dark p-6 text-white flex justify-between items-center relative overflow-hidden">
+        <div className="bg-brand-dark p-5 sm:p-6 text-white flex justify-between items-center relative overflow-hidden flex-shrink-0">
           <div className="absolute right-0 top-0 text-white/5 font-display font-black text-9xl transform translate-x-12 -translate-y-8 pointer-events-none">
             M
           </div>

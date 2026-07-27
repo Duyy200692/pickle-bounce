@@ -218,8 +218,13 @@ export default function AloboLiveSync() {
           </div>
         </div>
 
+        {/* Mobile Swipe Hint */}
+        <div className="md:hidden text-center text-xs font-semibold text-brand-blue mb-2 flex items-center justify-center gap-1 animate-pulse">
+          <span>← Vuốt ngang để xem tất cả các sân →</span>
+        </div>
+
         {/* Real-time Grid View (Matching exactly alobo visual layout) */}
-        <div className="bg-white rounded-3xl border border-brand-border/40 shadow-xl overflow-x-auto relative mb-12">
+        <div className="bg-white rounded-3xl border border-brand-border/40 shadow-xl overflow-x-auto relative mb-12 touch-pan-x">
           {isLoading && (
             <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-20 flex items-center justify-center">
               <div className="flex flex-col items-center gap-2">

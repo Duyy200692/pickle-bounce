@@ -480,7 +480,11 @@ Chỉ trả về định dạng JSON duy nhất dạng MẢNG OBJECTS [ { "fullN
 
         const geminiRes = await ai.models.generateContent({
           model: "gemini-2.5-flash",
-          contents: contents
+          contents: contents,
+          config: {
+            temperature: 0.1,
+            maxOutputTokens: 1000
+          }
         });
 
         const textOutput = geminiRes.text || "";

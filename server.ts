@@ -190,7 +190,7 @@ async function forwardToGoogleSheets(booking: {
   paymentStatus: string;
 }) {
   const config = loadConfig();
-  const webhookUrl = config.googleSheetWebhookUrl;
+  let webhookUrl = (config.googleSheetWebhookUrl || "").trim();
   
   const logEntry = {
     id: "gsl-" + Math.random().toString(36).substr(2, 9),
@@ -212,12 +212,31 @@ async function forwardToGoogleSheets(booking: {
     return { success: false, error: "Chưa cấu hình Google Sheets Webhook URL trong hệ thống." };
   }
 
+  // Auto replace /dev at end with /exec if user accidentally copied dev URL
+  if (webhookUrl.endsWith("/dev")) {
+    webhookUrl = webhookUrl.substring(0, webhookUrl.length - 4) + "/exec";
+    config.googleSheetWebhookUrl = webhookUrl;
+    saveConfig(config);
+  }
+
   // Double check if they accidentally pasted the Google Sheets Link in Webhook URL
   if (webhookUrl.includes("docs.google.com/spreadsheets")) {
     console.log("[Google Sheets] Forwarding skipped: Webhook URL contains a spreadsheet link instead of a Web App macro link.");
     config.forwardLogs = [logEntry, ...config.forwardLogs].slice(0, 50);
     saveConfig(config);
-    return { success: false, error: "Lỗi cấu hình: Webhook URL là link bảng tính, không phải link Apps Script Web App." };
+    return { 
+      success: false, 
+      error: "Lỗi cấu hình: Bạn đang dán Link bảng tính Google Sheets vào ô Webhook URL. Vui lòng dán Link Apps Script Web App (chứa script.google.com/macros/s/...) vào ô Webhook URL." 
+    };
+  }
+
+  if (!webhookUrl.includes("script.google.com/macros/s/")) {
+    config.forwardLogs = [logEntry, ...config.forwardLogs].slice(0, 50);
+    saveConfig(config);
+    return { 
+      success: false, 
+      error: "Lỗi đường dẫn: Webhook URL phải có định dạng dạng https://script.google.com/macros/s/.../exec" 
+    };
   }
 
   try {
@@ -236,33 +255,47 @@ async function forwardToGoogleSheets(booking: {
     console.log(`[Google Sheets] Forwarding to webhook: ${webhookUrl}`, formattedData);
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 seconds timeout
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds timeout
 
+    // Send as text/plain to avoid CORS / preflight / redirect drops in Google Apps Script
     const response = await fetch(webhookUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(formattedData),
+      redirect: "follow",
       signal: controller.signal
     });
 
     clearTimeout(timeoutId);
 
-    // Apps Script redirects, and usually returns 200 or 302
+    const respText = await response.text();
+
+    // Check if Google Apps Script returned a login redirect HTML
+    if (respText.includes("Google Accounts") || respText.includes("Sign in") || respText.includes("accounts.google.com")) {
+      logEntry.status = "failed";
+      config.forwardLogs = [logEntry, ...config.forwardLogs].slice(0, 50);
+      saveConfig(config);
+      return { 
+        success: false, 
+        error: "Lỗi phân quyền Google: Webhook đang yêu cầu Đăng nhập. Vui lòng vào Google Apps Script > Bấm 'Triển khai' > 'Triển khai mới' > Mục 'Ai có quyền truy cập': Chọn 'Bất kỳ ai (Anyone)' rồi Triển khai lại." 
+      };
+    }
+
     if (response.ok) {
       logEntry.status = "success";
-      console.log("[Google Sheets] Successfully forwarded booking!");
+      console.log("[Google Sheets] Successfully forwarded booking!", respText.substring(0, 100));
       config.forwardLogs = [logEntry, ...config.forwardLogs].slice(0, 50);
       saveConfig(config);
-      return { success: true };
+      return { success: true, message: "Đồng bộ lên Google Sheets thành công!" };
     } else {
-      const respText = await response.text();
-      console.error("[Google Sheets] Server error from Apps Script webhook:", respText);
+      logEntry.status = "failed";
       config.forwardLogs = [logEntry, ...config.forwardLogs].slice(0, 50);
       saveConfig(config);
-      return { success: false, error: `Lỗi máy chủ Google (${response.status}): ${respText.substring(0, 100)}` };
+      return { success: false, error: `Lỗi máy chủ Google (${response.status}): ${respText.substring(0, 150)}` };
     }
   } catch (error: any) {
     console.error("[Google Sheets] Connection failed:", error);
+    logEntry.status = "failed";
     config.forwardLogs = [logEntry, ...config.forwardLogs].slice(0, 50);
     saveConfig(config);
     return { success: false, error: error.message || "Không thể kết nối tới Google Webhook." };

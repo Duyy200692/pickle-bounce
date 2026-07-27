@@ -395,12 +395,24 @@ export default function AdminPanel({
   };
 
   const handleTestConnection = async () => {
+    if (!googleSheetWebhookUrl.trim()) {
+      alert('Vui lòng dán URL Google Apps Script Webhook vào ô ở Bước 1!');
+      return;
+    }
     setIsTestingSheet(true);
     setTestResult(null);
     try {
+      // Save current config first so server tests the exact Webhook URL typed in the input
+      await fetch('/api/alobo/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ googleSheetWebhookUrl, googleSheetUrl })
+      });
+
       const res = await fetch('/api/alobo/test-sheet', { method: 'POST' });
       const data = await res.json();
       setTestResult(data);
+      fetchConfig();
     } catch (err: any) {
       setTestResult({ error: err.message || 'Lỗi kết nối mạng.' });
     } finally {

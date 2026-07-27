@@ -3106,24 +3106,15 @@ export default function AdminPanel({
                         
                         <div className="space-y-3.5 font-sans leading-relaxed text-brand-dark">
                           <div>
-                            <span className="font-bold text-[#4285F4]">Bước 1:</span> Tạo một trang tính Google Sheets mới, đặt tên các tiêu đề cột tại hàng đầu tiên (A1 đến H1) lần lượt là:
-                            <div className="bg-white p-2 border border-brand-border/40 rounded-lg font-mono text-[10px] mt-2 select-all overflow-x-auto text-left">
-                              Date | Time Slot | Court | Name | Phone | Price | Status | Synced At
-                            </div>
+                            <span className="font-bold text-[#4285F4]">Bước 1:</span> Mở trang tính Google Sheets của bạn.
                           </div>
 
                           <div>
-                            <span className="font-bold text-[#4285F4]">Bước 2:</span> Mở <strong>Tiện ích mở rộng (Extensions)</strong> &gt; <strong>Apps Script</strong>. Xóa mọi mã có sẵn, dán đoạn mã Google Apps Script ở ô bên dưới vào và bấm lưu.
+                            <span className="font-bold text-[#4285F4]">Bước 2:</span> Mở <strong>Tiện ích mở rộng (Extensions)</strong> &gt; <strong>Apps Script</strong>. Xóa mọi mã có sẵn, dán đoạn mã bên dưới vào và lưu lại.
                           </div>
 
                           <div>
-                            <span className="font-bold text-[#4285F4]">Bước 3:</span> Bấm <strong>Triển khai (Deploy)</strong> &gt; <strong>Triển khai mới (New deployment)</strong>. 
-                            <ul className="list-disc pl-4 mt-1 space-y-0.5 text-brand-gray">
-                              <li>Chọn loại cấu hình: <strong>Ứng dụng web (Web app)</strong>.</li>
-                              <li>Vai trò chạy ứng dụng: <strong>Tôi (Me)</strong>.</li>
-                              <li>Ai có quyền truy cập: <strong>Bất kỳ ai (Anyone)</strong>.</li>
-                            </ul>
-                            Sau đó bấm <strong>Triển khai</strong>, cấp quyền truy cập tài khoản, sao chép <strong>URL ứng dụng web</strong> và dán vào phần cấu hình Webhook URL ở ô bên trái.
+                            <span className="font-bold text-[#4285F4]">Bước 3:</span> Bấm <strong>Triển khai (Deploy)</strong> &gt; <strong>Triển khai mới (New deployment)</strong> &gt; Chọn <strong>Ứng dụng web (Web app)</strong>. Đặt quyền truy cập: <strong>Bất kỳ ai (Anyone)</strong>. Dán Webhook URL nhận được vào ô bên trái.
                           </div>
                         </div>
                       </div>
@@ -3131,7 +3122,7 @@ export default function AdminPanel({
                       {/* Google Apps Script Code Copy Block */}
                       <div className="bg-white border border-brand-border/40 rounded-2xl overflow-hidden text-xs">
                         <div className="bg-brand-dark p-3 text-white text-xs font-bold flex justify-between items-center">
-                          <span>Google Apps Script Template (Khớp chuẩn 18 Cột "DOANH THU SÂN")</span>
+                          <span>Google Apps Script Template (Chuẩn Cột "DOANH THU SÂN")</span>
                           <button 
                             onClick={() => {
                               const scriptCode = `function doPost(e) {
@@ -3160,7 +3151,7 @@ export default function AdminPanel({
     // Tự động tính Số giờ tập từ Khung giờ (vd: 17:00 - 18:00 -> 1)
     var hoursVal = calculateHours(timeSlotVal);
 
-    // 2. Nhận diện tiêu đề cột bảng Google Sheet
+    // 2. Nhận diện chính xác tiêu đề cột bảng Google Sheet
     var r1 = sheet.getRange(1, 1, 1, 22).getValues()[0];
     var r2 = sheet.getRange(2, 1, 1, 22).getValues()[0];
     var headerRowIndex = 2;
@@ -3175,15 +3166,15 @@ export default function AdminPanel({
     for (var c = 0; c < headers.length; c++) {
       var h = String(headers[c]).trim().toLowerCase();
       if (h === "stt") colMap.stt = c + 1;
-      if (h.indexOf("ngày ký") > -1 || (h.indexOf("ngày") > -1 && h.indexOf("sinh") === -1)) colMap.date = c + 1;
+      if (h.indexOf("ký hđ") > -1 || h.indexOf("ngày ký") > -1 || (h.indexOf("ngày") > -1 && h.indexOf("sinh") === -1)) colMap.date = c + 1;
       if (h.indexOf("họ và tên") > -1 || h.indexOf("khách") > -1) colMap.name = c + 1;
-      if (h.indexOf("ngày sinh") > -1) colMap.dob = c + 1;
-      if (h.indexOf("sđt") > -1 || h.indexOf("phone") > -1) colMap.phone = c + 1;
+      if (h.indexOf("ngày sinh") > -1 || h.indexOf("sinh") > -1) colMap.dob = c + 1;
+      if (h.indexOf("sđt") > -1 || h.indexOf("phone") > -1 || h === "sdt") colMap.phone = c + 1;
       if (h.indexOf("thời gian") > -1 || h.indexOf("khung giờ") > -1) colMap.time = c + 1;
-      if (h.indexOf("giờ") > -1 || h.indexOf("vé") > -1) colMap.hours = c + 1;
+      if (h.indexOf("số giờ") > -1 || h.indexOf("số vé") > -1) colMap.hours = c + 1;
       if (h.indexOf("gói tập") > -1) colMap.package = c + 1;
       if (h.indexOf("dịch vụ") > -1) colMap.service = c + 1;
-      if (h.indexOf("giá trị") > -1 || h.indexOf("tiền") > -1) colMap.price = c + 1;
+      if (h.indexOf("giá trị") > -1 || h === "tiền") colMap.price = c + 1;
       if (h.indexOf("thu thực tế") > -1) colMap.actualPrice = c + 1;
       if (h.indexOf("nguồn") > -1) colMap.source = c + 1;
       if (h.indexOf("thanh toán") > -1) colMap.payment = c + 1;
@@ -3224,7 +3215,9 @@ export default function AdminPanel({
 
     if (foundRowIndex > -1) {
       sheet.getRange(foundRowIndex, colMap.name).setValue(fullNameVal);
-      sheet.getRange(foundRowIndex, colMap.phone).setValue(phoneVal);
+      var pCell = sheet.getRange(foundRowIndex, colMap.phone);
+      pCell.setNumberFormat("@");
+      pCell.setValue(phoneVal);
       sheet.getRange(foundRowIndex, colMap.price).setValue(priceVal);
       if (colMap.actualPrice) sheet.getRange(foundRowIndex, colMap.actualPrice).setValue(priceVal);
       sheet.getRange(foundRowIndex, colMap.payment).setValue(paymentStatusVal);
@@ -3235,15 +3228,46 @@ export default function AdminPanel({
     } else {
       var targetRow = Math.max(sheet.getLastRow() + 1, headerRowIndex + 1);
       
-      sheet.getRange(targetRow, colMap.stt).setValue(targetRow - headerRowIndex);
-      sheet.getRange(targetRow, colMap.date).setValue(dateVal);
+      // STT (Cột A): Đặt định dạng văn bản để Google Sheet không chuyển thành ngày 1899/1900
+      var sttCell = sheet.getRange(targetRow, colMap.stt);
+      sttCell.setNumberFormat("@");
+      sttCell.setValue(String(targetRow - headerRowIndex));
+
+      // NGÀY KÝ HĐ (Cột B):
+      var dateCell = sheet.getRange(targetRow, colMap.date);
+      dateCell.setNumberFormat("@");
+      dateCell.setValue(dateVal);
+
+      // HỌ VÀ TÊN (Cột C):
       sheet.getRange(targetRow, colMap.name).setValue(fullNameVal);
-      sheet.getRange(targetRow, colMap.phone).setValue(phoneVal);
+
+      // NGÀY SINH (Cột D): Để trống (không ghi ngày đặt sân vào ngày sinh)
+      if (colMap.dob && colMap.dob !== colMap.date) {
+        var dobCell = sheet.getRange(targetRow, colMap.dob);
+        dobCell.setNumberFormat("@");
+        dobCell.setValue("");
+      }
+
+      // SĐT (Cột E):
+      var phoneCell = sheet.getRange(targetRow, colMap.phone);
+      phoneCell.setNumberFormat("@");
+      phoneCell.setValue(phoneVal);
+
+      // Thời gian (Cột F):
       sheet.getRange(targetRow, colMap.time).setValue(timeSlotVal);
+
+      // SỐ GIỜ TẬP (Cột G):
       sheet.getRange(targetRow, colMap.hours).setValue(hoursVal);
+
+      // GÓI TẬP (Cột H):
       sheet.getRange(targetRow, colMap.package).setValue(courtNameVal || "Không");
+
+      // DỊCH VỤ (Cột K):
       sheet.getRange(targetRow, colMap.service).setValue(serviceVal);
+
+      // GIÁ TRỊ (Cột L):
       sheet.getRange(targetRow, colMap.price).setValue(priceVal);
+
       if (colMap.actualPrice) sheet.getRange(targetRow, colMap.actualPrice).setValue(priceVal);
       if (colMap.source) sheet.getRange(targetRow, colMap.source).setValue("Alobo App");
       sheet.getRange(targetRow, colMap.payment).setValue(paymentStatusVal);
@@ -3350,7 +3374,7 @@ function fillZero(num) {
       stt: 1,         // Cột A: STT
       date: 2,        // Cột B: NGÀY KÝ HĐ (vd: 27/7/2026)
       name: 3,        // Cột C: HỌ VÀ TÊN (vd: Chị Ly)
-      dob: 4,         // Cột D: NGÀY SINH
+      dob: 4,         // Cột D: NGÀY SINH (Để trống)
       phone: 5,       // Cột E: SĐT (vd: '0988164848)
       time: 6,        // Cột F: Thời gian (vd: 8h30-10h / 17:00 - 18:00)
       hours: 7,       // Cột G: SỐ GIỜ TẬP / SỐ VÉ (vd: 1.5)
@@ -3365,10 +3389,26 @@ function fillZero(num) {
 
     var targetRow = Math.max(sheet.getLastRow() + 1, 3);
     
-    sheet.getRange(targetRow, colMap.stt).setValue(targetRow - 2);
-    sheet.getRange(targetRow, colMap.date).setValue(dateVal);
+    // Đặt định dạng văn bản cho STT & Ngày ký HĐ để tránh Google Sheet hiển thị thành năm 1899/1900
+    var sttCell = sheet.getRange(targetRow, colMap.stt);
+    sttCell.setNumberFormat("@");
+    sttCell.setValue(String(targetRow - 2));
+
+    var dateCell = sheet.getRange(targetRow, colMap.date);
+    dateCell.setNumberFormat("@");
+    dateCell.setValue(dateVal);
+
     sheet.getRange(targetRow, colMap.name).setValue(fullNameVal);
-    sheet.getRange(targetRow, colMap.phone).setValue(phoneVal);
+    
+    // Cột D (NGÀY SINH) để trống
+    var dobCell = sheet.getRange(targetRow, colMap.dob);
+    dobCell.setNumberFormat("@");
+    dobCell.setValue("");
+
+    var phoneCell = sheet.getRange(targetRow, colMap.phone);
+    phoneCell.setNumberFormat("@");
+    phoneCell.setValue(phoneVal);
+
     sheet.getRange(targetRow, colMap.time).setValue(timeSlotVal);
     sheet.getRange(targetRow, colMap.hours).setValue(hoursVal);
     sheet.getRange(targetRow, colMap.package).setValue(courtNameVal || "Không");

@@ -243,8 +243,10 @@ async function forwardToGoogleSheets(booking: {
     const formattedData = {
       action: "addBooking",
       fullName: booking.fullName,
+      customerName: booking.fullName,
       phone: booking.phone,
       courtName: booking.courtName,
+      court: booking.courtName,
       date: booking.date,
       timeSlot: booking.timeSlot,
       price: booking.price,

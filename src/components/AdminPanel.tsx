@@ -313,15 +313,17 @@ export default function AdminPanel({
       targetUrl = targetUrl.substring(0, targetUrl.length - 4) + '/exec';
     }
     const formattedData = {
+      action: "addBooking",
+      fullName: bookingData.fullName || bookingData.customerName || "Khách Alobo",
       customerName: bookingData.fullName || bookingData.customerName || "Khách Alobo",
       phone: bookingData.phone || "",
+      courtName: bookingData.courtName || bookingData.court || "Sân 1",
       court: bookingData.courtName || bookingData.court || "Sân 1",
       date: bookingData.date || new Date().toISOString().split('T')[0],
       timeSlot: bookingData.timeSlot || "09:00 - 10:00",
       price: bookingData.price || "150.000",
       paymentStatus: bookingData.paymentStatus || "Đã thanh toán",
-      notes: bookingData.notes || "Gửi trực tiếp từ Trình duyệt Alobo",
-      timestamp: new Date().toISOString()
+      syncedAt: new Date().toLocaleString("vi-VN")
     };
 
     try {
@@ -3129,7 +3131,7 @@ export default function AdminPanel({
                       {/* Google Apps Script Code Copy Block */}
                       <div className="bg-white border border-brand-border/40 rounded-2xl overflow-hidden text-xs">
                         <div className="bg-brand-dark p-3 text-white text-xs font-bold flex justify-between items-center">
-                          <span>Google Apps Script Template (Chống trùng ca)</span>
+                          <span>Google Apps Script Template (Chuẩn Cột "DOANH THU SÂN")</span>
                           <button 
                             onClick={() => {
                               const scriptCode = `function doPost(e) {
@@ -3138,60 +3140,99 @@ export default function AdminPanel({
     var data = JSON.parse(jsonString);
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
     
-    if (data.action === "addBooking") {
-      var dateVal = data.date || "";
-      var timeSlotVal = data.timeSlot || "";
-      var courtNameVal = data.courtName || "";
-      var fullNameVal = data.fullName || "";
-      var phoneVal = "'" + (data.phone || "");
-      var priceVal = data.price || "";
-      var paymentStatusVal = data.paymentStatus || "";
-      var syncedAtVal = data.syncedAt || new Date().toLocaleString("vi-VN");
+    var dateVal = data.date || "";
+    var timeSlotVal = data.timeSlot || "";
+    var courtNameVal = data.courtName || data.court || "";
+    var fullNameVal = data.fullName || data.customerName || "";
+    var phoneVal = "'" + (data.phone || "");
+    var priceVal = data.price || "";
+    var paymentStatusVal = data.paymentStatus || "";
+    var syncedAtVal = data.syncedAt || new Date().toLocaleString("vi-VN");
+
+    // Scan headers in Row 1 or Row 2
+    var r1 = sheet.getRange(1, 1, 1, 22).getValues()[0];
+    var r2 = sheet.getRange(2, 1, 1, 22).getValues()[0];
+    var headerRowIndex = 2;
+    var headers = r2;
+
+    if (r2.join("").toLowerCase().indexOf("họ và tên") === -1 && r1.join("").toLowerCase().indexOf("họ và tên") > -1) {
+      headerRowIndex = 1;
+      headers = r1;
+    }
+
+    var colMap = {};
+    for (var c = 0; c < headers.length; c++) {
+      var h = String(headers[c]).trim().toLowerCase();
+      if (h.indexOf("stt") > -1) colMap.stt = c + 1;
+      if (h.indexOf("ngày") > -1) colMap.date = c + 1;
+      if (h.indexOf("họ và tên") > -1 || h.indexOf("khách") > -1 || h.indexOf("name") > -1) colMap.name = c + 1;
+      if (h.indexOf("sđt") > -1 || h.indexOf("phone") > -1) colMap.phone = c + 1;
+      if (h.indexOf("thời gian") > -1 || h.indexOf("khung giờ") > -1 || h.indexOf("time") > -1) colMap.time = c + 1;
+      if (h.indexOf("gói tập") > -1 || h.indexOf("sân") > -1 || h.indexOf("court") > -1) colMap.court = c + 1;
+      if (h.indexOf("giá trị") > -1 || h.indexOf("tiền") > -1 || h.indexOf("price") > -1) colMap.price = c + 1;
+      if (h.indexOf("thu thực tế") > -1) colMap.actualPrice = c + 1;
+      if (h.indexOf("nguồn") > -1) colMap.source = c + 1;
+      if (h.indexOf("thanh toán") > -1 || h.indexOf("trạng thái") > -1 || h.indexOf("status") > -1) colMap.payment = c + 1;
+      if (h.indexOf("ghi chú") > -1) colMap.notes = c + 1;
+    }
+
+    // Default column fallbacks for DOANH THU SÂN sheet
+    if (!colMap.stt) colMap.stt = 1;
+    if (!colMap.date) colMap.date = 2;
+    if (!colMap.name) colMap.name = 3;
+    if (!colMap.phone) colMap.phone = 5;
+    if (!colMap.time) colMap.time = 6;
+    if (!colMap.court) colMap.court = 8;
+    if (!colMap.price) colMap.price = 12;
+    if (!colMap.actualPrice) colMap.actualPrice = 15;
+    if (!colMap.source) colMap.source = 16;
+    if (!colMap.payment) colMap.payment = 17;
+    if (!colMap.notes) colMap.notes = 18;
+
+    // Check duplicate booking in existing rows
+    var rows = sheet.getDataRange().getValues();
+    var foundRowIndex = -1;
+    for (var i = headerRowIndex; i < rows.length; i++) {
+      var rDate = rows[i][colMap.date - 1] ? String(rows[i][colMap.date - 1]).trim() : "";
+      var rTime = rows[i][colMap.time - 1] ? String(rows[i][colMap.time - 1]).trim() : "";
+      var rCourt = rows[i][colMap.court - 1] ? String(rows[i][colMap.court - 1]).trim() : "";
       
-      var rows = sheet.getDataRange().getValues();
-      var foundRowIndex = -1;
-      
-      for (var i = 1; i < rows.length; i++) {
-        var rowDate = rows[i][0] ? String(rows[i][0]).trim() : "";
-        var rowTime = rows[i][1] ? String(rows[i][1]).trim() : "";
-        var rowCourt = rows[i][2] ? String(rows[i][2]).trim() : "";
-        
-        if (formatCompareDate(rowDate) === formatCompareDate(dateVal) && 
-            rowTime.toLowerCase() === timeSlotVal.toLowerCase() && 
-            rowCourt.toLowerCase() === courtNameVal.toLowerCase()) {
-          foundRowIndex = i + 1;
-          break;
-        }
-      }
-      
-      if (foundRowIndex > -1) {
-        sheet.getRange(foundRowIndex, 4).setValue(fullNameVal);
-        sheet.getRange(foundRowIndex, 5).setValue(phoneVal);
-        sheet.getRange(foundRowIndex, 6).setValue(priceVal);
-        sheet.getRange(foundRowIndex, 7).setValue(paymentStatusVal);
-        sheet.getRange(foundRowIndex, 8).setValue(syncedAtVal);
-        
-        return ContentService.createTextOutput(JSON.stringify({ success: true, status: "updated", rowIndex: foundRowIndex }))
-          .setMimeType(ContentService.MimeType.JSON);
-      } else {
-        sheet.appendRow([
-          dateVal,
-          timeSlotVal,
-          courtNameVal,
-          fullNameVal,
-          phoneVal,
-          priceVal,
-          paymentStatusVal,
-          syncedAtVal
-        ]);
-        
-        return ContentService.createTextOutput(JSON.stringify({ success: true, status: "inserted" }))
-          .setMimeType(ContentService.MimeType.JSON);
+      if (formatCompareDate(rDate) === formatCompareDate(dateVal) && 
+          rTime.toLowerCase() === timeSlotVal.toLowerCase() && 
+          rCourt.toLowerCase() === courtNameVal.toLowerCase()) {
+        foundRowIndex = i + 1;
+        break;
       }
     }
-    
-    return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Unknown action" }))
-      .setMimeType(ContentService.MimeType.JSON);
+
+    if (foundRowIndex > -1) {
+      sheet.getRange(foundRowIndex, colMap.name).setValue(fullNameVal);
+      sheet.getRange(foundRowIndex, colMap.phone).setValue(phoneVal);
+      sheet.getRange(foundRowIndex, colMap.price).setValue(priceVal);
+      if (colMap.actualPrice) sheet.getRange(foundRowIndex, colMap.actualPrice).setValue(priceVal);
+      sheet.getRange(foundRowIndex, colMap.payment).setValue(paymentStatusVal);
+      if (colMap.notes) sheet.getRange(foundRowIndex, colMap.notes).setValue("Cập nhật " + syncedAtVal);
+      
+      return ContentService.createTextOutput(JSON.stringify({ success: true, status: "updated", rowIndex: foundRowIndex }))
+        .setMimeType(ContentService.MimeType.JSON);
+    } else {
+      var targetRow = Math.max(sheet.getLastRow() + 1, headerRowIndex + 1);
+      
+      sheet.getRange(targetRow, colMap.stt).setValue(targetRow - headerRowIndex);
+      sheet.getRange(targetRow, colMap.date).setValue(dateVal);
+      sheet.getRange(targetRow, colMap.name).setValue(fullNameVal);
+      sheet.getRange(targetRow, colMap.phone).setValue(phoneVal);
+      sheet.getRange(targetRow, colMap.time).setValue(timeSlotVal);
+      sheet.getRange(targetRow, colMap.court).setValue(courtNameVal);
+      sheet.getRange(targetRow, colMap.price).setValue(priceVal);
+      if (colMap.actualPrice) sheet.getRange(targetRow, colMap.actualPrice).setValue(priceVal);
+      if (colMap.source) sheet.getRange(targetRow, colMap.source).setValue("Alobo App");
+      sheet.getRange(targetRow, colMap.payment).setValue(paymentStatusVal);
+      if (colMap.notes) sheet.getRange(targetRow, colMap.notes).setValue("Đồng bộ Alobo " + syncedAtVal);
+
+      return ContentService.createTextOutput(JSON.stringify({ success: true, status: "inserted", row: targetRow }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
   } catch (error) {
     return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
@@ -3201,32 +3242,17 @@ export default function AdminPanel({
 function formatCompareDate(dateStr) {
   if (!dateStr) return "";
   dateStr = String(dateStr).trim();
-  
   if (dateStr.indexOf('/') > -1) {
     var parts = dateStr.split('/');
-    if (parts.length === 3) {
-      return fillZero(parts[0]) + "/" + fillZero(parts[1]) + "/" + parts[2];
-    }
+    if (parts.length === 3) return fillZero(parts[0]) + "/" + fillZero(parts[1]) + "/" + parts[2];
   }
-  
   if (dateStr.indexOf('-') > -1) {
     var parts = dateStr.split('-');
     if (parts.length === 3) {
-      if (parts[0].length === 4) {
-        return fillZero(parts[2]) + "/" + fillZero(parts[1]) + "/" + parts[0];
-      } else if (parts[2].length === 4) {
-        return fillZero(parts[0]) + "/" + fillZero(parts[1]) + "/" + parts[2];
-      }
+      if (parts[0].length === 4) return fillZero(parts[2]) + "/" + fillZero(parts[1]) + "/" + parts[0];
+      if (parts[2].length === 4) return fillZero(parts[0]) + "/" + fillZero(parts[1]) + "/" + parts[2];
     }
   }
-  
-  try {
-    var d = new Date(dateStr);
-    if (!isNaN(d.getTime())) {
-      return fillZero(d.getDate()) + "/" + fillZero(d.getMonth() + 1) + "/" + d.getFullYear();
-    }
-  } catch(e) {}
-  
   return dateStr.toLowerCase();
 }
 
@@ -3235,115 +3261,89 @@ function fillZero(num) {
   return n < 10 ? "0" + n : String(n);
 }`;
                               navigator.clipboard.writeText(scriptCode);
-                              alert('Đã sao chép mã Google Apps Script cải tiến (chống trùng ca) vào Clipboard!');
+                              alert('Đã sao chép mã Google Apps Script tự động khớp cột "DOANH THU SÂN" vào Clipboard!');
                             }}
                             className="bg-white/10 hover:bg-white/20 px-2.5 py-1 rounded text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
                           >
                             <Copy className="w-3 h-3" /> Sao chép
                           </button>
                         </div>
-                        <div className="p-3 bg-brand-light-gray font-mono text-[9px] text-brand-dark/90 h-40 overflow-y-auto select-all leading-normal whitespace-pre text-left">
+                        <div className="p-3 bg-brand-light-gray font-mono text-[9px] text-brand-dark/90 h-44 overflow-y-auto select-all leading-normal whitespace-pre text-left">
 {`function doPost(e) {
   try {
     var jsonString = e.postData.contents;
     var data = JSON.parse(jsonString);
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
     
-    if (data.action === "addBooking") {
-      var dateVal = data.date || "";
-      var timeSlotVal = data.timeSlot || "";
-      var courtNameVal = data.courtName || "";
-      var fullNameVal = data.fullName || "";
-      var phoneVal = "'" + (data.phone || "");
-      var priceVal = data.price || "";
-      var paymentStatusVal = data.paymentStatus || "";
-      var syncedAtVal = data.syncedAt || new Date().toLocaleString("vi-VN");
-      
-      var rows = sheet.getDataRange().getValues();
-      var foundRowIndex = -1;
-      
-      for (var i = 1; i < rows.length; i++) {
-        var rowDate = rows[i][0] ? String(rows[i][0]).trim() : "";
-        var rowTime = rows[i][1] ? String(rows[i][1]).trim() : "";
-        var rowCourt = rows[i][2] ? String(rows[i][2]).trim() : "";
-        
-        if (formatCompareDate(rowDate) === formatCompareDate(dateVal) && 
-            rowTime.toLowerCase() === timeSlotVal.toLowerCase() && 
-            rowCourt.toLowerCase() === courtNameVal.toLowerCase()) {
-          foundRowIndex = i + 1;
-          break;
-        }
-      }
-      
-      if (foundRowIndex > -1) {
-        sheet.getRange(foundRowIndex, 4).setValue(fullNameVal);
-        sheet.getRange(foundRowIndex, 5).setValue(phoneVal);
-        sheet.getRange(foundRowIndex, 6).setValue(priceVal);
-        sheet.getRange(foundRowIndex, 7).setValue(paymentStatusVal);
-        sheet.getRange(foundRowIndex, 8).setValue(syncedAtVal);
-        
-        return ContentService.createTextOutput(JSON.stringify({ success: true, status: "updated", rowIndex: foundRowIndex }))
-          .setMimeType(ContentService.MimeType.JSON);
-      } else {
-        sheet.appendRow([
-          dateVal,
-          timeSlotVal,
-          courtNameVal,
-          fullNameVal,
-          phoneVal,
-          priceVal,
-          paymentStatusVal,
-          syncedAtVal
-        ]);
-        
-        return ContentService.createTextOutput(JSON.stringify({ success: true, status: "inserted" }))
-          .setMimeType(ContentService.MimeType.JSON);
-      }
+    var dateVal = data.date || "";
+    var timeSlotVal = data.timeSlot || "";
+    var courtNameVal = data.courtName || data.court || "";
+    var fullNameVal = data.fullName || data.customerName || "";
+    var phoneVal = "'" + (data.phone || "");
+    var priceVal = data.price || "";
+    var paymentStatusVal = data.paymentStatus || "";
+    var syncedAtVal = data.syncedAt || new Date().toLocaleString("vi-VN");
+
+    // Tự động nhận diện cột theo tiêu đề bảng "DOANH THU SÂN"
+    var r1 = sheet.getRange(1, 1, 1, 22).getValues()[0];
+    var r2 = sheet.getRange(2, 1, 1, 22).getValues()[0];
+    var headerRowIndex = 2;
+    var headers = r2;
+
+    if (r2.join("").toLowerCase().indexOf("họ và tên") === -1 && r1.join("").toLowerCase().indexOf("họ và tên") > -1) {
+      headerRowIndex = 1;
+      headers = r1;
     }
+
+    var colMap = {};
+    for (var c = 0; c < headers.length; c++) {
+      var h = String(headers[c]).trim().toLowerCase();
+      if (h.indexOf("stt") > -1) colMap.stt = c + 1;
+      if (h.indexOf("ngày") > -1) colMap.date = c + 1;
+      if (h.indexOf("họ và tên") > -1 || h.indexOf("khách") > -1 || h.indexOf("name") > -1) colMap.name = c + 1;
+      if (h.indexOf("sđt") > -1 || h.indexOf("phone") > -1) colMap.phone = c + 1;
+      if (h.indexOf("thời gian") > -1 || h.indexOf("khung giờ") > -1 || h.indexOf("time") > -1) colMap.time = c + 1;
+      if (h.indexOf("gói tập") > -1 || h.indexOf("sân") > -1 || h.indexOf("court") > -1) colMap.court = c + 1;
+      if (h.indexOf("giá trị") > -1 || h.indexOf("tiền") > -1 || h.indexOf("price") > -1) colMap.price = c + 1;
+      if (h.indexOf("thu thực tế") > -1) colMap.actualPrice = c + 1;
+      if (h.indexOf("nguồn") > -1) colMap.source = c + 1;
+      if (h.indexOf("thanh toán") > -1 || h.indexOf("trạng thái") > -1 || h.indexOf("status") > -1) colMap.payment = c + 1;
+      if (h.indexOf("ghi chú") > -1) colMap.notes = c + 1;
+    }
+
+    // Vị trí mặc định chuẩn cho bảng "DOANH THU SÂN"
+    if (!colMap.stt) colMap.stt = 1;         // Cột A: STT
+    if (!colMap.date) colMap.date = 2;       // Cột B: NGÀY KÝ HĐ
+    if (!colMap.name) colMap.name = 3;       // Cột C: HỌ VÀ TÊN
+    if (!colMap.phone) colMap.phone = 5;      // Cột E: SĐT
+    if (!colMap.time) colMap.time = 6;       // Cột F: Thời gian (07:30 - 08:30)
+    if (!colMap.court) colMap.court = 8;      // Cột H: GÓI TẬP (Sân 1)
+    if (!colMap.price) colMap.price = 12;     // Cột L: GIÁ TRỊ (150.000 đ)
+    if (!colMap.actualPrice) colMap.actualPrice = 15; // Cột O: THU THỰC TẾ
+    if (!colMap.source) colMap.source = 16;   // Cột P: NGUỒN (Alobo)
+    if (!colMap.payment) colMap.payment = 17; // Cột Q: HÌNH THỨC THANH TOÁN
+    if (!colMap.notes) colMap.notes = 18;     // Cột R: GHI CHÚ
+
+    var targetRow = Math.max(sheet.getLastRow() + 1, headerRowIndex + 1);
     
-    return ContentService.createTextOutput(JSON.stringify({ success: false, error: "Unknown action" }))
+    sheet.getRange(targetRow, colMap.stt).setValue(targetRow - headerRowIndex);
+    sheet.getRange(targetRow, colMap.date).setValue(dateVal);
+    sheet.getRange(targetRow, colMap.name).setValue(fullNameVal);
+    sheet.getRange(targetRow, colMap.phone).setValue(phoneVal);
+    sheet.getRange(targetRow, colMap.time).setValue(timeSlotVal);
+    sheet.getRange(targetRow, colMap.court).setValue(courtNameVal);
+    sheet.getRange(targetRow, colMap.price).setValue(priceVal);
+    if (colMap.actualPrice) sheet.getRange(targetRow, colMap.actualPrice).setValue(priceVal);
+    if (colMap.source) sheet.getRange(targetRow, colMap.source).setValue("Alobo App");
+    sheet.getRange(targetRow, colMap.payment).setValue(paymentStatusVal);
+    if (colMap.notes) sheet.getRange(targetRow, colMap.notes).setValue("Đồng bộ Alobo " + syncedAtVal);
+
+    return ContentService.createTextOutput(JSON.stringify({ success: true, status: "inserted", row: targetRow }))
       .setMimeType(ContentService.MimeType.JSON);
   } catch (error) {
     return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
   }
-}
-
-function formatCompareDate(dateStr) {
-  if (!dateStr) return "";
-  dateStr = String(dateStr).trim();
-  
-  if (dateStr.indexOf('/') > -1) {
-    var parts = dateStr.split('/');
-    if (parts.length === 3) {
-      return fillZero(parts[0]) + "/" + fillZero(parts[1]) + "/" + parts[2];
-    }
-  }
-  
-  if (dateStr.indexOf('-') > -1) {
-    var parts = dateStr.split('-');
-    if (parts.length === 3) {
-      if (parts[0].length === 4) {
-        return fillZero(parts[2]) + "/" + fillZero(parts[1]) + "/" + parts[0];
-      } else if (parts[2].length === 4) {
-        return fillZero(parts[0]) + "/" + fillZero(parts[1]) + "/" + parts[2];
-      }
-    }
-  }
-  
-  try {
-    var d = new Date(dateStr);
-    if (!isNaN(d.getTime())) {
-      return fillZero(d.getDate()) + "/" + fillZero(d.getMonth() + 1) + "/" + d.getFullYear();
-    }
-  } catch(e) {}
-  
-  return dateStr.toLowerCase();
-}
-
-function fillZero(num) {
-  var n = parseInt(num);
-  return n < 10 ? "0" + n : String(n);
 }`}
                         </div>
                       </div>

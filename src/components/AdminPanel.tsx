@@ -3131,7 +3131,7 @@ export default function AdminPanel({
                       {/* Google Apps Script Code Copy Block */}
                       <div className="bg-white border border-brand-border/40 rounded-2xl overflow-hidden text-xs">
                         <div className="bg-brand-dark p-3 text-white text-xs font-bold flex justify-between items-center">
-                          <span>Google Apps Script Template (Chuẩn Cột "DOANH THU SÂN")</span>
+                          <span>Google Apps Script Template (Khớp chuẩn 18 Cột "DOANH THU SÂN")</span>
                           <button 
                             onClick={() => {
                               const scriptCode = `function doPost(e) {
@@ -3140,16 +3140,27 @@ export default function AdminPanel({
     var data = JSON.parse(jsonString);
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
     
-    var dateVal = data.date || "";
+    // 1. Chuẩn hóa dữ liệu đầu vào
+    var rawDate = data.date || "";
+    var dateVal = formatDateForSheet(rawDate);
+    var fullNameVal = data.fullName || data.customerName || "Khách Alobo";
+    var phoneVal = data.phone ? "'" + data.phone : "";
     var timeSlotVal = data.timeSlot || "";
     var courtNameVal = data.courtName || data.court || "";
-    var fullNameVal = data.fullName || data.customerName || "";
-    var phoneVal = "'" + (data.phone || "");
     var priceVal = data.price || "";
-    var paymentStatusVal = data.paymentStatus || "";
+    var paymentStatusVal = data.paymentStatus || "Đã thanh toán";
     var syncedAtVal = data.syncedAt || new Date().toLocaleString("vi-VN");
+    
+    // Tự động xác định Dịch vụ (SÂN VẮNG LAI / SOCIAL / HỘI VIÊN)
+    var serviceVal = "SÂN VẮNG LAI";
+    if (courtNameVal.toLowerCase().indexOf("social") > -1 || (data.notes && data.notes.toLowerCase().indexOf("social") > -1)) {
+      serviceVal = "SOCIAL";
+    }
 
-    // Scan headers in Row 1 or Row 2
+    // Tự động tính Số giờ tập từ Khung giờ (vd: 17:00 - 18:00 -> 1)
+    var hoursVal = calculateHours(timeSlotVal);
+
+    // 2. Nhận diện tiêu đề cột bảng Google Sheet
     var r1 = sheet.getRange(1, 1, 1, 22).getValues()[0];
     var r2 = sheet.getRange(2, 1, 1, 22).getValues()[0];
     var headerRowIndex = 2;
@@ -3163,43 +3174,49 @@ export default function AdminPanel({
     var colMap = {};
     for (var c = 0; c < headers.length; c++) {
       var h = String(headers[c]).trim().toLowerCase();
-      if (h.indexOf("stt") > -1) colMap.stt = c + 1;
-      if (h.indexOf("ngày") > -1) colMap.date = c + 1;
-      if (h.indexOf("họ và tên") > -1 || h.indexOf("khách") > -1 || h.indexOf("name") > -1) colMap.name = c + 1;
+      if (h === "stt") colMap.stt = c + 1;
+      if (h.indexOf("ngày ký") > -1 || (h.indexOf("ngày") > -1 && h.indexOf("sinh") === -1)) colMap.date = c + 1;
+      if (h.indexOf("họ và tên") > -1 || h.indexOf("khách") > -1) colMap.name = c + 1;
+      if (h.indexOf("ngày sinh") > -1) colMap.dob = c + 1;
       if (h.indexOf("sđt") > -1 || h.indexOf("phone") > -1) colMap.phone = c + 1;
-      if (h.indexOf("thời gian") > -1 || h.indexOf("khung giờ") > -1 || h.indexOf("time") > -1) colMap.time = c + 1;
-      if (h.indexOf("gói tập") > -1 || h.indexOf("sân") > -1 || h.indexOf("court") > -1) colMap.court = c + 1;
-      if (h.indexOf("giá trị") > -1 || h.indexOf("tiền") > -1 || h.indexOf("price") > -1) colMap.price = c + 1;
+      if (h.indexOf("thời gian") > -1 || h.indexOf("khung giờ") > -1) colMap.time = c + 1;
+      if (h.indexOf("giờ") > -1 || h.indexOf("vé") > -1) colMap.hours = c + 1;
+      if (h.indexOf("gói tập") > -1) colMap.package = c + 1;
+      if (h.indexOf("dịch vụ") > -1) colMap.service = c + 1;
+      if (h.indexOf("giá trị") > -1 || h.indexOf("tiền") > -1) colMap.price = c + 1;
       if (h.indexOf("thu thực tế") > -1) colMap.actualPrice = c + 1;
       if (h.indexOf("nguồn") > -1) colMap.source = c + 1;
-      if (h.indexOf("thanh toán") > -1 || h.indexOf("trạng thái") > -1 || h.indexOf("status") > -1) colMap.payment = c + 1;
+      if (h.indexOf("thanh toán") > -1) colMap.payment = c + 1;
       if (h.indexOf("ghi chú") > -1) colMap.notes = c + 1;
     }
 
-    // Default column fallbacks for DOANH THU SÂN sheet
-    if (!colMap.stt) colMap.stt = 1;
-    if (!colMap.date) colMap.date = 2;
-    if (!colMap.name) colMap.name = 3;
-    if (!colMap.phone) colMap.phone = 5;
-    if (!colMap.time) colMap.time = 6;
-    if (!colMap.court) colMap.court = 8;
-    if (!colMap.price) colMap.price = 12;
-    if (!colMap.actualPrice) colMap.actualPrice = 15;
-    if (!colMap.source) colMap.source = 16;
-    if (!colMap.payment) colMap.payment = 17;
-    if (!colMap.notes) colMap.notes = 18;
+    // Vị trí mặc định chuẩn tuyệt đối cho bảng "DOANH THU SÂN" (Cột A -> R)
+    if (!colMap.stt) colMap.stt = 1;           // A: STT
+    if (!colMap.date) colMap.date = 2;         // B: NGÀY KÝ HĐ
+    if (!colMap.name) colMap.name = 3;         // C: HỌ VÀ TÊN
+    if (!colMap.dob) colMap.dob = 4;           // D: NGÀY SINH
+    if (!colMap.phone) colMap.phone = 5;       // E: SĐT
+    if (!colMap.time) colMap.time = 6;        // F: Thời gian
+    if (!colMap.hours) colMap.hours = 7;      // G: SỐ GIỜ TẬP / SỐ VÉ
+    if (!colMap.package) colMap.package = 8;   // H: GÓI TẬP
+    if (!colMap.service) colMap.service = 11;  // K: DỊCH VỤ
+    if (!colMap.price) colMap.price = 12;     // L: GIÁ TRỊ
+    if (!colMap.actualPrice) colMap.actualPrice = 15; // O: THU THỰC TẾ
+    if (!colMap.source) colMap.source = 16;   // P: NGUỒN
+    if (!colMap.payment) colMap.payment = 17; // Q: HÌNH THỨC THANH TOÁN
+    if (!colMap.notes) colMap.notes = 18;     // R: GHI CHÚ
 
-    // Check duplicate booking in existing rows
+    // 3. Kiểm tra trùng ca đặt sân cũ để cập nhật thay vì chèn đè
     var rows = sheet.getDataRange().getValues();
     var foundRowIndex = -1;
     for (var i = headerRowIndex; i < rows.length; i++) {
       var rDate = rows[i][colMap.date - 1] ? String(rows[i][colMap.date - 1]).trim() : "";
       var rTime = rows[i][colMap.time - 1] ? String(rows[i][colMap.time - 1]).trim() : "";
-      var rCourt = rows[i][colMap.court - 1] ? String(rows[i][colMap.court - 1]).trim() : "";
+      var rPackage = rows[i][colMap.package - 1] ? String(rows[i][colMap.package - 1]).trim() : "";
       
       if (formatCompareDate(rDate) === formatCompareDate(dateVal) && 
           rTime.toLowerCase() === timeSlotVal.toLowerCase() && 
-          rCourt.toLowerCase() === courtNameVal.toLowerCase()) {
+          rPackage.toLowerCase() === courtNameVal.toLowerCase()) {
         foundRowIndex = i + 1;
         break;
       }
@@ -3211,7 +3228,7 @@ export default function AdminPanel({
       sheet.getRange(foundRowIndex, colMap.price).setValue(priceVal);
       if (colMap.actualPrice) sheet.getRange(foundRowIndex, colMap.actualPrice).setValue(priceVal);
       sheet.getRange(foundRowIndex, colMap.payment).setValue(paymentStatusVal);
-      if (colMap.notes) sheet.getRange(foundRowIndex, colMap.notes).setValue("Cập nhật " + syncedAtVal);
+      if (colMap.notes) sheet.getRange(foundRowIndex, colMap.notes).setValue("Cập nhật Alobo " + syncedAtVal);
       
       return ContentService.createTextOutput(JSON.stringify({ success: true, status: "updated", rowIndex: foundRowIndex }))
         .setMimeType(ContentService.MimeType.JSON);
@@ -3223,7 +3240,9 @@ export default function AdminPanel({
       sheet.getRange(targetRow, colMap.name).setValue(fullNameVal);
       sheet.getRange(targetRow, colMap.phone).setValue(phoneVal);
       sheet.getRange(targetRow, colMap.time).setValue(timeSlotVal);
-      sheet.getRange(targetRow, colMap.court).setValue(courtNameVal);
+      sheet.getRange(targetRow, colMap.hours).setValue(hoursVal);
+      sheet.getRange(targetRow, colMap.package).setValue(courtNameVal || "Không");
+      sheet.getRange(targetRow, colMap.service).setValue(serviceVal);
       sheet.getRange(targetRow, colMap.price).setValue(priceVal);
       if (colMap.actualPrice) sheet.getRange(targetRow, colMap.actualPrice).setValue(priceVal);
       if (colMap.source) sheet.getRange(targetRow, colMap.source).setValue("Alobo App");
@@ -3237,6 +3256,37 @@ export default function AdminPanel({
     return ContentService.createTextOutput(JSON.stringify({ success: false, error: error.toString() }))
       .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+function formatDateForSheet(dStr) {
+  if (!dStr) return "";
+  if (dStr.indexOf("-") > -1) {
+    var parts = dStr.split("-");
+    if (parts.length === 3 && parts[0].length === 4) {
+      return parseInt(parts[2], 10) + "/" + parseInt(parts[1], 10) + "/" + parts[0];
+    }
+  }
+  return dStr;
+}
+
+function calculateHours(timeStr) {
+  if (!timeStr) return 1;
+  try {
+    var clean = timeStr.toLowerCase().replace(/h/g, ":").replace(/\\s/g, "");
+    var parts = clean.split("-");
+    if (parts.length === 2) {
+      var parseTime = function(t) {
+        var p = t.split(":");
+        var h = parseInt(p[0], 10) || 0;
+        var m = parseInt(p[1], 10) || 0;
+        return h + m / 60;
+      };
+      var start = parseTime(parts[0]);
+      var end = parseTime(parts[1]);
+      if (end > start) return end - start;
+    }
+  } catch(e) {}
+  return 1;
 }
 
 function formatCompareDate(dateStr) {
@@ -3261,7 +3311,7 @@ function fillZero(num) {
   return n < 10 ? "0" + n : String(n);
 }`;
                               navigator.clipboard.writeText(scriptCode);
-                              alert('Đã sao chép mã Google Apps Script tự động khớp cột "DOANH THU SÂN" vào Clipboard!');
+                              alert('Đã sao chép mã Google Apps Script tự động khớp chuẩn 18 cột "DOANH THU SÂN" vào Clipboard!');
                             }}
                             className="bg-white/10 hover:bg-white/20 px-2.5 py-1 rounded text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
                           >
@@ -3275,63 +3325,54 @@ function fillZero(num) {
     var data = JSON.parse(jsonString);
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
     
-    var dateVal = data.date || "";
+    // 1. Chuẩn hóa dữ liệu đầu vào
+    var rawDate = data.date || "";
+    var dateVal = formatDateForSheet(rawDate);
+    var fullNameVal = data.fullName || data.customerName || "Khách Alobo";
+    var phoneVal = data.phone ? "'" + data.phone : "";
     var timeSlotVal = data.timeSlot || "";
     var courtNameVal = data.courtName || data.court || "";
-    var fullNameVal = data.fullName || data.customerName || "";
-    var phoneVal = "'" + (data.phone || "");
     var priceVal = data.price || "";
-    var paymentStatusVal = data.paymentStatus || "";
+    var paymentStatusVal = data.paymentStatus || "Đã thanh toán";
     var syncedAtVal = data.syncedAt || new Date().toLocaleString("vi-VN");
-
-    // Tự động nhận diện cột theo tiêu đề bảng "DOANH THU SÂN"
-    var r1 = sheet.getRange(1, 1, 1, 22).getValues()[0];
-    var r2 = sheet.getRange(2, 1, 1, 22).getValues()[0];
-    var headerRowIndex = 2;
-    var headers = r2;
-
-    if (r2.join("").toLowerCase().indexOf("họ và tên") === -1 && r1.join("").toLowerCase().indexOf("họ và tên") > -1) {
-      headerRowIndex = 1;
-      headers = r1;
-    }
-
-    var colMap = {};
-    for (var c = 0; c < headers.length; c++) {
-      var h = String(headers[c]).trim().toLowerCase();
-      if (h.indexOf("stt") > -1) colMap.stt = c + 1;
-      if (h.indexOf("ngày") > -1) colMap.date = c + 1;
-      if (h.indexOf("họ và tên") > -1 || h.indexOf("khách") > -1 || h.indexOf("name") > -1) colMap.name = c + 1;
-      if (h.indexOf("sđt") > -1 || h.indexOf("phone") > -1) colMap.phone = c + 1;
-      if (h.indexOf("thời gian") > -1 || h.indexOf("khung giờ") > -1 || h.indexOf("time") > -1) colMap.time = c + 1;
-      if (h.indexOf("gói tập") > -1 || h.indexOf("sân") > -1 || h.indexOf("court") > -1) colMap.court = c + 1;
-      if (h.indexOf("giá trị") > -1 || h.indexOf("tiền") > -1 || h.indexOf("price") > -1) colMap.price = c + 1;
-      if (h.indexOf("thu thực tế") > -1) colMap.actualPrice = c + 1;
-      if (h.indexOf("nguồn") > -1) colMap.source = c + 1;
-      if (h.indexOf("thanh toán") > -1 || h.indexOf("trạng thái") > -1 || h.indexOf("status") > -1) colMap.payment = c + 1;
-      if (h.indexOf("ghi chú") > -1) colMap.notes = c + 1;
-    }
-
-    // Vị trí mặc định chuẩn cho bảng "DOANH THU SÂN"
-    if (!colMap.stt) colMap.stt = 1;         // Cột A: STT
-    if (!colMap.date) colMap.date = 2;       // Cột B: NGÀY KÝ HĐ
-    if (!colMap.name) colMap.name = 3;       // Cột C: HỌ VÀ TÊN
-    if (!colMap.phone) colMap.phone = 5;      // Cột E: SĐT
-    if (!colMap.time) colMap.time = 6;       // Cột F: Thời gian (07:30 - 08:30)
-    if (!colMap.court) colMap.court = 8;      // Cột H: GÓI TẬP (Sân 1)
-    if (!colMap.price) colMap.price = 12;     // Cột L: GIÁ TRỊ (150.000 đ)
-    if (!colMap.actualPrice) colMap.actualPrice = 15; // Cột O: THU THỰC TẾ
-    if (!colMap.source) colMap.source = 16;   // Cột P: NGUỒN (Alobo)
-    if (!colMap.payment) colMap.payment = 17; // Cột Q: HÌNH THỨC THANH TOÁN
-    if (!colMap.notes) colMap.notes = 18;     // Cột R: GHI CHÚ
-
-    var targetRow = Math.max(sheet.getLastRow() + 1, headerRowIndex + 1);
     
-    sheet.getRange(targetRow, colMap.stt).setValue(targetRow - headerRowIndex);
+    // Tự động xác định Dịch vụ (SÂN VẮNG LAI / SOCIAL)
+    var serviceVal = "SÂN VẮNG LAI";
+    if (courtNameVal.toLowerCase().indexOf("social") > -1 || (data.notes && data.notes.toLowerCase().indexOf("social") > -1)) {
+      serviceVal = "SOCIAL";
+    }
+
+    // Tự động tính Số giờ tập
+    var hoursVal = calculateHours(timeSlotVal);
+
+    // 2. Vị trí cột mặc định chuẩn 18 Cột "DOANH THU SÂN"
+    var colMap = {
+      stt: 1,         // Cột A: STT
+      date: 2,        // Cột B: NGÀY KÝ HĐ (vd: 27/7/2026)
+      name: 3,        // Cột C: HỌ VÀ TÊN (vd: Chị Ly)
+      dob: 4,         // Cột D: NGÀY SINH
+      phone: 5,       // Cột E: SĐT (vd: '0988164848)
+      time: 6,        // Cột F: Thời gian (vd: 8h30-10h / 17:00 - 18:00)
+      hours: 7,       // Cột G: SỐ GIỜ TẬP / SỐ VÉ (vd: 1.5)
+      package: 8,     // Cột H: GÓI TẬP (vd: Không / Sân 1)
+      service: 11,    // Cột K: DỊCH VỤ (vd: SÂN VẮNG LAI)
+      price: 12,      // Cột L: GIÁ TRỊ (vd: 150.000)
+      actualPrice: 15,// Cột O: THU THỰC TẾ (vd: 150.000)
+      source: 16,     // Cột P: NGUỒN (vd: Alobo)
+      payment: 17,    // Cột Q: HÌNH THỨC THANH TOÁN (vd: Chuyển khoản)
+      notes: 18       // Cột R: GHI CHÚ
+    };
+
+    var targetRow = Math.max(sheet.getLastRow() + 1, 3);
+    
+    sheet.getRange(targetRow, colMap.stt).setValue(targetRow - 2);
     sheet.getRange(targetRow, colMap.date).setValue(dateVal);
     sheet.getRange(targetRow, colMap.name).setValue(fullNameVal);
     sheet.getRange(targetRow, colMap.phone).setValue(phoneVal);
     sheet.getRange(targetRow, colMap.time).setValue(timeSlotVal);
-    sheet.getRange(targetRow, colMap.court).setValue(courtNameVal);
+    sheet.getRange(targetRow, colMap.hours).setValue(hoursVal);
+    sheet.getRange(targetRow, colMap.package).setValue(courtNameVal || "Không");
+    sheet.getRange(targetRow, colMap.service).setValue(serviceVal);
     sheet.getRange(targetRow, colMap.price).setValue(priceVal);
     if (colMap.actualPrice) sheet.getRange(targetRow, colMap.actualPrice).setValue(priceVal);
     if (colMap.source) sheet.getRange(targetRow, colMap.source).setValue("Alobo App");

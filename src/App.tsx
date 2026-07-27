@@ -8,7 +8,6 @@ import Sponsors from './components/Sponsors';
 import Partnership from './components/Partnership';
 import AloboLiveSync from './components/AloboLiveSync';
 import WeeklySchedule from './components/WeeklySchedule';
-import CourtPricing from './components/CourtPricing';
 import Footer from './components/Footer';
 
 // Interactive modals
@@ -17,11 +16,10 @@ import MatchLobby from './components/MatchLobby';
 import TournamentModal from './components/TournamentModal';
 import MyScheduleModal from './components/MyScheduleModal';
 import AdminPanel from './components/AdminPanel';
-import TrainingModal from './components/TrainingModal';
 
 // Static Data and Types
-import { INITIAL_COURTS, INITIAL_OPEN_PLAYS, INITIAL_TOURNAMENTS, SPONSORS } from './data';
-import { Booking, OpenPlay, Tournament, TeamRegistration, Court, SocialRevenue, MemberRegistration, LandingPageConfig } from './types';
+import { INITIAL_COURTS, INITIAL_OPEN_PLAYS, INITIAL_TOURNAMENTS, SPONSORS, PICKLE_BOUNCE_BRANCH, INITIAL_MEMBERS } from './data';
+import { Booking, OpenPlay, Tournament, TeamRegistration, Court, SocialRevenue, CourtBranch, Member } from './types';
 
 export default function App() {
   // Modal visibility states
@@ -29,99 +27,19 @@ export default function App() {
   const [isMatchLobbyOpen, setIsMatchLobbyOpen] = useState(false);
   const [isMyScheduleOpen, setIsMyScheduleOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [isTrainingOpen, setIsTrainingOpen] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
 
-  // Landing Page Configuration State
-  const [landingPageConfig, setLandingPageConfig] = useState<LandingPageConfig>(() => {
-    const saved = localStorage.getItem('pickle_landing_page_config');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {}
-    }
-    return {
-      heroTag: "SPORT PICKLE BOUNCE",
-      heroTitle: "Khám phá tính năng",
-      heroSubtitle: "Tổ chức buổi chơi chuyên nghiệp. Miễn phí 100%. Đặt sân nhanh chóng, tìm bạn cùng trình, tổ chức giải đấu bùng nổ.",
-      heroImage: "https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&q=80&w=1600",
-      visionTag: "Tầm nhìn cộng đồng",
-      visionTitle: "Chơi cùng nhau. Tiến bộ cùng nhau. Vươn tầm cùng nhau.",
-      visionParagraph1: "Pickleball Bounce được tạo ra như một sân chơi mới cho cộng đồng đam mê pickleball. Từ người mới bắt đầu cầm vợt đến các vận động viên phong trào hay chuyên nghiệp, ai cũng có chỗ đứng và lộ trình phát triển rõ ràng.",
-      visionParagraph2: "Chúng tôi kết nối hệ thống giải đấu kịch tính, các hoạt động truyền thông sôi nổi và mạng lưới sân bãi đối tác rộng lớn thành một hệ sinh thái chung, mang lại sự tiện nghi và hứng khởi tuyệt đối cho người chơi.",
-      visionImage: "https://images.unsplash.com/photo-1541252260730-0412e8e2108e?auto=format&fit=crop&q=80&w=800",
-      stat1Value: "12k+",
-      stat1Label: "Hội viên active",
-      stat2Value: "50+",
-      stat2Label: "Sân đối tác",
-      stat3Value: "180+",
-      stat3Label: "Giải đấu lớn nhỏ",
-      visionBadgeTitle: "Chinh phục đỉnh cao mới",
-      visionBadgeText: "Sẵn sàng cùng đồng đội nâng hạng tuần này.",
-      priceTitle: "BẢNG GIÁ SÂN",
-      priceSection1Title: "Khách Vãng Lai",
-      priceRows1: [
-        { day: "T2 - T6", time: "16h - 22h", price: "250.000 đ" },
-        { day: "T2 - CN", time: "6h - 16h", price: "150.000 đ" },
-        { day: "T7 - CN", time: "16h - 22h", price: "200.000 đ" }
-      ],
-      priceSection2Title: "Ưu đãi tháng 10",
-      priceRows2: [
-        { title: "Khách vãng lai", time: "Mặc định", price: "250.000 đ" }
-      ]
-    };
+  // Branch Info State
+  const [branch, setBranch] = useState<CourtBranch>(() => {
+    const saved = localStorage.getItem('pickle_branch');
+    return saved ? JSON.parse(saved) : PICKLE_BOUNCE_BRANCH;
   });
+
+  useEffect(() => {
+    localStorage.setItem('pickle_branch', JSON.stringify(branch));
+  }, [branch]);
 
   // Core App State
-  const [memberRegistrations, setMemberRegistrations] = useState<MemberRegistration[]>(() => {
-    const saved = localStorage.getItem('pickle_member_registrations');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {}
-    }
-    return [
-      {
-        id: 'MEM-7301',
-        contractDate: '19/07/2026',
-        fullName: 'Anh Khanh (Lớp VIP)',
-        dob: '1995-04-12',
-        phone: '0908882233',
-        preferredTime: 'Thứ 2, 4, 6 (18:00 - 20:00)',
-        hoursCount: '20 giờ tập',
-        packageType: 'Combo 20 Buổi Chuyên Sâu',
-        durationMonths: 6,
-        coachName: 'Coach Tommy (Đội tuyển)',
-        serviceType: 'Tập luyện cá nhân 1-1',
-        totalPrice: 9000000,
-        depositAmount: 3000000,
-        remainingAmount: 6000000,
-        actualPaid: 3000000,
-        status: 'confirmed',
-        createdAt: '19/07/2026 15:30:22'
-      },
-      {
-        id: 'MEM-7302',
-        contractDate: '18/07/2026',
-        fullName: 'Chị Mai Anh',
-        dob: '1998-09-25',
-        phone: '0912445566',
-        preferredTime: 'Thứ 3, 5, Bảy (19:00 - 21:00)',
-        hoursCount: '10 giờ tập',
-        packageType: 'Combo 10 Buổi Nhập Môn',
-        durationMonths: 3,
-        coachName: 'Coach Lisa (Cựu tuyển thủ quốc gia)',
-        serviceType: 'Tập luyện cá nhân 1-1',
-        totalPrice: 5000000,
-        depositAmount: 5000000,
-        remainingAmount: 0,
-        actualPaid: 5000000,
-        status: 'confirmed',
-        createdAt: '18/07/2026 10:15:45'
-      }
-    ];
-  });
-
   const [bookings, setBookings] = useState<Booking[]>(() => {
     const saved = localStorage.getItem('pickle_bookings');
     if (saved) {
@@ -263,13 +181,7 @@ export default function App() {
 
   const [socialRevenues, setSocialRevenues] = useState<SocialRevenue[]>(() => {
     const saved = localStorage.getItem('pickle_social_revenues');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Error parsing social revenues', e);
-      }
-    }
+    if (saved) return JSON.parse(saved);
     return [
       {
         id: 'soc-1',
@@ -346,49 +258,22 @@ export default function App() {
 
   const [courts, setCourts] = useState<Court[]>(() => {
     const saved = localStorage.getItem('pickle_courts');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Error parsing courts', e);
-      }
-    }
-    return INITIAL_COURTS;
+    return saved ? JSON.parse(saved) : INITIAL_COURTS;
   });
 
   const [openPlays, setOpenPlays] = useState<OpenPlay[]>(() => {
     const saved = localStorage.getItem('pickle_openplays');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Error parsing open plays', e);
-      }
-    }
-    return INITIAL_OPEN_PLAYS;
+    return saved ? JSON.parse(saved) : INITIAL_OPEN_PLAYS;
   });
 
   const [tournaments, setTournaments] = useState<Tournament[]>(() => {
     const saved = localStorage.getItem('pickle_tournaments');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Error parsing tournaments', e);
-      }
-    }
-    return INITIAL_TOURNAMENTS;
+    return saved ? JSON.parse(saved) : INITIAL_TOURNAMENTS;
   });
 
   const [teamRegistrations, setTeamRegistrations] = useState<TeamRegistration[]>(() => {
     const saved = localStorage.getItem('pickle_registrations');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Error parsing team registrations', e);
-      }
-    }
+    if (saved) return JSON.parse(saved);
     return [
       {
         id: 'reg-1',
@@ -415,7 +300,15 @@ export default function App() {
     ];
   });
 
+  const [members, setMembers] = useState<Member[]>(() => {
+    const saved = localStorage.getItem('pickle_members');
+    return saved ? JSON.parse(saved) : INITIAL_MEMBERS;
+  });
+
   // Sync state variables to LocalStorage on change
+  useEffect(() => {
+    localStorage.setItem('pickle_members', JSON.stringify(members));
+  }, [members]);
   useEffect(() => {
     localStorage.setItem('pickle_courts', JSON.stringify(courts));
   }, [courts]);
@@ -436,161 +329,28 @@ export default function App() {
     localStorage.setItem('pickle_social_revenues', JSON.stringify(socialRevenues));
   }, [socialRevenues]);
 
+  // Load bookings from LocalStorage on mount
   useEffect(() => {
-    localStorage.setItem('pickle_member_registrations', JSON.stringify(memberRegistrations));
-  }, [memberRegistrations]);
-
-  // Load bookings and member registrations from Backend/Firebase on mount
-  useEffect(() => {
-    // 1. Fetch Bookings
-    fetch('/api/bookings')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.bookings && data.bookings.length > 0) {
-          setBookings(data.bookings);
-        } else {
-          // Fallback to localstorage
-          const saved = localStorage.getItem('pickle_bookings');
-          if (saved) {
-            try {
-              const parsed = JSON.parse(saved);
-              setBookings(parsed);
-              if (data.isFirebaseActive) {
-                fetch('/api/firebase/bulk-sync', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ bookings: parsed })
-                }).catch(err => console.error('Auto initial bookings sync failed:', err));
-              }
-            } catch (e) {
-              console.error('Error parsing saved bookings', e);
-            }
-          }
-        }
-      })
-      .catch(err => console.error('Error fetching bookings from server:', err));
-
-    // 2. Fetch Member Registrations
-    fetch('/api/member-registrations')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.memberRegistrations && data.memberRegistrations.length > 0) {
-          setMemberRegistrations(data.memberRegistrations);
-        } else {
-          // Fallback to localstorage
-          const saved = localStorage.getItem('pickle_member_registrations');
-          if (saved) {
-            try {
-              const parsed = JSON.parse(saved);
-              setMemberRegistrations(parsed);
-              if (data.isFirebaseActive) {
-                fetch('/api/firebase/bulk-sync', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ memberRegistrations: parsed })
-                }).catch(err => console.error('Auto initial member sync failed:', err));
-              }
-            } catch (e) {
-              console.error('Error parsing saved registrations', e);
-            }
-          }
-        }
-      })
-      .catch(err => console.error('Error fetching members from server:', err));
-
-    // 3. Fetch Landing Page Config
-    fetch('/api/landing-page')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.config) {
-          setLandingPageConfig(data.config);
-          localStorage.setItem('pickle_landing_page_config', JSON.stringify(data.config));
-        }
-      })
-      .catch(err => console.error('Error fetching landing page config:', err));
+    const savedBookings = localStorage.getItem('pickle_bookings');
+    if (savedBookings) {
+      try {
+        setBookings(JSON.parse(savedBookings));
+      } catch (e) {
+        console.error('Error parsing saved bookings', e);
+      }
+    }
   }, []);
 
-  // Sync bookings to LocalStorage on change and keep local state
+  // Sync bookings to LocalStorage on change
   const saveBookings = (newBookings: Booking[]) => {
     setBookings(newBookings);
     localStorage.setItem('pickle_bookings', JSON.stringify(newBookings));
-  };
-
-  const saveMemberRegistrations = (newMembers: MemberRegistration[]) => {
-    // Sync change in local state first
-    setMemberRegistrations(newMembers);
-    localStorage.setItem('pickle_member_registrations', JSON.stringify(newMembers));
-
-    // Detect deleted members and sync to server/Firebase
-    const deleted = memberRegistrations.filter(m => !newMembers.some(nm => nm.id === m.id));
-    deleted.forEach(m => {
-      fetch(`/api/member-registrations/${m.id}`, {
-        method: 'DELETE'
-      }).catch(err => console.error('Server delete member failed:', err));
-    });
-
-    // Detect updated/edited members and sync to server/Firebase
-    const updated = newMembers.filter(nm => {
-      const current = memberRegistrations.find(m => m.id === nm.id);
-      return !current || JSON.stringify(current) !== JSON.stringify(nm);
-    });
-    updated.forEach(m => {
-      fetch('/api/member-registrations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(m)
-      }).catch(err => console.error('Server save member failed:', err));
-    });
-  };
-
-  // Create a new member/coaching package registration
-  const handleRegisterMember = (newReg: MemberRegistration) => {
-    const updated = [newReg, ...memberRegistrations];
-    setMemberRegistrations(updated);
-    
-    // Sync to server/Firebase!
-    fetch('/api/member-registrations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newReg)
-    }).catch(err => console.error('Server sync failed for new member:', err));
-
-    // Auto sync registration to Google Sheets in real-time!
-    fetch('/api/alobo/forward-booking', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'addRegistration',
-        contractId: newReg.id,
-        contractDate: newReg.contractDate,
-        fullName: newReg.fullName,
-        dob: newReg.dob,
-        phone: newReg.phone,
-        preferredTime: newReg.preferredTime,
-        hoursCount: newReg.hoursCount,
-        packageType: newReg.packageType,
-        durationMonths: newReg.durationMonths,
-        coachName: newReg.coachName,
-        serviceType: newReg.serviceType,
-        totalPrice: newReg.totalPrice,
-        depositAmount: newReg.depositAmount,
-        remainingAmount: newReg.remainingAmount,
-        actualPaid: newReg.actualPaid
-      })
-    }).catch(err => console.error('Auto Google Sheets registration sync failed:', err));
   };
 
   // Create a new court booking
   const handleAddBooking = (newBooking: Booking) => {
     const updated = [newBooking, ...bookings];
     saveBookings(updated);
-
-    // Sync to server/Firebase!
-    fetch('/api/bookings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newBooking)
-    }).catch(err => console.error('Server sync failed for new booking:', err));
 
     // If "Open Play" was enabled, automatically publish an open play matchup to the community lobby!
     if (newBooking.isOpenPlay) {
@@ -631,11 +391,6 @@ export default function App() {
   const handleCancelBooking = (id: string) => {
     const filtered = bookings.filter(b => b.id !== id);
     saveBookings(filtered);
-
-    // Delete on server/Firebase!
-    fetch(`/api/bookings/${id}`, {
-      method: 'DELETE'
-    }).catch(err => console.error('Server delete failed:', err));
   };
 
   // Join an existing open play matchup
@@ -733,7 +488,6 @@ export default function App() {
         onOpenMatchLobby={() => setIsMatchLobbyOpen(true)}
         onOpenMySchedule={() => setIsMyScheduleOpen(true)}
         onOpenAdmin={() => setIsAdminOpen(true)}
-        onOpenTraining={() => setIsTrainingOpen(true)}
         bookingCount={bookings.length}
       />
 
@@ -744,14 +498,13 @@ export default function App() {
         <Hero 
           onOpenBooking={() => setIsBookingOpen(true)}
           onOpenMatchLobby={() => setIsMatchLobbyOpen(true)}
-          config={landingPageConfig}
         />
 
         {/* 2. Sponsors/Partners Marquee Row */}
         <Sponsors sponsors={SPONSORS} />
 
         {/* 3. Community Vision Section */}
-        <Vision config={landingPageConfig} />
+        <Vision />
 
         {/* 4. Ecosystem Steps (01 to 04) */}
         <Ecosystem />
@@ -767,9 +520,6 @@ export default function App() {
 
         {/* Real-time Visual Booking Status synced with Alobo.vn */}
         <AloboLiveSync />
-
-        {/* Court Pricing Section (New) */}
-        <CourtPricing config={landingPageConfig} />
 
         {/* 7. Weekly/Monthly Schedules Cards */}
         <WeeklySchedule 
@@ -826,6 +576,8 @@ export default function App() {
       <AdminPanel 
         isOpen={isAdminOpen}
         onClose={() => setIsAdminOpen(false)}
+        branch={branch}
+        onSaveBranch={setBranch}
         courts={courts}
         onSaveCourts={setCourts}
         bookings={bookings}
@@ -838,17 +590,8 @@ export default function App() {
         onSaveTeamRegistrations={setTeamRegistrations}
         socialRevenues={socialRevenues}
         onSaveSocialRevenues={setSocialRevenues}
-        memberRegistrations={memberRegistrations}
-        onSaveMemberRegistrations={saveMemberRegistrations}
-        landingPageConfig={landingPageConfig}
-        onSaveLandingPageConfig={setLandingPageConfig}
-      />
-
-      {/* 6. Training & Membership Registration Modal */}
-      <TrainingModal 
-        isOpen={isTrainingOpen}
-        onClose={() => setIsTrainingOpen(false)}
-        onAddRegistration={handleRegisterMember}
+        members={members}
+        onSaveMembers={setMembers}
       />
 
     </div>

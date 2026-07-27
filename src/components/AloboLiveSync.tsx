@@ -10,98 +10,98 @@ interface SyncedSlot {
 
 const INITIAL_SLOTS: SyncedSlot[] = [
   // Sân 1
-  { courtName: "Sân 1", timeSlot: "06:00 - 07:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 1", timeSlot: "07:00 - 08:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 1", timeSlot: "08:00 - 09:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 1", timeSlot: "09:00 - 10:00", status: "booked", date: "2026-07-20" },
-  { courtName: "Sân 1", timeSlot: "10:00 - 11:00", status: "booked", date: "2026-07-20" },
-  { courtName: "Sân 1", timeSlot: "11:00 - 12:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 1", timeSlot: "12:00 - 13:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 1", timeSlot: "13:00 - 14:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 1", timeSlot: "14:00 - 15:00", status: "booked", date: "2026-07-20" },
-  { courtName: "Sân 1", timeSlot: "15:00 - 16:00", status: "booked", date: "2026-07-20" },
-  { courtName: "Sân 1", timeSlot: "16:00 - 17:00", status: "booked", date: "2026-07-20" },
-  { courtName: "Sân 1", timeSlot: "17:00 - 18:00", status: "booked", date: "2026-07-20" },
-  { courtName: "Sân 1", timeSlot: "18:00 - 19:00", status: "free", date: "2026-07-20" },
-  { courtName: "Sân 1", timeSlot: "19:00 - 20:00", status: "booked", date: "2026-07-20" },
-  { courtName: "Sân 1", timeSlot: "20:00 - 21:00", status: "booked", date: "2026-07-20" },
-  { courtName: "Sân 1", timeSlot: "21:00 - 22:00", status: "free", date: "2026-07-20" },
+  { courtName: "Sân 1", timeSlot: "06:00 - 07:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 1", timeSlot: "07:00 - 08:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 1", timeSlot: "08:00 - 09:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 1", timeSlot: "09:00 - 10:00", status: "booked", date: "2026-07-16" },
+  { courtName: "Sân 1", timeSlot: "10:00 - 11:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 1", timeSlot: "11:00 - 12:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 1", timeSlot: "12:00 - 13:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 1", timeSlot: "13:00 - 14:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 1", timeSlot: "14:00 - 15:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 1", timeSlot: "15:00 - 16:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 1", timeSlot: "16:00 - 17:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 1", timeSlot: "17:00 - 18:00", status: "free", date: "2026-07-16" },
+  { courtName: "Sân 1", timeSlot: "18:00 - 19:00", status: "free", date: "2026-07-16" },
+  { courtName: "Sân 1", timeSlot: "19:00 - 20:00", status: "free", date: "2026-07-16" },
+  { courtName: "Sân 1", timeSlot: "20:00 - 21:00", status: "free", date: "2026-07-16" },
+  { courtName: "Sân 1", timeSlot: "21:00 - 22:00", status: "free", date: "2026-07-16" },
 
   // Sân 2
-  { courtName: "Sân 2", timeSlot: "06:00 - 07:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 2", timeSlot: "07:00 - 08:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 2", timeSlot: "08:00 - 09:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 2", timeSlot: "09:00 - 10:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 2", timeSlot: "10:00 - 11:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 2", timeSlot: "11:00 - 12:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 2", timeSlot: "12:00 - 13:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 2", timeSlot: "13:00 - 14:00", status: "booked", date: "2026-07-20" },
-  { courtName: "Sân 2", timeSlot: "14:00 - 15:00", status: "booked", date: "2026-07-20" },
-  { courtName: "Sân 2", timeSlot: "15:00 - 16:00", status: "booked", date: "2026-07-20" },
-  { courtName: "Sân 2", timeSlot: "16:00 - 17:00", status: "booked", date: "2026-07-20" },
-  { courtName: "Sân 2", timeSlot: "17:00 - 18:00", status: "free", date: "2026-07-20" },
-  { courtName: "Sân 2", timeSlot: "18:00 - 19:00", status: "free", date: "2026-07-20" },
-  { courtName: "Sân 2", timeSlot: "19:00 - 20:00", status: "booked", date: "2026-07-20" },
-  { courtName: "Sân 2", timeSlot: "20:00 - 21:00", status: "booked", date: "2026-07-20" },
-  { courtName: "Sân 2", timeSlot: "21:00 - 22:00", status: "booked", date: "2026-07-20" },
+  { courtName: "Sân 2", timeSlot: "06:00 - 07:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 2", timeSlot: "07:00 - 08:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 2", timeSlot: "08:00 - 09:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 2", timeSlot: "09:00 - 10:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 2", timeSlot: "10:00 - 11:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 2", timeSlot: "11:00 - 12:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 2", timeSlot: "12:00 - 13:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 2", timeSlot: "13:00 - 14:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 2", timeSlot: "14:00 - 15:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 2", timeSlot: "15:00 - 16:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 2", timeSlot: "16:00 - 17:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 2", timeSlot: "17:00 - 18:00", status: "free", date: "2026-07-16" },
+  { courtName: "Sân 2", timeSlot: "18:00 - 19:00", status: "free", date: "2026-07-16" },
+  { courtName: "Sân 2", timeSlot: "19:00 - 20:00", status: "free", date: "2026-07-16" },
+  { courtName: "Sân 2", timeSlot: "20:00 - 21:00", status: "free", date: "2026-07-16" },
+  { courtName: "Sân 2", timeSlot: "21:00 - 22:00", status: "free", date: "2026-07-16" },
 
   // Sân 3
-  { courtName: "Sân 3", timeSlot: "06:00 - 07:00", status: "booked", date: "2026-07-20" },
-  { courtName: "Sân 3", timeSlot: "07:00 - 08:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 3", timeSlot: "08:00 - 09:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 3", timeSlot: "09:00 - 10:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 3", timeSlot: "10:00 - 11:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 3", timeSlot: "11:00 - 12:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 3", timeSlot: "12:00 - 13:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 3", timeSlot: "13:00 - 14:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 3", timeSlot: "14:00 - 15:00", status: "free", date: "2026-07-20" },
-  { courtName: "Sân 3", timeSlot: "15:00 - 16:00", status: "free", date: "2026-07-20" },
-  { courtName: "Sân 3", timeSlot: "16:00 - 17:00", status: "free", date: "2026-07-20" },
-  { courtName: "Sân 3", timeSlot: "17:00 - 18:00", status: "free", date: "2026-07-20" },
-  { courtName: "Sân 3", timeSlot: "18:00 - 19:00", status: "free", date: "2026-07-20" },
-  { courtName: "Sân 3", timeSlot: "19:00 - 20:00", status: "free", date: "2026-07-20" },
-  { courtName: "Sân 3", timeSlot: "20:00 - 21:00", status: "free", date: "2026-07-20" },
-  { courtName: "Sân 3", timeSlot: "21:00 - 22:00", status: "free", date: "2026-07-20" },
+  { courtName: "Sân 3", timeSlot: "06:00 - 07:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 3", timeSlot: "07:00 - 08:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 3", timeSlot: "08:00 - 09:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 3", timeSlot: "09:00 - 10:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 3", timeSlot: "10:00 - 11:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 3", timeSlot: "11:00 - 12:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 3", timeSlot: "12:00 - 13:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 3", timeSlot: "13:00 - 14:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 3", timeSlot: "14:00 - 15:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 3", timeSlot: "15:00 - 16:00", status: "booked", date: "2026-07-16" },
+  { courtName: "Sân 3", timeSlot: "16:00 - 17:00", status: "booked", date: "2026-07-16" },
+  { courtName: "Sân 3", timeSlot: "17:00 - 18:00", status: "free", date: "2026-07-16" },
+  { courtName: "Sân 3", timeSlot: "18:00 - 19:00", status: "booked", date: "2026-07-16" },
+  { courtName: "Sân 3", timeSlot: "19:00 - 20:00", status: "booked", date: "2026-07-16" },
+  { courtName: "Sân 3", timeSlot: "20:00 - 21:00", status: "booked", date: "2026-07-16" },
+  { courtName: "Sân 3", timeSlot: "21:00 - 22:00", status: "free", date: "2026-07-16" },
 
   // Sân 4
-  { courtName: "Sân 4", timeSlot: "06:00 - 07:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 4", timeSlot: "07:00 - 08:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 4", timeSlot: "08:00 - 09:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 4", timeSlot: "09:00 - 10:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 4", timeSlot: "10:00 - 11:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 4", timeSlot: "11:00 - 12:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 4", timeSlot: "12:00 - 13:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 4", timeSlot: "13:00 - 14:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 4", timeSlot: "14:00 - 15:00", status: "free", date: "2026-07-20" },
-  { courtName: "Sân 4", timeSlot: "15:00 - 16:00", status: "free", date: "2026-07-20" },
-  { courtName: "Sân 4", timeSlot: "16:00 - 17:00", status: "free", date: "2026-07-20" },
-  { courtName: "Sân 4", timeSlot: "17:00 - 18:00", status: "free", date: "2026-07-20" },
-  { courtName: "Sân 4", timeSlot: "18:00 - 19:00", status: "free", date: "2026-07-20" },
-  { courtName: "Sân 4", timeSlot: "19:00 - 20:00", status: "booked", date: "2026-07-20" },
-  { courtName: "Sân 4", timeSlot: "20:00 - 21:00", status: "booked", date: "2026-07-20" },
-  { courtName: "Sân 4", timeSlot: "21:00 - 22:00", status: "free", date: "2026-07-20" },
+  { courtName: "Sân 4", timeSlot: "06:00 - 07:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 4", timeSlot: "07:00 - 08:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 4", timeSlot: "08:00 - 09:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 4", timeSlot: "09:00 - 10:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 4", timeSlot: "10:00 - 11:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 4", timeSlot: "11:00 - 12:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 4", timeSlot: "12:00 - 13:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 4", timeSlot: "13:00 - 14:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 4", timeSlot: "14:00 - 15:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 4", timeSlot: "15:00 - 16:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 4", timeSlot: "16:00 - 17:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 4", timeSlot: "17:00 - 18:00", status: "free", date: "2026-07-16" },
+  { courtName: "Sân 4", timeSlot: "18:00 - 19:00", status: "free", date: "2026-07-16" },
+  { courtName: "Sân 4", timeSlot: "19:00 - 20:00", status: "free", date: "2026-07-16" },
+  { courtName: "Sân 4", timeSlot: "20:00 - 21:00", status: "free", date: "2026-07-16" },
+  { courtName: "Sân 4", timeSlot: "21:00 - 22:00", status: "free", date: "2026-07-16" },
 
   // Sân 5
-  { courtName: "Sân 5", timeSlot: "06:00 - 07:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 5", timeSlot: "07:00 - 08:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 5", timeSlot: "08:00 - 09:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 5", timeSlot: "09:00 - 10:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 5", timeSlot: "10:00 - 11:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 5", timeSlot: "11:00 - 12:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 5", timeSlot: "12:00 - 13:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 5", timeSlot: "13:00 - 14:00", status: "locked", date: "2026-07-20" },
-  { courtName: "Sân 5", timeSlot: "14:00 - 15:00", status: "free", date: "2026-07-20" },
-  { courtName: "Sân 5", timeSlot: "15:00 - 16:00", status: "free", date: "2026-07-20" },
-  { courtName: "Sân 5", timeSlot: "16:00 - 17:00", status: "free", date: "2026-07-20" },
-  { courtName: "Sân 5", timeSlot: "17:00 - 18:00", status: "free", date: "2026-07-20" },
-  { courtName: "Sân 5", timeSlot: "18:00 - 19:00", status: "free", date: "2026-07-20" },
-  { courtName: "Sân 5", timeSlot: "19:00 - 20:00", status: "free", date: "2026-07-20" },
-  { courtName: "Sân 5", timeSlot: "20:00 - 21:00", status: "free", date: "2026-07-20" },
-  { courtName: "Sân 5", timeSlot: "21:00 - 22:00", status: "free", date: "2026-07-20" },
+  { courtName: "Sân 5", timeSlot: "06:00 - 07:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 5", timeSlot: "07:00 - 08:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 5", timeSlot: "08:00 - 09:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 5", timeSlot: "09:00 - 10:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 5", timeSlot: "10:00 - 11:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 5", timeSlot: "11:00 - 12:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 5", timeSlot: "12:00 - 13:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 5", timeSlot: "13:00 - 14:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 5", timeSlot: "14:00 - 15:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 5", timeSlot: "15:00 - 16:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 5", timeSlot: "16:00 - 17:00", status: "locked", date: "2026-07-16" },
+  { courtName: "Sân 5", timeSlot: "17:00 - 18:00", status: "booked", date: "2026-07-16" },
+  { courtName: "Sân 5", timeSlot: "18:00 - 19:00", status: "booked", date: "2026-07-16" },
+  { courtName: "Sân 5", timeSlot: "19:00 - 20:00", status: "free", date: "2026-07-16" },
+  { courtName: "Sân 5", timeSlot: "20:00 - 21:00", status: "free", date: "2026-07-16" },
+  { courtName: "Sân 5", timeSlot: "21:00 - 22:00", status: "free", date: "2026-07-16" },
 ];
 
 export default function AloboLiveSync() {
-  const [date, setDate] = useState("2026-07-20");
+  const [date, setDate] = useState("2026-07-16");
   const [slots, setSlots] = useState<SyncedSlot[]>(INITIAL_SLOTS);
   const [lastUpdated, setLastUpdated] = useState<string>(() => new Date().toLocaleString("vi-VN"));
   const [isLoading, setIsLoading] = useState(false);
@@ -135,84 +135,6 @@ export default function AloboLiveSync() {
       fetchSyncData(date, false);
     }, 3000);
     return () => clearInterval(interval);
-  }, [date]);
-
-  // Silent Browser Auto-Sync on Landing Page
-  useEffect(() => {
-    let active = true;
-    let intervalId: any;
-
-    const runSilentSync = async () => {
-      try {
-        const configRes = await fetch('/api/alobo/config');
-        const configData = await configRes.json();
-        if (!active || !configData.success || !configData.config) return;
-
-        const { aloboApiUrl, isAutoSyncEnabled } = configData.config;
-        if (!isAutoSyncEnabled || !aloboApiUrl) return;
-
-        console.log('[Landing Page Silent Auto-Sync] Attempting browser-side fetch via CORS proxy...');
-        let fetchedData = null;
-        try {
-          // Try corsproxy.io (which is fast, free and has no rate limit for light browser use)
-          const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(aloboApiUrl)}`;
-          const proxyRes = await fetch(proxyUrl);
-          if (proxyRes.ok) {
-            fetchedData = await proxyRes.json();
-            console.log('[Landing Page Silent Auto-Sync] Successfully fetched via browser CORS proxy.');
-          }
-        } catch (err) {
-          console.warn('[Landing Page Silent Auto-Sync] Browser CORS proxy failed:', err);
-        }
-
-        if (fetchedData && active) {
-          // Send raw JSON directly to our sync-raw-json endpoint to update our system!
-          const syncRes = await fetch('/api/alobo/sync-raw-json', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              rawJson: fetchedData,
-              date: date
-            })
-          });
-          if (syncRes.ok && active) {
-            console.log('[Landing Page Silent Auto-Sync] Successfully parsed CORS proxy data on server.');
-            fetchSyncData(date, false);
-            return;
-          }
-        }
-
-        // Fallback to server proxy fetch
-        console.log('[Landing Page Silent Auto-Sync] Triggering fallback sync via server proxy...');
-        const response = await fetch('/api/alobo/fetch-live-api', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            url: aloboApiUrl
-          })
-        });
-        
-        if (response.ok && active) {
-          console.log('[Landing Page Silent Auto-Sync] Successfully background synced via server proxy.');
-          // Refresh local state
-          fetchSyncData(date, false);
-        }
-      } catch (e) {
-        console.warn('[Landing Page Silent Auto-Sync] Failed silently:', e);
-      }
-    };
-
-    // Run once on load after 4 seconds
-    const timeoutId = setTimeout(() => {
-      runSilentSync();
-      intervalId = setInterval(runSilentSync, 5 * 60 * 1000); // every 5 minutes
-    }, 4000);
-
-    return () => {
-      active = false;
-      clearTimeout(timeoutId);
-      if (intervalId) clearInterval(intervalId);
-    };
   }, [date]);
 
   // Courts matching alobo.vn

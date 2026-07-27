@@ -1,11 +1,29 @@
+export interface CourtBranch {
+  id: string;
+  name: string;
+  code: string;
+  address: string;
+  district: string;
+  city: string;
+  phone: string;
+  openTime: string;
+  totalCourts: number;
+  image: string;
+  description: string;
+  amenities: string[];
+}
+
 export interface Court {
   id: string;
   name: string;
+  branchName: string;
   image: string;
   address: string;
   region: string;
   rating: number;
   pricePerHour: number;
+  courtType?: 'Trong nhà (Indoor)' | 'Mái che (Covered)' | 'Ngoài trời (Outdoor)';
+  status?: 'Hoạt động' | 'Bảo trì';
   amenities: string[];
   slots: string[];
 }
@@ -72,6 +90,20 @@ export interface Sponsor {
   logo: string;
 }
 
+export interface Member {
+  id: string;
+  fullName: string;
+  phone: string;
+  email: string;
+  membershipTier: 'Đồng (Bronze)' | 'Bạc (Silver)' | 'Vàng (Gold)' | 'Kim Cương (VIP)';
+  joinDate: string;
+  totalBookings: number;
+  totalSpent: number;
+  points: number;
+  status: 'Đang hoạt động' | 'Tạm khóa';
+  notes?: string;
+}
+
 export interface SocialRevenue {
   id: string;
   courtId: string;
@@ -82,62 +114,3 @@ export interface SocialRevenue {
   notes: string;
   createdAt: string;
 }
-
-export interface MemberRegistration {
-  id: string;
-  contractDate: string; // NGÀY KÝ HĐ
-  fullName: string;     // HỌ VÀ TÊN
-  dob: string;          // NGÀY SINH
-  phone: string;        // SĐT
-  preferredTime: string;// Thời gian
-  hoursCount: string;   // SỐ GIỜ TẬP / SỐ VÉ
-  packageType: string;  // GÓI TẬP
-  durationMonths: number; // THỜI HẠN (THÁNG)
-  coachName: string;    // HLV
-  serviceType: string;  // DỊCH VỤ
-  totalPrice: number;   // GIÁ TRỊ
-  depositAmount: number;// ĐẶT CỌC
-  remainingAmount: number; // CÒN LẠI
-  actualPaid: number;   // DTHU THỰC TẾ
-  status: 'confirmed' | 'pending';
-  createdAt: string;
-}
-
-export interface PriceRow {
-  day: string;
-  time: string;
-  price: string;
-}
-
-export interface PromoRow {
-  title: string;
-  time: string;
-  price: string;
-}
-
-export interface LandingPageConfig {
-  heroTag: string;
-  heroTitle: string;
-  heroSubtitle: string;
-  heroImage: string;
-  visionTag: string;
-  visionTitle: string;
-  visionParagraph1: string;
-  visionParagraph2: string;
-  visionImage: string;
-  stat1Value: string;
-  stat1Label: string;
-  stat2Value: string;
-  stat2Label: string;
-  stat3Value: string;
-  stat3Label: string;
-  visionBadgeTitle: string;
-  visionBadgeText: string;
-  priceTitle?: string;
-  priceSection1Title?: string;
-  priceRows1?: PriceRow[];
-  priceSection2Title?: string;
-  priceRows2?: PromoRow[];
-}
-
-

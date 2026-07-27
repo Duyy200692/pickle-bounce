@@ -1,70 +1,110 @@
-import { Court, OpenPlay, Tournament, Sponsor } from './types';
+import { Court, OpenPlay, Tournament, Sponsor, CourtBranch, Member } from './types';
+
+export const PICKLE_BOUNCE_BRANCH: CourtBranch = {
+  id: 'branch-pb-q12',
+  name: 'Pickle Bounce An Phú Đông',
+  code: 'PB-Q12',
+  address: '306/5 Vườn Lài, P. An Phú Đông, Quận 12, TP. Hồ Chí Minh',
+  district: 'Quận 12',
+  city: 'TP. Hồ Chí Minh',
+  phone: '0901 234 567',
+  openTime: '06:00 - 23:00 (Thứ 2 - Chủ Nhật)',
+  totalCourts: 6,
+  image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&q=80&w=800',
+  description: 'Chi nhánh chuẩn thi đấu duy nhất của Pickle Bounce với 6 sân mái che thảm SPM cao cấp, hệ thống đèn LED chống lóa, tủ locker thông minh và khu F&B giải khát.',
+  amenities: [
+    'Sân mái che cao cấp SPM 100%',
+    'Hệ thống đèn LED chống lóa',
+    'Tủ locker thông minh',
+    'Cho thuê vợt JOOLA / Selkirk',
+    'Quầy F&B & nước uống miễn phí',
+    'Bãi đỗ xe ô tô & xe máy rộng rãi'
+  ]
+};
 
 export const INITIAL_COURTS: Court[] = [
   {
     id: 'court-1',
     name: 'Sân 1 - Sport Pickle Bounce',
+    branchName: 'Pickle Bounce An Phú Đông',
     image: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&q=80&w=800',
     address: '306/5 Vườn Lài, P. An Phú Đông, Quận 12, TP. Hồ Chí Minh',
     region: 'Hồ Chí Minh (Quận 12)',
     rating: 4.9,
     pricePerHour: 150000,
+    courtType: 'Mái che (Covered)',
+    status: 'Hoạt động',
     amenities: ['Sân mái che cao cấp', 'Thảm thi đấu quốc tế', 'Đèn LED chống lóa', 'Tủ locker thông minh', 'Nước uống miễn phí', 'Cho thuê vợt JOOLA'],
     slots: ['06:00 - 08:00', '08:00 - 10:00', '10:00 - 12:00', '14:00 - 16:00', '16:00 - 18:00', '18:00 - 20:00', '20:00 - 22:00']
   },
   {
     id: 'court-2',
     name: 'Sân 2 - Sport Pickle Bounce',
+    branchName: 'Pickle Bounce An Phú Đông',
     image: 'https://images.unsplash.com/photo-1599447421416-3414500d18a5?auto=format&fit=crop&q=80&w=800',
     address: '306/5 Vườn Lài, P. An Phú Đông, Quận 12, TP. Hồ Chí Minh',
     region: 'Hồ Chí Minh (Quận 12)',
     rating: 4.8,
     pricePerHour: 150000,
+    courtType: 'Mái che (Covered)',
+    status: 'Hoạt động',
     amenities: ['Sân mái che cao cấp', 'Thảm thi đấu quốc tế', 'Đèn LED chống lóa', 'Tủ locker thông minh', 'Nước uống miễn phí', 'Cho thuê vợt JOOLA'],
     slots: ['06:00 - 08:00', '08:00 - 10:00', '10:00 - 12:00', '14:00 - 16:00', '16:00 - 18:00', '18:00 - 20:00', '20:00 - 22:00']
   },
   {
     id: 'court-3',
     name: 'Sân 3 - Sport Pickle Bounce',
+    branchName: 'Pickle Bounce An Phú Đông',
     image: 'https://images.unsplash.com/photo-1613918431208-6752fe243c5e?auto=format&fit=crop&q=80&w=800',
     address: '306/5 Vườn Lài, P. An Phú Đông, Quận 12, TP. Hồ Chí Minh',
     region: 'Hồ Chí Minh (Quận 12)',
     rating: 4.8,
     pricePerHour: 150000,
+    courtType: 'Trong nhà (Indoor)',
+    status: 'Hoạt động',
     amenities: ['Sân mái che cao cấp', 'Thảm thi đấu quốc tế', 'Đèn LED chống lóa', 'Tủ locker thông minh', 'Nước uống miễn phí', 'Cho thuê vợt JOOLA'],
     slots: ['06:00 - 08:00', '08:00 - 10:00', '10:00 - 12:00', '14:00 - 16:00', '16:00 - 18:00', '18:00 - 20:00', '20:00 - 22:00']
   },
   {
     id: 'court-4',
     name: 'Sân 4 - Sport Pickle Bounce',
+    branchName: 'Pickle Bounce An Phú Đông',
     image: 'https://images.unsplash.com/photo-1541252260730-0412e8e2108e?auto=format&fit=crop&q=80&w=800',
     address: '306/5 Vườn Lài, P. An Phú Đông, Quận 12, TP. Hồ Chí Minh',
     region: 'Hồ Chí Minh (Quận 12)',
     rating: 4.9,
     pricePerHour: 150000,
+    courtType: 'Trong nhà (Indoor)',
+    status: 'Hoạt động',
     amenities: ['Sân mái che cao cấp', 'Thảm thi đấu quốc tế', 'Đèn LED chống lóa', 'Tủ locker thông minh', 'Nước uống miễn phí', 'Cho thuê vợt JOOLA'],
     slots: ['06:00 - 08:00', '08:00 - 10:00', '10:00 - 12:00', '14:00 - 16:00', '16:00 - 18:00', '18:00 - 20:00', '20:00 - 22:00']
   },
   {
     id: 'court-5',
     name: 'Sân 5 - Sport Pickle Bounce',
+    branchName: 'Pickle Bounce An Phú Đông',
     image: 'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?auto=format&fit=crop&q=80&w=800',
     address: '306/5 Vườn Lài, P. An Phú Đông, Quận 12, TP. Hồ Chí Minh',
     region: 'Hồ Chí Minh (Quận 12)',
     rating: 4.8,
     pricePerHour: 150000,
-    amenities: ['Sân mái che cao cấp', 'Thảm thi đấu quốc tế', 'Đèn LED chống lóa', 'Tủ locker thông minh', 'Nước uống miễn phí', 'Cho thuê vợt JOOLA'],
+    courtType: 'Ngoài trời (Outdoor)',
+    status: 'Hoạt động',
+    amenities: ['Sân ngoài trời thoáng mát', 'Thảm thi đấu quốc tế', 'Đèn LED chống lóa', 'Tủ locker thông minh', 'Nước uống miễn phí'],
     slots: ['06:00 - 08:00', '08:00 - 10:00', '10:00 - 12:00', '14:00 - 16:00', '16:00 - 18:00', '18:00 - 20:00', '20:00 - 22:00']
   },
   {
     id: 'court-6',
     name: 'Sân 6 - Sport Pickle Bounce',
+    branchName: 'Pickle Bounce An Phú Đông',
     image: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&q=80&w=800',
     address: '306/5 Vườn Lài, P. An Phú Đông, Quận 12, TP. Hồ Chí Minh',
     region: 'Hồ Chí Minh (Quận 12)',
     rating: 4.8,
     pricePerHour: 150000,
-    amenities: ['Sân mái che cao cấp', 'Thảm thi đấu quốc tế', 'Đèn LED chống lóa', 'Tủ locker thông minh', 'Nước uống miễn phí', 'Cho thuê vợt JOOLA'],
+    courtType: 'Ngoài trời (Outdoor)',
+    status: 'Hoạt động',
+    amenities: ['Sân ngoài trời thoáng mát', 'Thảm thi đấu quốc tế', 'Đèn LED chống lóa', 'Tủ locker thông minh', 'Nước uống miễn phí'],
     slots: ['06:00 - 08:00', '08:00 - 10:00', '10:00 - 12:00', '14:00 - 16:00', '16:00 - 18:00', '18:00 - 20:00', '20:00 - 22:00']
   }
 ];
@@ -153,4 +193,57 @@ export const SPONSORS: Sponsor[] = [
   { id: 'sp-10', name: 'Engage', logo: 'ENGAGE' },
   { id: 'sp-11', name: 'ProKennex', logo: 'PRO KENNEX' },
   { id: 'sp-12', name: 'Red Bull', logo: 'RED BULL' }
+];
+
+export const INITIAL_MEMBERS: Member[] = [
+  {
+    id: 'mem-1',
+    fullName: 'Nguyễn Văn Hùng',
+    phone: '0908 123 456',
+    email: 'vanhung.nguyen@gmail.com',
+    membershipTier: 'Kim Cương (VIP)',
+    joinDate: '2025-01-15',
+    totalBookings: 24,
+    totalSpent: 3600000,
+    points: 360,
+    status: 'Đang hoạt động',
+    notes: 'Khách quen cố định khung giờ 18:00 - 20:00 Thứ 3 & Thứ 5'
+  },
+  {
+    id: 'mem-2',
+    fullName: 'Trần Thị Mai',
+    phone: '0912 345 678',
+    email: 'maitran.pickle@gmail.com',
+    membershipTier: 'Vàng (Gold)',
+    joinDate: '2025-03-20',
+    totalBookings: 15,
+    totalSpent: 2250000,
+    points: 225,
+    status: 'Đang hoạt động',
+    notes: 'Thường xuyên đăng ký thi đấu giải Bounce Cup'
+  },
+  {
+    id: 'mem-3',
+    fullName: 'Lê Hoàng Nam',
+    phone: '0989 777 888',
+    email: 'hoangnam.le@yahoo.com',
+    membershipTier: 'Bạc (Silver)',
+    joinDate: '2025-05-10',
+    totalBookings: 8,
+    totalSpent: 1200000,
+    points: 120,
+    status: 'Đang hoạt động'
+  },
+  {
+    id: 'mem-4',
+    fullName: 'Phạm Đức Anh',
+    phone: '0933 112 233',
+    email: 'ducanh.pham@outlook.com',
+    membershipTier: 'Đồng (Bronze)',
+    joinDate: '2025-06-01',
+    totalBookings: 3,
+    totalSpent: 450000,
+    points: 45,
+    status: 'Đang hoạt động'
+  }
 ];

@@ -17,7 +17,7 @@ export default function MatchLobby({ isOpen, onClose, openPlays, courts, onJoinO
   const [userName, setUserName] = useState('');
   const [title, setTitle] = useState('');
   const [level, setLevel] = useState<OpenPlay['level']>('Mọi cấp độ');
-  const [location, setLocation] = useState(() => courts[0]?.name || 'Pickle Bounce Thảo Điền');
+  const [location, setLocation] = useState(() => courts[0]?.name || 'Pickle Bounce An Phú Đông (Q.12)');
   const [date, setDate] = useState('Hôm nay');
   const [time, setTime] = useState('18:00 - 20:00');
   const [maxPlayers, setMaxPlayers] = useState(6);

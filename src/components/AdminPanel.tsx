@@ -3165,10 +3165,9 @@ export default function AdminPanel({
     var colMap = {};
     for (var c = 0; c < headers.length; c++) {
       var h = String(headers[c]).trim().toLowerCase();
-      if (h === "stt") colMap.stt = c + 1;
+      // Bỏ qua STT (Cột A) và NGÀY SINH (Cột D) vì người dùng tự nhập thủ công
       if (h.indexOf("ký hđ") > -1 || h.indexOf("ngày ký") > -1 || (h.indexOf("ngày") > -1 && h.indexOf("sinh") === -1)) colMap.date = c + 1;
       if (h.indexOf("họ và tên") > -1 || h.indexOf("khách") > -1) colMap.name = c + 1;
-      if (h.indexOf("ngày sinh") > -1 || h.indexOf("sinh") > -1) colMap.dob = c + 1;
       if (h.indexOf("sđt") > -1 || h.indexOf("phone") > -1 || h === "sdt") colMap.phone = c + 1;
       if (h.indexOf("thời gian") > -1 || h.indexOf("khung giờ") > -1) colMap.time = c + 1;
       if (h.indexOf("số giờ") > -1 || h.indexOf("số vé") > -1) colMap.hours = c + 1;
@@ -3181,11 +3180,9 @@ export default function AdminPanel({
       if (h.indexOf("ghi chú") > -1) colMap.notes = c + 1;
     }
 
-    // Vị trí mặc định chuẩn tuyệt đối cho bảng "DOANH THU SÂN" (Cột A -> R)
-    if (!colMap.stt) colMap.stt = 1;           // A: STT
-    if (!colMap.date) colMap.date = 2;         // B: NGÀY KÝ HĐ
+    // Vị trí mặc định chuẩn cho bảng "DOANH THU SÂN" (Cột B -> R, Cột A & D để trống)
+    if (!colMap.date) colMap.date = 2;         // B: NGÀY KÝ HĐ (Điền ngày đặt sân)
     if (!colMap.name) colMap.name = 3;         // C: HỌ VÀ TÊN
-    if (!colMap.dob) colMap.dob = 4;           // D: NGÀY SINH
     if (!colMap.phone) colMap.phone = 5;       // E: SĐT
     if (!colMap.time) colMap.time = 6;        // F: Thời gian
     if (!colMap.hours) colMap.hours = 7;      // G: SỐ GIỜ TẬP / SỐ VÉ
@@ -3228,12 +3225,7 @@ export default function AdminPanel({
     } else {
       var targetRow = Math.max(sheet.getLastRow() + 1, headerRowIndex + 1);
       
-      // STT (Cột A): Đặt định dạng văn bản để Google Sheet không chuyển thành ngày 1899/1900
-      var sttCell = sheet.getRange(targetRow, colMap.stt);
-      sttCell.setNumberFormat("@");
-      sttCell.setValue(String(targetRow - headerRowIndex));
-
-      // NGÀY KÝ HĐ (Cột B):
+      // NGÀY KÝ HĐ (Cột B): Ghi ngày đặt sân / bắt đầu chơi
       var dateCell = sheet.getRange(targetRow, colMap.date);
       dateCell.setNumberFormat("@");
       dateCell.setValue(dateVal);
@@ -3241,12 +3233,7 @@ export default function AdminPanel({
       // HỌ VÀ TÊN (Cột C):
       sheet.getRange(targetRow, colMap.name).setValue(fullNameVal);
 
-      // NGÀY SINH (Cột D): Để trống (không ghi ngày đặt sân vào ngày sinh)
-      if (colMap.dob && colMap.dob !== colMap.date) {
-        var dobCell = sheet.getRange(targetRow, colMap.dob);
-        dobCell.setNumberFormat("@");
-        dobCell.setValue("");
-      }
+      // (Cột A STT & Cột D NGÀY SINH bỏ qua hoàn toàn để người dùng tự gõ thủ công)
 
       // SĐT (Cột E):
       var phoneCell = sheet.getRange(targetRow, colMap.phone);
@@ -3371,10 +3358,8 @@ function fillZero(num) {
 
     // 2. Vị trí cột mặc định chuẩn 18 Cột "DOANH THU SÂN"
     var colMap = {
-      stt: 1,         // Cột A: STT
-      date: 2,        // Cột B: NGÀY KÝ HĐ (vd: 27/7/2026)
+      date: 2,        // Cột B: NGÀY KÝ HĐ (vd: 27/7/2026 - ngày bắt đầu chơi)
       name: 3,        // Cột C: HỌ VÀ TÊN (vd: Chị Ly)
-      dob: 4,         // Cột D: NGÀY SINH (Để trống)
       phone: 5,       // Cột E: SĐT (vd: '0988164848)
       time: 6,        // Cột F: Thời gian (vd: 8h30-10h / 17:00 - 18:00)
       hours: 7,       // Cột G: SỐ GIỜ TẬP / SỐ VÉ (vd: 1.5)
@@ -3389,21 +3374,12 @@ function fillZero(num) {
 
     var targetRow = Math.max(sheet.getLastRow() + 1, 3);
     
-    // Đặt định dạng văn bản cho STT & Ngày ký HĐ để tránh Google Sheet hiển thị thành năm 1899/1900
-    var sttCell = sheet.getRange(targetRow, colMap.stt);
-    sttCell.setNumberFormat("@");
-    sttCell.setValue(String(targetRow - 2));
-
+    // Cột A (STT) & Cột D (NGÀY SINH) để trống hoàn toàn để người dùng tự nhập thủ công
     var dateCell = sheet.getRange(targetRow, colMap.date);
     dateCell.setNumberFormat("@");
     dateCell.setValue(dateVal);
 
     sheet.getRange(targetRow, colMap.name).setValue(fullNameVal);
-    
-    // Cột D (NGÀY SINH) để trống
-    var dobCell = sheet.getRange(targetRow, colMap.dob);
-    dobCell.setNumberFormat("@");
-    dobCell.setValue("");
 
     var phoneCell = sheet.getRange(targetRow, colMap.phone);
     phoneCell.setNumberFormat("@");

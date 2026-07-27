@@ -104,6 +104,151 @@ export default function AdminPanel({
   const [isManualSending, setIsManualSending] = useState(false);
   const [manualSendResult, setManualSendResult] = useState<{ success?: boolean; error?: string } | null>(null);
 
+  // Alobo OCR & Auto Extraction state
+  const [isExtractingOcr, setIsExtractingOcr] = useState(false);
+  const [pastedOcrText, setPastedOcrText] = useState('');
+  const [extractedBookings, setExtractedBookings] = useState<Array<{
+    fullName: string;
+    phone: string;
+    courtName: string;
+    timeSlot: string;
+    date: string;
+    price: string;
+    paymentStatus: string;
+    selected?: boolean;
+  }>>([]);
+  const [isBatchSending, setIsBatchSending] = useState(false);
+  const [batchSendResult, setBatchSendResult] = useState<{ success?: boolean; count?: number; total?: number; error?: string } | null>(null);
+
+  const handleExtractFromImage = async (file: File) => {
+    setIsExtractingOcr(true);
+    setBatchSendResult(null);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = reader.result as string;
+        const res = await fetch('/api/alobo/extract-ocr', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageBase64: base64, date: manualBookingForm.date })
+        });
+        const data = await res.json();
+        if (data.success && Array.isArray(data.bookings)) {
+          setExtractedBookings(data.bookings.map((b: any) => ({ ...b, selected: true })));
+        } else {
+          alert('Không thể trích xuất dữ liệu từ ảnh: ' + (data.error || 'Lỗi không xác định'));
+        }
+        setIsExtractingOcr(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      alert('Lỗi đọc tập tin: ' + err.message);
+      setIsExtractingOcr(false);
+    }
+  };
+
+  const handleExtractFromText = async () => {
+    setIsExtractingOcr(true);
+    setBatchSendResult(null);
+    try {
+      const res = await fetch('/api/alobo/extract-ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rawText: pastedOcrText, date: manualBookingForm.date })
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.bookings)) {
+        setExtractedBookings(data.bookings.map((b: any) => ({ ...b, selected: true })));
+      } else {
+        alert('Không thể trích xuất: ' + (data.error || 'Vui lòng kiểm tra văn bản đầu vào'));
+      }
+    } catch (err: any) {
+      alert('Lỗi gửi yêu cầu: ' + err.message);
+    } finally {
+      setIsExtractingOcr(false);
+    }
+  };
+
+  const handleLoadSampleFromImage = () => {
+    // Exactly matches the screenshot uploaded by user on 19/07/2026
+    const sampleFromUserScreenshot = [
+      {
+        fullName: "Anh Khanh",
+        phone: "Khách vãng lai",
+        courtName: "Sân 1",
+        timeSlot: "07:30 - 08:30",
+        date: "2026-07-19",
+        price: "150.000",
+        paymentStatus: "Đã thanh toán",
+        selected: true
+      },
+      {
+        fullName: "Anh Luân",
+        phone: "0908957295",
+        courtName: "Sân 2",
+        timeSlot: "08:00 - 09:30",
+        date: "2026-07-19",
+        price: "225.000",
+        paymentStatus: "Chưa T.Toán",
+        selected: true
+      },
+      {
+        fullName: "Chị Phương Uyên",
+        phone: "0935442932",
+        courtName: "Sân 2",
+        timeSlot: "09:30 - 11:30",
+        date: "2026-07-19",
+        price: "300.000",
+        paymentStatus: "Đã thanh toán",
+        selected: true
+      },
+      {
+        fullName: "A Toàn",
+        phone: "0913811267",
+        courtName: "Sân 4",
+        timeSlot: "09:30 - 11:30",
+        date: "2026-07-19",
+        price: "300.000",
+        paymentStatus: "Đã thanh toán",
+        selected: true
+      }
+    ];
+    setExtractedBookings(sampleFromUserScreenshot);
+    setBatchSendResult(null);
+  };
+
+  const handleBatchSendSheets = async () => {
+    const selectedList = extractedBookings.filter(b => b.selected);
+    if (selectedList.length === 0) {
+      alert('Vui lòng chọn ít nhất 1 ca đặt sân để đồng bộ!');
+      return;
+    }
+    if (!googleSheetWebhookUrl) {
+      alert('Vui lòng nhập Webhook URL Google Sheets ở Mục 1 trước!');
+      return;
+    }
+    setIsBatchSending(true);
+    setBatchSendResult(null);
+    try {
+      const res = await fetch('/api/alobo/batch-forward-sheets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookings: selectedList })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBatchSendResult({ success: true, count: data.count, total: data.total });
+        fetchConfig(); // Refresh sync logs
+      } else {
+        setBatchSendResult({ success: false, error: data.error });
+      }
+    } catch (err: any) {
+      setBatchSendResult({ success: false, error: err.message });
+    } finally {
+      setIsBatchSending(false);
+    }
+  };
+
   // Load config on authentication or tab switch
   React.useEffect(() => {
     if (isAuthenticated && activeTab === 'alobo_sync') {
@@ -2452,10 +2597,183 @@ export default function AdminPanel({
                         )}
                       </div>
 
+                      {/* AI OCR & Auto Extract Section */}
+                      <div className="bg-gradient-to-br from-blue-50/80 via-white to-emerald-50/80 border-2 border-[#4285F4]/30 p-5 rounded-2xl shadow-sm space-y-4 text-xs">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-display font-black text-sm text-brand-dark flex items-center gap-2">
+                            <span className="bg-[#4285F4] text-white px-2 py-0.5 rounded-lg text-xs">AI OCR</span>
+                            <span>2. Trích Xuất Tự Động Từ Màn Hình Alobo (Không Cần Nhập Tay)</span>
+                          </h4>
+                          <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full">
+                            Tiết kiệm 99% thời gian
+                          </span>
+                        </div>
+
+                        <p className="font-sans text-[11px] text-brand-gray leading-relaxed">
+                          Thay vì gõ thủ công từng tên khách và SĐT từ màn hình Alobo vào Sheet, bạn chỉ cần <strong>Tải ảnh chụp màn hình Alobo</strong> hoặc <strong>Dán văn bản</strong>, AI sẽ tự động đọc tên, SĐT, sân, khung giờ và gửi lên Google Sheets chỉ bằng 1 cú nhấp chuột!
+                        </p>
+
+                        {/* Input options */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                          {/* Option A: Image Upload / Paste */}
+                          <div className="bg-white p-3.5 border border-brand-border/60 rounded-xl space-y-2 text-center hover:border-[#4285F4] transition-all">
+                            <div className="text-xs font-bold text-brand-dark flex items-center justify-center gap-1.5">
+                              📷 Tải ảnh màn hình Alobo
+                            </div>
+                            <p className="text-[10px] text-brand-gray">Chấp nhận JPG, PNG hoặc ảnh chụp màn hình</p>
+                            <input 
+                              type="file" 
+                              accept="image/*"
+                              onChange={(e) => e.target.files && e.target.files[0] && handleExtractFromImage(e.target.files[0])}
+                              className="hidden" 
+                              id="alobo-ocr-upload"
+                            />
+                            <label 
+                              htmlFor="alobo-ocr-upload"
+                              className="inline-block bg-[#4285F4] hover:bg-[#357ae8] text-white font-bold text-xs px-3.5 py-1.5 rounded-lg cursor-pointer transition-colors shadow-sm"
+                            >
+                              {isExtractingOcr ? 'Đang trích xuất AI...' : 'Chọn hoặc Tải Ảnh Màn Hình'}
+                            </label>
+                          </div>
+
+                          {/* Option B: Try with Real Sample from uploaded picture */}
+                          <div className="bg-emerald-50/90 p-3.5 border border-emerald-200 rounded-xl space-y-2 text-center hover:bg-emerald-100/80 transition-all flex flex-col justify-between">
+                            <div>
+                              <div className="text-xs font-bold text-emerald-900 flex items-center justify-center gap-1.5">
+                                ⚡ Tải Mẫu Alobo Thực Tế Vừa Chụp
+                              </div>
+                              <p className="text-[10px] text-emerald-700 mt-1">
+                                Tải ngay 4 ca: Anh Khanh, Anh Luân (0908957295), Chị Phương Uyên (0935442932), A Toàn (0913811267)
+                              </p>
+                            </div>
+                            <button
+                              onClick={handleLoadSampleFromImage}
+                              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-1.5 rounded-lg cursor-pointer transition-colors shadow-sm mt-1"
+                            >
+                              Trích xuất mẫu từ ảnh Alobo
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Extracted Data Table Preview */}
+                        {extractedBookings.length > 0 && (
+                          <div className="bg-white border border-brand-border/60 rounded-xl p-3 space-y-3 mt-3">
+                            <div className="flex items-center justify-between border-b border-brand-border/20 pb-2">
+                              <span className="font-bold text-xs text-brand-dark flex items-center gap-1.5">
+                                ✓ Đã nhận diện <strong className="text-[#4285F4]">{extractedBookings.length} ca đặt sân</strong> từ Alobo:
+                              </span>
+                              <button 
+                                onClick={() => setExtractedBookings([])}
+                                className="text-[10px] text-brand-gray hover:text-red-500 underline"
+                              >
+                                Đặt lại
+                              </button>
+                            </div>
+
+                            <div className="overflow-x-auto max-h-60">
+                              <table className="w-full text-left text-[11px] border-collapse">
+                                <thead>
+                                  <tr className="bg-brand-light-gray text-brand-gray font-bold border-b border-brand-border/40">
+                                    <th className="p-1.5 w-6 text-center">
+                                      <input 
+                                        type="checkbox" 
+                                        checked={extractedBookings.every(b => b.selected)} 
+                                        onChange={(e) => setExtractedBookings(extractedBookings.map(b => ({ ...b, selected: e.target.checked })))}
+                                      />
+                                    </th>
+                                    <th className="p-1.5">Tên khách hàng</th>
+                                    <th className="p-1.5">Số điện thoại</th>
+                                    <th className="p-1.5">Sân</th>
+                                    <th className="p-1.5">Khung giờ</th>
+                                    <th className="p-1.5">Giá sân</th>
+                                    <th className="p-1.5">Thanh toán</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {extractedBookings.map((b, idx) => (
+                                    <tr key={idx} className="border-b border-brand-border/10 hover:bg-blue-50/40">
+                                      <td className="p-1.5 text-center">
+                                        <input 
+                                          type="checkbox" 
+                                          checked={!!b.selected} 
+                                          onChange={(e) => {
+                                            const updated = [...extractedBookings];
+                                            updated[idx].selected = e.target.checked;
+                                            setExtractedBookings(updated);
+                                          }}
+                                        />
+                                      </td>
+                                      <td className="p-1.5 font-bold text-brand-dark">
+                                        <input 
+                                          type="text" 
+                                          value={b.fullName} 
+                                          onChange={(e) => {
+                                            const updated = [...extractedBookings];
+                                            updated[idx].fullName = e.target.value;
+                                            setExtractedBookings(updated);
+                                          }}
+                                          className="w-full bg-transparent border-b border-dashed border-gray-300 outline-none focus:border-blue-500 font-bold text-brand-dark"
+                                        />
+                                      </td>
+                                      <td className="p-1.5 text-brand-blue font-mono">
+                                        <input 
+                                          type="text" 
+                                          value={b.phone} 
+                                          onChange={(e) => {
+                                            const updated = [...extractedBookings];
+                                            updated[idx].phone = e.target.value;
+                                            setExtractedBookings(updated);
+                                          }}
+                                          className="w-full bg-transparent border-b border-dashed border-gray-300 outline-none focus:border-blue-500 text-brand-blue font-mono"
+                                        />
+                                      </td>
+                                      <td className="p-1.5 font-semibold text-emerald-800">{b.courtName}</td>
+                                      <td className="p-1.5 font-mono">{b.timeSlot}</td>
+                                      <td className="p-1.5 font-bold">{b.price}</td>
+                                      <td className="p-1.5">
+                                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                          b.paymentStatus.includes('Đã') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                        }`}>
+                                          {b.paymentStatus}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+
+                            {/* Batch Sync Action Button */}
+                            <button
+                              onClick={handleBatchSendSheets}
+                              disabled={isBatchSending || !googleSheetWebhookUrl}
+                              className="w-full bg-[#0F9D58] hover:bg-[#0b8043] text-white font-sans font-bold text-xs py-3 rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-40 flex items-center justify-center gap-2"
+                            >
+                              <RefreshCw className={`w-4 h-4 ${isBatchSending ? 'animate-spin' : ''}`} />
+                              <span>
+                                {isBatchSending ? 'Đang tự động gửi toàn bộ lên Google Sheets...' : `⚡ ĐỒNG BỘ ${extractedBookings.filter(b=>b.selected).length} CA NÀY LÊN GOOGLE SHEETS (1-CLICK)`}
+                              </span>
+                            </button>
+
+                            {batchSendResult && (
+                              <div className={`p-3 rounded-xl text-xs font-semibold ${
+                                batchSendResult.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-brand-red border border-brand-red-light/30'
+                              }`}>
+                                {batchSendResult.success ? (
+                                  `✓ Đã đồng bộ thành công ${batchSendResult.count}/${batchSendResult.total} ca đặt sân từ Alobo vào Google Sheets!`
+                                ) : (
+                                  `✗ Đồng bộ thất bại: ${batchSendResult.error || 'Kiểm tra lại Webhook URL'}`
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
                       {/* Manual Booking Input Form */}
                       <div className="bg-white border border-brand-border/40 p-5 rounded-2xl shadow-sm space-y-4 text-xs">
                         <h4 className="font-display font-bold text-sm text-brand-dark">
-                          2. Gửi giao dịch thủ công lên Google Sheets
+                          3. Gửi từng giao dịch thủ công lên Google Sheets
                         </h4>
                         <p className="font-sans text-[11px] text-brand-gray mt-0.5 text-left">
                           Sử dụng khi bạn muốn đẩy nhanh một ca khách vãng lai hoặc bổ sung đặt lịch vào Sheets mà không qua Alobo.

@@ -1,0 +1,10 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow public read and write for courts, bookings, open plays, tournaments, registrations, revenues, members, sponsors, appConfig
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

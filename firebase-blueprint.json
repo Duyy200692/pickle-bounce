@@ -1,0 +1,110 @@
+{
+  "entities": {
+    "courts": {
+      "fields": {
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "pricePerHour": { "type": "number" },
+        "status": { "type": "string" },
+        "image": { "type": "string" },
+        "branchId": { "type": "string" },
+        "branchName": { "type": "string" }
+      }
+    },
+    "bookings": {
+      "fields": {
+        "courtId": { "type": "string" },
+        "courtName": { "type": "string" },
+        "date": { "type": "string" },
+        "timeSlot": { "type": "string" },
+        "price": { "type": "number" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "status": { "type": "string" },
+        "notes": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "createdAt": { "type": "string" }
+      }
+    },
+    "openPlays": {
+      "fields": {
+        "title": { "type": "string" },
+        "date": { "type": "string" },
+        "timeSlot": { "type": "string" },
+        "location": { "type": "string" },
+        "maxPlayers": { "type": "number" },
+        "fee": { "type": "number" },
+        "level": { "type": "string" },
+        "hostName": { "type": "string" },
+        "status": { "type": "string" }
+      }
+    },
+    "tournaments": {
+      "fields": {
+        "name": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "location": { "type": "string" },
+        "format": { "type": "string" },
+        "maxTeams": { "type": "number" },
+        "prize": { "type": "string" },
+        "entryFee": { "type": "number" },
+        "status": { "type": "string" },
+        "description": { "type": "string" }
+      }
+    },
+    "registrations": {
+      "fields": {
+        "tournamentId": { "type": "string" },
+        "tournamentName": { "type": "string" },
+        "teamName": { "type": "string" },
+        "player1Name": { "type": "string" },
+        "player1Phone": { "type": "string" },
+        "player2Name": { "type": "string" },
+        "player2Phone": { "type": "string" },
+        "category": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      }
+    },
+    "socialRevenues": {
+      "fields": {
+        "date": { "type": "string" },
+        "title": { "type": "string" },
+        "organizerName": { "type": "string" },
+        "totalAmount": { "type": "number" },
+        "pickleShare": { "type": "number" },
+        "organizerShare": { "type": "number" },
+        "status": { "type": "string" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string" }
+      }
+    },
+    "members": {
+      "fields": {
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "tier": { "type": "string" },
+        "totalSpent": { "type": "number" },
+        "bookingsCount": { "type": "number" },
+        "joinedDate": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    },
+    "sponsors": {
+      "fields": {
+        "name": { "type": "string" },
+        "logo": { "type": "string" }
+      }
+    },
+    "appConfig": {
+      "fields": {
+        "heroTag": { "type": "string" },
+        "heroTitle": { "type": "string" },
+        "heroSubtitle": { "type": "string text" }
+      }
+    }
+  }
+}

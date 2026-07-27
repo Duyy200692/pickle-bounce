@@ -18,8 +18,27 @@ import MyScheduleModal from './components/MyScheduleModal';
 import AdminPanel from './components/AdminPanel';
 
 // Static Data and Types
-import { INITIAL_COURTS, INITIAL_OPEN_PLAYS, INITIAL_TOURNAMENTS, SPONSORS, PICKLE_BOUNCE_BRANCH, INITIAL_MEMBERS, INITIAL_PROMO_CONFIG } from './data';
+import { 
+  INITIAL_COURTS, 
+  INITIAL_OPEN_PLAYS, 
+  INITIAL_TOURNAMENTS, 
+  SPONSORS, 
+  PICKLE_BOUNCE_BRANCH, 
+  INITIAL_MEMBERS, 
+  INITIAL_PROMO_CONFIG,
+  INITIAL_BOOKINGS,
+  INITIAL_SOCIAL_REVENUES,
+  INITIAL_REGISTRATIONS
+} from './data';
 import { Booking, OpenPlay, Tournament, TeamRegistration, Court, SocialRevenue, CourtBranch, Member, Sponsor, PromoConfig } from './types';
+import { 
+  subscribeToCollection, 
+  subscribeToDoc, 
+  saveFirebaseDoc, 
+  deleteFirebaseDoc, 
+  saveFirebaseCollection, 
+  saveSingleDoc 
+} from './lib/firebase';
 
 export default function App() {
   // Modal visibility states
@@ -29,362 +48,95 @@ export default function App() {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
 
-  // Promo / Hero Landing Page Configuration State
-  const [promoConfig, setPromoConfig] = useState<PromoConfig>(() => {
-    const saved = localStorage.getItem('pickle_promo_config');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Error parsing saved promo config', e);
-      }
-    }
-    return INITIAL_PROMO_CONFIG;
-  });
+  // App Core States initialized with Firebase
+  const [promoConfig, setPromoConfig] = useState<PromoConfig>(INITIAL_PROMO_CONFIG);
+  const [sponsors, setSponsors] = useState<Sponsor[]>(SPONSORS);
+  const [branch, setBranch] = useState<CourtBranch>(PICKLE_BOUNCE_BRANCH);
+  const [bookings, setBookings] = useState<Booking[]>(INITIAL_BOOKINGS);
+  const [socialRevenues, setSocialRevenues] = useState<SocialRevenue[]>(INITIAL_SOCIAL_REVENUES);
+  const [courts, setCourts] = useState<Court[]>(INITIAL_COURTS);
+  const [openPlays, setOpenPlays] = useState<OpenPlay[]>(INITIAL_OPEN_PLAYS);
+  const [tournaments, setTournaments] = useState<Tournament[]>(INITIAL_TOURNAMENTS);
+  const [teamRegistrations, setTeamRegistrations] = useState<TeamRegistration[]>(INITIAL_REGISTRATIONS);
+  const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
 
+  // Subscribe to Firebase Firestore collections & documents in real-time
   useEffect(() => {
-    localStorage.setItem('pickle_promo_config', JSON.stringify(promoConfig));
-  }, [promoConfig]);
+    const unsubCourts = subscribeToCollection('courts', setCourts, INITIAL_COURTS);
+    const unsubBookings = subscribeToCollection('bookings', setBookings, INITIAL_BOOKINGS);
+    const unsubOpenPlays = subscribeToCollection('openPlays', setOpenPlays, INITIAL_OPEN_PLAYS);
+    const unsubTournaments = subscribeToCollection('tournaments', setTournaments, INITIAL_TOURNAMENTS);
+    const unsubRegistrations = subscribeToCollection('registrations', setTeamRegistrations, INITIAL_REGISTRATIONS);
+    const unsubRevenues = subscribeToCollection('socialRevenues', setSocialRevenues, INITIAL_SOCIAL_REVENUES);
+    const unsubMembers = subscribeToCollection('members', setMembers, INITIAL_MEMBERS);
+    const unsubSponsors = subscribeToCollection('sponsors', setSponsors, SPONSORS);
+    const unsubBranch = subscribeToDoc('appConfig', 'branch', setBranch, PICKLE_BOUNCE_BRANCH);
+    const unsubPromo = subscribeToDoc('appConfig', 'promoConfig', setPromoConfig, INITIAL_PROMO_CONFIG);
 
-  // Sponsors / Strategic Partners State
-  const [sponsors, setSponsors] = useState<Sponsor[]>(() => {
-    const saved = localStorage.getItem('pickle_sponsors');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Error parsing saved sponsors', e);
-      }
-    }
-    return SPONSORS;
-  });
-
-  useEffect(() => {
-    localStorage.setItem('pickle_sponsors', JSON.stringify(sponsors));
-  }, [sponsors]);
-
-  // Branch Info State
-  const [branch, setBranch] = useState<CourtBranch>(() => {
-    const saved = localStorage.getItem('pickle_branch');
-    return saved ? JSON.parse(saved) : PICKLE_BOUNCE_BRANCH;
-  });
-
-  useEffect(() => {
-    localStorage.setItem('pickle_branch', JSON.stringify(branch));
-  }, [branch]);
-
-  // Core App State
-  const [bookings, setBookings] = useState<Booking[]>(() => {
-    const saved = localStorage.getItem('pickle_bookings');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error('Error parsing saved bookings', e);
-      }
-    }
-    return [
-      {
-        id: 'B-1001',
-        courtId: 'court-1',
-        courtName: 'Sân 1 - Sport Pickle Bounce',
-        address: '306/5 Vườn Lài, P. An Phú Đông, Quận 12, TP. Hồ Chí Minh',
-        date: '2025-11-12',
-        timeSlot: '18:00 - 20:00',
-        fullName: 'Nguyễn Minh Quân',
-        phone: '0901234567',
-        status: 'confirmed',
-        totalPrice: 300000,
-        isOpenPlay: false,
-        createdAt: new Date('2025-11-12T17:30:00Z').toISOString()
-      },
-      {
-        id: 'B-1002',
-        courtId: 'court-2',
-        courtName: 'Sân 2 - Sport Pickle Bounce',
-        address: '306/5 Vườn Lài, P. An Phú Đông, Quận 12, TP. Hồ Chí Minh',
-        date: '2025-12-14',
-        timeSlot: '16:00 - 18:00',
-        fullName: 'Trần Thị Thảo',
-        phone: '0912345678',
-        status: 'confirmed',
-        totalPrice: 300000,
-        isOpenPlay: false,
-        createdAt: new Date('2025-12-14T15:10:00Z').toISOString()
-      },
-      {
-        id: 'B-1003',
-        courtId: 'court-3',
-        courtName: 'Sân 3 - Sport Pickle Bounce',
-        address: '306/5 Vườn Lài, P. An Phú Đông, Quận 12, TP. Hồ Chí Minh',
-        date: '2026-05-04',
-        timeSlot: '08:00 - 10:00',
-        fullName: 'Lê Hoàng Hải',
-        phone: '0987654321',
-        status: 'confirmed',
-        totalPrice: 300000,
-        isOpenPlay: false,
-        createdAt: new Date('2026-05-04T07:45:00Z').toISOString()
-      },
-      {
-        id: 'B-1004',
-        courtId: 'court-4',
-        courtName: 'Sân 4 - Sport Pickle Bounce',
-        address: '306/5 Vườn Lài, P. An Phú Đông, Quận 12, TP. Hồ Chí Minh',
-        date: '2026-05-18',
-        timeSlot: '18:00 - 22:00',
-        fullName: 'Phạm Thanh Sơn',
-        phone: '0909998887',
-        status: 'confirmed',
-        totalPrice: 600000,
-        isOpenPlay: false,
-        createdAt: new Date('2026-05-18T17:15:00Z').toISOString()
-      },
-      {
-        id: 'B-1005',
-        courtId: 'court-1',
-        courtName: 'Sân 1 - Sport Pickle Bounce',
-        address: '306/5 Vườn Lài, P. An Phú Đông, Quận 12, TP. Hồ Chí Minh',
-        date: '2026-06-08',
-        timeSlot: '14:00 - 17:00',
-        fullName: 'Bùi Anh Tuấn',
-        phone: '0933445566',
-        status: 'confirmed',
-        totalPrice: 450000,
-        isOpenPlay: false,
-        createdAt: new Date('2026-06-08T13:30:00Z').toISOString()
-      },
-      {
-        id: 'B-1006',
-        courtId: 'court-2',
-        courtName: 'Sân 2 - Sport Pickle Bounce',
-        address: '306/5 Vườn Lài, P. An Phú Đông, Quận 12, TP. Hồ Chí Minh',
-        date: '2026-06-22',
-        timeSlot: '16:00 - 22:00',
-        fullName: 'Đỗ Thùy Trang',
-        phone: '0911223344',
-        status: 'confirmed',
-        totalPrice: 900000,
-        isOpenPlay: false,
-        createdAt: new Date('2026-06-22T15:45:00Z').toISOString()
-      },
-      {
-        id: 'B-1007',
-        courtId: 'court-1',
-        courtName: 'Sân 1 - Sport Pickle Bounce',
-        address: '306/5 Vườn Lài, P. An Phú Đông, Quận 12, TP. Hồ Chí Minh',
-        date: '2026-07-01',
-        timeSlot: '06:00 - 08:00',
-        fullName: 'Nguyễn Văn Minh',
-        phone: '0901234567',
-        status: 'confirmed',
-        totalPrice: 300000,
-        isOpenPlay: false,
-        createdAt: new Date('2026-07-01T05:50:00Z').toISOString()
-      },
-      {
-        id: 'B-1008',
-        courtId: 'court-3',
-        courtName: 'Sân 3 - Sport Pickle Bounce',
-        address: '306/5 Vườn Lài, P. An Phú Đông, Quận 12, TP. Hồ Chí Minh',
-        date: '2026-07-15',
-        timeSlot: '18:00 - 22:00',
-        fullName: 'Hoàng Long',
-        phone: '0907654321',
-        status: 'confirmed',
-        totalPrice: 600000,
-        isOpenPlay: true,
-        createdAt: new Date('2026-07-15T17:00:00Z').toISOString()
-      },
-      {
-        id: 'B-1009',
-        courtId: 'court-2',
-        courtName: 'Sân 2 - Sport Pickle Bounce',
-        address: '306/5 Vườn Lài, P. An Phú Đông, Quận 12, TP. Hồ Chí Minh',
-        date: '2026-07-16',
-        timeSlot: '16:00 - 19:00',
-        fullName: 'Nguyễn Ngọc Anh',
-        phone: '0901112223',
-        status: 'confirmed',
-        totalPrice: 450000,
-        isOpenPlay: false,
-        createdAt: new Date('2026-07-16T15:20:00Z').toISOString()
-      }
-    ];
-  });
-
-  const [socialRevenues, setSocialRevenues] = useState<SocialRevenue[]>(() => {
-    const saved = localStorage.getItem('pickle_social_revenues');
-    if (saved) return JSON.parse(saved);
-    return [
-      {
-        id: 'soc-1',
-        courtId: 'court-1',
-        courtName: 'Sân 1 - Sport Pickle Bounce',
-        date: '2025-11-15',
-        amount: 300000,
-        playersCount: 4,
-        notes: 'Khách vãng lai chơi social buổi tối',
-        createdAt: new Date('2025-11-15T18:00:00Z').toISOString()
-      },
-      {
-        id: 'soc-2',
-        courtId: 'court-2',
-        courtName: 'Sân 2 - Sport Pickle Bounce',
-        date: '2025-12-20',
-        amount: 450000,
-        playersCount: 6,
-        notes: 'Kèo social cuối năm giao lưu',
-        createdAt: new Date('2025-12-20T19:00:00Z').toISOString()
-      },
-      {
-        id: 'soc-3',
-        courtId: 'court-1',
-        courtName: 'Sân 1 - Sport Pickle Bounce',
-        date: '2026-05-10',
-        amount: 600000,
-        playersCount: 8,
-        notes: 'Nhóm khách lẻ thuê vãng lai trưa',
-        createdAt: new Date('2026-05-10T12:00:00Z').toISOString()
-      },
-      {
-        id: 'soc-4',
-        courtId: 'court-3',
-        courtName: 'Sân 3 - Sport Pickle Bounce',
-        date: '2026-06-15',
-        amount: 450000,
-        playersCount: 4,
-        notes: 'Kèo social chiều tối thứ Hai',
-        createdAt: new Date('2026-06-15T17:00:00Z').toISOString()
-      },
-      {
-        id: 'soc-5',
-        courtId: 'court-2',
-        courtName: 'Sân 2 - Sport Pickle Bounce',
-        date: '2026-07-02',
-        amount: 750000,
-        playersCount: 10,
-        notes: 'Vãng lai sáng sớm chơi đợt nắng nóng',
-        createdAt: new Date('2026-07-02T07:00:00Z').toISOString()
-      },
-      {
-        id: 'soc-6',
-        courtId: 'court-4',
-        courtName: 'Sân 4 - Sport Pickle Bounce',
-        date: '2026-07-10',
-        amount: 900000,
-        playersCount: 12,
-        notes: 'Khách lẻ vãng lai giao lưu buổi chiều tà',
-        createdAt: new Date('2026-07-10T16:00:00Z').toISOString()
-      },
-      {
-        id: 'soc-7',
-        courtId: 'court-1',
-        courtName: 'Sân 1 - Sport Pickle Bounce',
-        date: '2026-07-16',
-        amount: 450000,
-        playersCount: 4,
-        notes: 'Khách lẻ đánh social trực tiếp',
-        createdAt: new Date('2026-07-16T18:00:00Z').toISOString()
-      }
-    ];
-  });
-
-  const [courts, setCourts] = useState<Court[]>(() => {
-    const saved = localStorage.getItem('pickle_courts');
-    return saved ? JSON.parse(saved) : INITIAL_COURTS;
-  });
-
-  const [openPlays, setOpenPlays] = useState<OpenPlay[]>(() => {
-    const saved = localStorage.getItem('pickle_openplays');
-    return saved ? JSON.parse(saved) : INITIAL_OPEN_PLAYS;
-  });
-
-  const [tournaments, setTournaments] = useState<Tournament[]>(() => {
-    const saved = localStorage.getItem('pickle_tournaments');
-    return saved ? JSON.parse(saved) : INITIAL_TOURNAMENTS;
-  });
-
-  const [teamRegistrations, setTeamRegistrations] = useState<TeamRegistration[]>(() => {
-    const saved = localStorage.getItem('pickle_registrations');
-    if (saved) return JSON.parse(saved);
-    return [
-      {
-        id: 'reg-1',
-        tournamentId: 'tour-1',
-        tournamentName: 'Bounce Cup 2026 - The League',
-        teamName: 'Sài Gòn Bouncers',
-        player1: 'Nguyễn Văn Minh',
-        player2: 'Trần Hữu Kiên',
-        phone: '0901234567',
-        email: 'sgbouncers@gmail.com',
-        status: 'confirmed'
-      },
-      {
-        id: 'reg-2',
-        tournamentId: 'tour-1',
-        tournamentName: 'Bounce Cup 2026 - The League',
-        teamName: 'Hà Nội Smashers',
-        player1: 'Đặng Quốc Huy',
-        player2: 'Bùi Việt Hoàng',
-        phone: '0987654321',
-        email: 'hn.smashers@outlook.com',
-        status: 'pending'
-      }
-    ];
-  });
-
-  const [members, setMembers] = useState<Member[]>(() => {
-    const saved = localStorage.getItem('pickle_members');
-    return saved ? JSON.parse(saved) : INITIAL_MEMBERS;
-  });
-
-  // Sync state variables to LocalStorage on change
-  useEffect(() => {
-    localStorage.setItem('pickle_members', JSON.stringify(members));
-  }, [members]);
-  useEffect(() => {
-    localStorage.setItem('pickle_courts', JSON.stringify(courts));
-  }, [courts]);
-
-  useEffect(() => {
-    localStorage.setItem('pickle_openplays', JSON.stringify(openPlays));
-  }, [openPlays]);
-
-  useEffect(() => {
-    localStorage.setItem('pickle_tournaments', JSON.stringify(tournaments));
-  }, [tournaments]);
-
-  useEffect(() => {
-    localStorage.setItem('pickle_registrations', JSON.stringify(teamRegistrations));
-  }, [teamRegistrations]);
-
-  useEffect(() => {
-    localStorage.setItem('pickle_social_revenues', JSON.stringify(socialRevenues));
-  }, [socialRevenues]);
-
-  // Load bookings from LocalStorage on mount
-  useEffect(() => {
-    const savedBookings = localStorage.getItem('pickle_bookings');
-    if (savedBookings) {
-      try {
-        setBookings(JSON.parse(savedBookings));
-      } catch (e) {
-        console.error('Error parsing saved bookings', e);
-      }
-    }
+    return () => {
+      unsubCourts();
+      unsubBookings();
+      unsubOpenPlays();
+      unsubTournaments();
+      unsubRegistrations();
+      unsubRevenues();
+      unsubMembers();
+      unsubSponsors();
+      unsubBranch();
+      unsubPromo();
+    };
   }, []);
 
-  // Sync bookings to LocalStorage on change
-  const saveBookings = (newBookings: Booking[]) => {
-    setBookings(newBookings);
-    localStorage.setItem('pickle_bookings', JSON.stringify(newBookings));
+  // Handlers to sync Admin Panel changes to Firebase
+  const handleSaveCourts = (newCourts: Court[]) => {
+    setCourts(newCourts);
+    saveFirebaseCollection('courts', newCourts);
+  };
+
+  const handleSaveMembers = (newMembers: Member[]) => {
+    setMembers(newMembers);
+    saveFirebaseCollection('members', newMembers);
+  };
+
+  const handleSaveOpenPlays = (newOpenPlays: OpenPlay[]) => {
+    setOpenPlays(newOpenPlays);
+    saveFirebaseCollection('openPlays', newOpenPlays);
+  };
+
+  const handleSaveTournaments = (newTournaments: Tournament[]) => {
+    setTournaments(newTournaments);
+    saveFirebaseCollection('tournaments', newTournaments);
+  };
+
+  const handleSaveRegistrations = (newRegs: TeamRegistration[]) => {
+    setTeamRegistrations(newRegs);
+    saveFirebaseCollection('registrations', newRegs);
+  };
+
+  const handleSaveSocialRevenues = (newRevenues: SocialRevenue[]) => {
+    setSocialRevenues(newRevenues);
+    saveFirebaseCollection('socialRevenues', newRevenues);
+  };
+
+  const handleSaveSponsors = (newSponsors: Sponsor[]) => {
+    setSponsors(newSponsors);
+    saveFirebaseCollection('sponsors', newSponsors);
+  };
+
+  const handleSaveBranch = (newBranch: CourtBranch) => {
+    setBranch(newBranch);
+    saveSingleDoc('appConfig', 'branch', newBranch);
+  };
+
+  const handleSavePromoConfig = (newConfig: PromoConfig) => {
+    setPromoConfig(newConfig);
+    saveSingleDoc('appConfig', 'promoConfig', newConfig);
   };
 
   // Create a new court booking
   const handleAddBooking = (newBooking: Booking) => {
-    const updated = [newBooking, ...bookings];
-    saveBookings(updated);
+    setBookings(prev => [newBooking, ...prev]);
+    saveFirebaseDoc('bookings', newBooking);
 
     // If "Open Play" was enabled, automatically publish an open play matchup to the community lobby!
     if (newBooking.isOpenPlay) {
@@ -402,7 +154,8 @@ export default function App() {
         fee: Math.round((newBooking.totalPrice / 4) / 10000) * 10000, // split among 4 players, rounded
         description: 'Kèo mở tự động từ đặt sân! Rất mong tìm được các anh tài ráp cặp cùng giao lưu và chia sẻ tiền sân vui vẻ.'
       };
-      setOpenPlays([autoOpenPlay, ...openPlays]);
+      setOpenPlays(prev => [autoOpenPlay, ...prev]);
+      saveFirebaseDoc('openPlays', autoOpenPlay);
     }
 
     // Auto sync booking to Google Sheets via server endpoint in real-time!
@@ -423,46 +176,45 @@ export default function App() {
 
   // Cancel an existing booking
   const handleCancelBooking = (id: string) => {
-    const filtered = bookings.filter(b => b.id !== id);
-    saveBookings(filtered);
+    setBookings(prev => prev.filter(b => b.id !== id));
+    deleteFirebaseDoc('bookings', id);
   };
 
   // Join an existing open play matchup
   const handleJoinOpenPlay = (id: string, name: string) => {
     const matchedOpenPlay = openPlays.find(op => op.id === id);
-    const updated = openPlays.map(op => {
-      if (op.id === id) {
-        if (op.joinedPlayers.includes(name)) return op; // prevent double join
-        return {
-          ...op,
-          joinedPlayers: [...op.joinedPlayers, name]
-        };
-      }
-      return op;
-    });
-    setOpenPlays(updated);
+    if (!matchedOpenPlay) return;
 
-    if (matchedOpenPlay && !matchedOpenPlay.joinedPlayers.includes(name)) {
-      // Sync open play joiner to Google Sheets
-      fetch('/api/alobo/forward-booking', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName: `${name} (Tham gia ghép sân)`,
-          phone: 'Thành viên ghép',
-          courtName: `Hội ghép: ${matchedOpenPlay.title}`,
-          date: new Date().toISOString().split('T')[0],
-          timeSlot: matchedOpenPlay.time,
-          price: matchedOpenPlay.fee.toLocaleString('vi-VN') + ' đ / người',
-          paymentStatus: 'Giao lưu tại sân'
-        })
-      }).catch(err => console.error('Auto Google Sheets open play join sync failed:', err));
-    }
+    if (matchedOpenPlay.joinedPlayers.includes(name)) return; // prevent double join
+
+    const updatedOpenPlay = {
+      ...matchedOpenPlay,
+      joinedPlayers: [...matchedOpenPlay.joinedPlayers, name]
+    };
+
+    setOpenPlays(prev => prev.map(op => op.id === id ? updatedOpenPlay : op));
+    saveFirebaseDoc('openPlays', updatedOpenPlay);
+
+    // Sync open play joiner to Google Sheets
+    fetch('/api/alobo/forward-booking', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fullName: `${name} (Tham gia ghép sân)`,
+        phone: 'Thành viên ghép',
+        courtName: `Hội ghép: ${matchedOpenPlay.title}`,
+        date: new Date().toISOString().split('T')[0],
+        timeSlot: matchedOpenPlay.time,
+        price: matchedOpenPlay.fee.toLocaleString('vi-VN') + ' đ / người',
+        paymentStatus: 'Giao lưu tại sân'
+      })
+    }).catch(err => console.error('Auto Google Sheets open play join sync failed:', err));
   };
 
   // Post a new custom open play matchmaking request to lobby
   const handlePostOpenPlay = (newOpenPlay: OpenPlay) => {
-    setOpenPlays([newOpenPlay, ...openPlays]);
+    setOpenPlays(prev => [newOpenPlay, ...prev]);
+    saveFirebaseDoc('openPlays', newOpenPlay);
     
     // Sync newly created open play matchup to Google Sheets
     fetch('/api/alobo/forward-booking', {
@@ -483,19 +235,19 @@ export default function App() {
   // Register a team for a tournament
   const handleRegisterTeam = (newReg: TeamRegistration) => {
     // Add to registrations list
-    setTeamRegistrations([newReg, ...teamRegistrations]);
+    setTeamRegistrations(prev => [newReg, ...prev]);
+    saveFirebaseDoc('registrations', newReg);
 
     // Increment registration count for this tournament
-    const updatedTours = tournaments.map(t => {
-      if (t.id === newReg.tournamentId) {
-        return {
-          ...t,
-          teamsRegistered: Math.min(t.maxTeams, t.teamsRegistered + 1)
-        };
-      }
-      return t;
-    });
-    setTournaments(updatedTours);
+    const matchedTour = tournaments.find(t => t.id === newReg.tournamentId);
+    if (matchedTour) {
+      const updatedTour = {
+        ...matchedTour,
+        teamsRegistered: Math.min(matchedTour.maxTeams, matchedTour.teamsRegistered + 1)
+      };
+      setTournaments(prev => prev.map(t => t.id === newReg.tournamentId ? updatedTour : t));
+      saveFirebaseDoc('tournaments', updatedTour);
+    }
 
     // Auto sync tournament registration to Google Sheets in real-time!
     fetch('/api/alobo/forward-booking', {
@@ -612,25 +364,25 @@ export default function App() {
         isOpen={isAdminOpen}
         onClose={() => setIsAdminOpen(false)}
         branch={branch}
-        onSaveBranch={setBranch}
+        onSaveBranch={handleSaveBranch}
         courts={courts}
-        onSaveCourts={setCourts}
+        onSaveCourts={handleSaveCourts}
         bookings={bookings}
-        onSaveBookings={saveBookings}
+        onSaveBookings={(newBookings) => { setBookings(newBookings); saveFirebaseCollection('bookings', newBookings); }}
         openPlays={openPlays}
-        onSaveOpenPlays={setOpenPlays}
+        onSaveOpenPlays={handleSaveOpenPlays}
         tournaments={tournaments}
-        onSaveTournaments={setTournaments}
+        onSaveTournaments={handleSaveTournaments}
         teamRegistrations={teamRegistrations}
-        onSaveTeamRegistrations={setTeamRegistrations}
+        onSaveTeamRegistrations={handleSaveRegistrations}
         socialRevenues={socialRevenues}
-        onSaveSocialRevenues={setSocialRevenues}
+        onSaveSocialRevenues={handleSaveSocialRevenues}
         members={members}
-        onSaveMembers={setMembers}
+        onSaveMembers={handleSaveMembers}
         sponsors={sponsors}
-        onSaveSponsors={setSponsors}
+        onSaveSponsors={handleSaveSponsors}
         promoConfig={promoConfig}
-        onSavePromoConfig={setPromoConfig}
+        onSavePromoConfig={handleSavePromoConfig}
       />
 
     </div>

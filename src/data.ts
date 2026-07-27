@@ -1,4 +1,4 @@
-import { Court, OpenPlay, Tournament, Sponsor, CourtBranch, Member, PromoConfig } from './types';
+import { Court, OpenPlay, Tournament, Sponsor, CourtBranch, Member, PromoConfig, Booking, SocialRevenue, TeamRegistration } from './types';
 
 export const INITIAL_PROMO_CONFIG: PromoConfig = {
   heroTag: 'SPORT PICKLE BOUNCE',
@@ -267,3 +267,99 @@ export const INITIAL_MEMBERS: Member[] = [
     status: 'Đang hoạt động'
   }
 ];
+
+export const INITIAL_BOOKINGS: Booking[] = [
+  {
+    id: 'B-1001',
+    courtId: 'court-1',
+    courtName: 'Sân 1 - Sport Pickle Bounce',
+    address: '306/5 Vườn Lài, P. An Phú Đông, Quận 12, TP. Hồ Chí Minh',
+    date: '2025-11-12',
+    timeSlot: '18:00 - 20:00',
+    fullName: 'Nguyễn Minh Quân',
+    phone: '0901234567',
+    status: 'confirmed',
+    totalPrice: 300000,
+    isOpenPlay: false,
+    createdAt: new Date('2025-11-12T17:30:00Z').toISOString()
+  },
+  {
+    id: 'B-1002',
+    courtId: 'court-2',
+    courtName: 'Sân 2 - Sport Pickle Bounce',
+    address: '306/5 Vườn Lài, P. An Phú Đông, Quận 12, TP. Hồ Chí Minh',
+    date: '2025-12-14',
+    timeSlot: '16:00 - 18:00',
+    fullName: 'Trần Thị Thảo',
+    phone: '0912345678',
+    status: 'confirmed',
+    totalPrice: 300000,
+    isOpenPlay: false,
+    createdAt: new Date('2025-12-14T15:10:00Z').toISOString()
+  },
+  {
+    id: 'B-1003',
+    courtId: 'court-3',
+    courtName: 'Sân 3 - Sport Pickle Bounce',
+    address: '306/5 Vườn Lài, P. An Phú Đông, Quận 12, TP. Hồ Chí Minh',
+    date: '2026-05-04',
+    timeSlot: '08:00 - 10:00',
+    fullName: 'Lê Hoàng Hải',
+    phone: '0987654321',
+    status: 'confirmed',
+    totalPrice: 300000,
+    isOpenPlay: false,
+    createdAt: new Date('2026-05-04T07:45:00Z').toISOString()
+  }
+];
+
+export const INITIAL_SOCIAL_REVENUES: SocialRevenue[] = [
+  {
+    id: 'soc-1',
+    courtId: 'court-1',
+    courtName: 'Sân 1 - Sport Pickle Bounce',
+    date: '2025-11-15',
+    amount: 300000,
+    playersCount: 4,
+    notes: 'Khách vãng lai chơi social buổi tối',
+    createdAt: new Date('2025-11-15T18:00:00Z').toISOString()
+  },
+  {
+    id: 'soc-2',
+    courtId: 'court-2',
+    courtName: 'Sân 2 - Sport Pickle Bounce',
+    date: '2025-12-20',
+    amount: 450000,
+    playersCount: 6,
+    notes: 'Kèo social cuối năm giao lưu',
+    createdAt: new Date('2025-12-20T19:00:00Z').toISOString()
+  }
+];
+
+export const INITIAL_REGISTRATIONS: TeamRegistration[] = [
+  {
+    id: 'reg-1',
+    tournamentId: 'tour-1',
+    tournamentName: 'Bounce Cup 2026 - The League',
+    teamName: 'Sài Gòn Bouncers',
+    player1: 'Nguyễn Văn Minh',
+    player2: 'Trần Hữu Kiên',
+    phone: '0901234567',
+    email: 'sgbouncers@gmail.com',
+    status: 'confirmed',
+    createdAt: new Date('2026-06-01T10:00:00Z').toISOString()
+  },
+  {
+    id: 'reg-2',
+    tournamentId: 'tour-1',
+    tournamentName: 'Bounce Cup 2026 - The League',
+    teamName: 'Hà Nội Smashers',
+    player1: 'Đặng Quốc Huy',
+    player2: 'Bùi Việt Hoàng',
+    phone: '0987654321',
+    email: 'hn.smashers@outlook.com',
+    status: 'pending',
+    createdAt: new Date('2026-06-05T14:30:00Z').toISOString()
+  }
+];
+

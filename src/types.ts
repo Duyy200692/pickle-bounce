@@ -114,3 +114,26 @@ export interface SocialRevenue {
   notes: string;
   createdAt: string;
 }
+
+export interface PromoConfig {
+  heroTag: string;
+  heroTitle: string;
+  heroSubtitle: string;
+  heroImgUrl: string;
+  bookingBtnText: string;
+  matchBtnText: string;
+  
+  // Notice / Announcement Bar
+  showNoticeBar: boolean;
+  noticeText: string;
+  noticeBadge: string;
+  
+  // Vision Section Promo
+  visionTitle: string;
+  visionDesc1: string;
+  visionDesc2: string;
+  statMembers: string;
+  statCourts: string;
+  statTournaments: string;
+}
+

@@ -1,8 +1,20 @@
 import React from 'react';
 import { Sparkles, Trophy, Flame } from 'lucide-react';
 import { motion } from 'motion/react';
+import { PromoConfig } from '../types';
 
-export default function Vision() {
+interface VisionProps {
+  promoConfig?: PromoConfig;
+}
+
+export default function Vision({ promoConfig }: VisionProps) {
+  const visionTitle = promoConfig?.visionTitle || 'Chơi cùng nhau. Tiến bộ cùng nhau. Vươn tầm cùng nhau.';
+  const desc1 = promoConfig?.visionDesc1 || 'Pickleball Bounce được tạo ra như một sân chơi mới cho cộng đồng đam mê pickleball. Từ người mới bắt đầu cầm vợt đến các vận động viên phong trào hay chuyên nghiệp, ai cũng có chỗ đứng và lộ trình phát triển rõ ràng.';
+  const desc2 = promoConfig?.visionDesc2 || 'Chúng tôi kết nối hệ thống giải đấu kịch tính, các hoạt động truyền thông sôi nổi và mạng lưới sân bãi đối tác rộng lớn thành một hệ sinh thái chung, mang lại sự tiện nghi và hứng khởi tuyệt đối cho người chơi.';
+  const statMembers = promoConfig?.statMembers || '12k+';
+  const statCourts = promoConfig?.statCourts || '50+';
+  const statTournaments = promoConfig?.statTournaments || '180+';
+
   return (
     <section className="py-20 bg-white overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -20,34 +32,28 @@ export default function Vision() {
             </div>
 
             {/* Title */}
-            <h2 className="font-display font-black text-3xl sm:text-4xl md:text-5xl text-brand-dark tracking-tight leading-none mb-6">
-              Chơi cùng nhau. <br className="hidden sm:inline" />
-              Tiến bộ cùng nhau. <br className="hidden sm:inline" />
-              Vươn tầm cùng nhau.
+            <h2 className="font-display font-black text-3xl sm:text-4xl md:text-5xl text-brand-dark tracking-tight leading-tight mb-6 whitespace-pre-line">
+              {visionTitle}
             </h2>
 
             {/* Description */}
             <div className="space-y-4 font-sans text-base text-brand-gray leading-relaxed max-w-xl">
-              <p>
-                <strong>Pickleball Bounce</strong> được tạo ra như một sân chơi mới cho cộng đồng đam mê pickleball. Từ người mới bắt đầu cầm vợt đến các vận động viên phong trào hay chuyên nghiệp, ai cũng có chỗ đứng và lộ trình phát triển rõ ràng.
-              </p>
-              <p>
-                Chúng tôi kết nối hệ thống giải đấu kịch tính, các hoạt động truyền thông sôi nổi và mạng lưới sân bãi đối tác rộng lớn thành một hệ sinh thái chung, mang lại sự tiện nghi và hứng khởi tuyệt đối cho người chơi.
-              </p>
+              <p>{desc1}</p>
+              {desc2 && <p>{desc2}</p>}
             </div>
 
             {/* Micro Stats inside section */}
             <div className="grid grid-cols-3 gap-6 mt-10 pt-8 border-t border-brand-border/40 max-w-lg">
               <div>
-                <span className="block font-display font-black text-3xl text-brand-red">12k+</span>
+                <span className="block font-display font-black text-3xl text-brand-red">{statMembers}</span>
                 <span className="block text-xs font-semibold text-brand-gray mt-1 uppercase tracking-wider">Hội viên active</span>
               </div>
               <div>
-                <span className="block font-display font-black text-3xl text-brand-red">50+</span>
+                <span className="block font-display font-black text-3xl text-brand-red">{statCourts}</span>
                 <span className="block text-xs font-semibold text-brand-gray mt-1 uppercase tracking-wider">Sân đối tác</span>
               </div>
               <div>
-                <span className="block font-display font-black text-3xl text-brand-red">180+</span>
+                <span className="block font-display font-black text-3xl text-brand-red">{statTournaments}</span>
                 <span className="block text-xs font-semibold text-brand-gray mt-1 uppercase tracking-wider">Giải đấu lớn nhỏ</span>
               </div>
             </div>
@@ -61,6 +67,7 @@ export default function Vision() {
                 src="https://images.unsplash.com/photo-1541252260730-0412e8e2108e?auto=format&fit=crop&q=80&w=800" 
                 alt="Pickleball active players smiling together" 
                 className="w-full h-[380px] sm:h-[450px] object-cover object-center transform group-hover:scale-105 transition-transform duration-700"
+                referrerPolicy="no-referrer"
               />
               {/* Image Vignette */}
               <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/40 to-transparent"></div>
@@ -87,3 +94,4 @@ export default function Vision() {
     </section>
   );
 }
+

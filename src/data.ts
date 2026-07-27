@@ -1,4 +1,24 @@
-import { Court, OpenPlay, Tournament, Sponsor, CourtBranch, Member } from './types';
+import { Court, OpenPlay, Tournament, Sponsor, CourtBranch, Member, PromoConfig } from './types';
+
+export const INITIAL_PROMO_CONFIG: PromoConfig = {
+  heroTag: 'SPORT PICKLE BOUNCE',
+  heroTitle: 'Khám phá tính năng',
+  heroSubtitle: 'Tổ chức buổi chơi chuyên nghiệp. Miễn phí 100%. Đặt sân nhanh chóng, tìm bạn cùng trình, tổ chức giải đấu bùng nổ.',
+  heroImgUrl: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&q=80&w=1600',
+  bookingBtnText: 'Đặt Sân Khám Phá',
+  matchBtnText: 'Ghép Trận Giao Lưu',
+  
+  showNoticeBar: true,
+  noticeBadge: '🔥 ƯU ĐÃI ĐẶC BIỆT',
+  noticeText: 'Giảm 20% phí thuê sân giờ vàng từ 08:00 - 16:00 các ngày trong tuần | Đặt ngay hôm nay!',
+
+  visionTitle: 'Chơi cùng nhau. Tiến bộ cùng nhau. Vươn tầm cùng nhau.',
+  visionDesc1: 'Pickleball Bounce được tạo ra như một sân chơi mới cho cộng đồng đam mê pickleball. Từ người mới bắt đầu cầm vợt đến các vận động viên phong trào hay chuyên nghiệp, ai cũng có chỗ đứng và lộ trình phát triển rõ ràng.',
+  visionDesc2: 'Chúng tôi kết nối hệ thống giải đấu kịch tính, các hoạt động truyền thông sôi nổi và mạng lưới sân bãi đối tác rộng lớn thành một hệ sinh thái chung, mang lại sự tiện nghi và hứng khởi tuyệt đối cho người chơi.',
+  statMembers: '12k+',
+  statCourts: '50+',
+  statTournaments: '180+'
+};
 
 export const PICKLE_BOUNCE_BRANCH: CourtBranch = {
   id: 'branch-pb-q12',

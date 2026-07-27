@@ -18,8 +18,8 @@ import MyScheduleModal from './components/MyScheduleModal';
 import AdminPanel from './components/AdminPanel';
 
 // Static Data and Types
-import { INITIAL_COURTS, INITIAL_OPEN_PLAYS, INITIAL_TOURNAMENTS, SPONSORS, PICKLE_BOUNCE_BRANCH, INITIAL_MEMBERS } from './data';
-import { Booking, OpenPlay, Tournament, TeamRegistration, Court, SocialRevenue, CourtBranch, Member } from './types';
+import { INITIAL_COURTS, INITIAL_OPEN_PLAYS, INITIAL_TOURNAMENTS, SPONSORS, PICKLE_BOUNCE_BRANCH, INITIAL_MEMBERS, INITIAL_PROMO_CONFIG } from './data';
+import { Booking, OpenPlay, Tournament, TeamRegistration, Court, SocialRevenue, CourtBranch, Member, Sponsor, PromoConfig } from './types';
 
 export default function App() {
   // Modal visibility states
@@ -28,6 +28,40 @@ export default function App() {
   const [isMyScheduleOpen, setIsMyScheduleOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
+
+  // Promo / Hero Landing Page Configuration State
+  const [promoConfig, setPromoConfig] = useState<PromoConfig>(() => {
+    const saved = localStorage.getItem('pickle_promo_config');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Error parsing saved promo config', e);
+      }
+    }
+    return INITIAL_PROMO_CONFIG;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('pickle_promo_config', JSON.stringify(promoConfig));
+  }, [promoConfig]);
+
+  // Sponsors / Strategic Partners State
+  const [sponsors, setSponsors] = useState<Sponsor[]>(() => {
+    const saved = localStorage.getItem('pickle_sponsors');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Error parsing saved sponsors', e);
+      }
+    }
+    return SPONSORS;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('pickle_sponsors', JSON.stringify(sponsors));
+  }, [sponsors]);
 
   // Branch Info State
   const [branch, setBranch] = useState<CourtBranch>(() => {
@@ -498,13 +532,14 @@ export default function App() {
         <Hero 
           onOpenBooking={() => setIsBookingOpen(true)}
           onOpenMatchLobby={() => setIsMatchLobbyOpen(true)}
+          promoConfig={promoConfig}
         />
 
         {/* 2. Sponsors/Partners Marquee Row */}
-        <Sponsors sponsors={SPONSORS} />
+        <Sponsors sponsors={sponsors} />
 
         {/* 3. Community Vision Section */}
-        <Vision />
+        <Vision promoConfig={promoConfig} />
 
         {/* 4. Ecosystem Steps (01 to 04) */}
         <Ecosystem />
@@ -592,6 +627,10 @@ export default function App() {
         onSaveSocialRevenues={setSocialRevenues}
         members={members}
         onSaveMembers={setMembers}
+        sponsors={sponsors}
+        onSaveSponsors={setSponsors}
+        promoConfig={promoConfig}
+        onSavePromoConfig={setPromoConfig}
       />
 
     </div>

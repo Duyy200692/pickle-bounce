@@ -4,9 +4,10 @@ import {
   Trash2, Edit, Check, Lock, Plus, LogOut, Clock, Sparkles, 
   ShieldCheck, RefreshCw, FileText, CheckCircle,
   DollarSign, TrendingUp, BarChart3, PieChart, PlusCircle, CalendarDays,
-  Copy, ExternalLink, Database, AlertTriangle, Search, UserCheck, UserPlus, Phone, Mail, Award, Filter
+  Copy, ExternalLink, Database, AlertTriangle, Search, UserCheck, UserPlus, Phone, Mail, Award, Filter, RotateCcw, Megaphone, Image as ImageIcon
 } from 'lucide-react';
-import { Court, Booking, OpenPlay, Tournament, TeamRegistration, SocialRevenue, CourtBranch, Member } from '../types';
+import { Court, Booking, OpenPlay, Tournament, TeamRegistration, SocialRevenue, CourtBranch, Member, Sponsor, PromoConfig } from '../types';
+import { SPONSORS as DEFAULT_SPONSORS, INITIAL_PROMO_CONFIG } from '../data';
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -27,9 +28,13 @@ interface AdminPanelProps {
   onSaveSocialRevenues: (socials: SocialRevenue[]) => void;
   members?: Member[];
   onSaveMembers?: (members: Member[]) => void;
+  sponsors?: Sponsor[];
+  onSaveSponsors?: (sponsors: Sponsor[]) => void;
+  promoConfig?: PromoConfig;
+  onSavePromoConfig?: (config: PromoConfig) => void;
 }
 
-type AdminTab = 'dashboard' | 'courts' | 'members' | 'bookings' | 'openplays' | 'tournaments' | 'registrations' | 'revenue' | 'alobo_sync';
+type AdminTab = 'dashboard' | 'courts' | 'members' | 'bookings' | 'openplays' | 'tournaments' | 'registrations' | 'revenue' | 'alobo_sync' | 'landing_sponsors' | 'landing_promo';
 
 export default function AdminPanel({
   isOpen,
@@ -49,12 +54,97 @@ export default function AdminPanel({
   socialRevenues,
   onSaveSocialRevenues,
   members = [],
-  onSaveMembers
+  onSaveMembers,
+  sponsors = [],
+  onSaveSponsors,
+  promoConfig = INITIAL_PROMO_CONFIG,
+  onSavePromoConfig
 }: AdminPanelProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [authError, setAuthError] = useState('');
+
+  // Promo Config local form state
+  const [promoForm, setPromoForm] = useState<PromoConfig>(promoConfig);
+  const [promoSavedNotice, setPromoSavedNotice] = useState(false);
+
+  // Sync promoForm if parent promoConfig changes
+  React.useEffect(() => {
+    setPromoForm(promoConfig);
+  }, [promoConfig]);
+
+  const handleSavePromoForm = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (onSavePromoConfig) {
+      onSavePromoConfig(promoForm);
+      setPromoSavedNotice(true);
+      setTimeout(() => setPromoSavedNotice(false), 3000);
+    }
+  };
+
+  const handleResetPromoForm = () => {
+    if (window.confirm('Bạn có chắc chắn muốn khôi phục nội dung quảng bá về mặc định ban đầu?')) {
+      setPromoForm(INITIAL_PROMO_CONFIG);
+      if (onSavePromoConfig) {
+        onSavePromoConfig(INITIAL_PROMO_CONFIG);
+      }
+    }
+  };
+
+  // Sponsor management state
+  const [newSponsorName, setNewSponsorName] = useState('');
+  const [newSponsorLogo, setNewSponsorLogo] = useState('');
+  const [editingSponsorId, setEditingSponsorId] = useState<string | null>(null);
+  const [editingSponsorName, setEditingSponsorName] = useState('');
+  const [editingSponsorLogo, setEditingSponsorLogo] = useState('');
+
+  const handleAddSponsor = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSponsorName.trim()) return;
+    const newSponsor: Sponsor = {
+      id: 'sp-' + Date.now(),
+      name: newSponsorName.trim(),
+      logo: newSponsorLogo.trim() || newSponsorName.trim().toUpperCase()
+    };
+    const updated = [...sponsors, newSponsor];
+    if (onSaveSponsors) onSaveSponsors(updated);
+    setNewSponsorName('');
+    setNewSponsorLogo('');
+  };
+
+  const handleDeleteSponsor = (id: string) => {
+    const updated = sponsors.filter(s => s.id !== id);
+    if (onSaveSponsors) onSaveSponsors(updated);
+  };
+
+  const handleStartEditSponsor = (sponsor: Sponsor) => {
+    setEditingSponsorId(sponsor.id);
+    setEditingSponsorName(sponsor.name);
+    setEditingSponsorLogo(sponsor.logo);
+  };
+
+  const handleSaveEditSponsor = (id: string) => {
+    if (!editingSponsorName.trim()) return;
+    const updated = sponsors.map(s => {
+      if (s.id === id) {
+        return {
+          ...s,
+          name: editingSponsorName.trim(),
+          logo: editingSponsorLogo.trim() || editingSponsorName.trim().toUpperCase()
+        };
+      }
+      return s;
+    });
+    if (onSaveSponsors) onSaveSponsors(updated);
+    setEditingSponsorId(null);
+  };
+
+  const handleResetSponsorsToDefault = () => {
+    if (window.confirm('Bạn có chắc chắn muốn khôi phục danh sách nhà đồng hành về mặc định (12 thương hiệu)?')) {
+      if (onSaveSponsors) onSaveSponsors(DEFAULT_SPONSORS);
+    }
+  };
 
   // Editing structures
   const [editingCourtId, setEditingCourtId] = useState<string | null>(null);
@@ -1021,6 +1111,34 @@ export default function AdminPanel({
                 <span>Đồng Bộ Alobo & Sheets</span>
                 <span className="bg-[#4285F4] text-white text-[9px] px-1.5 py-0.5 rounded ml-auto font-black font-sans uppercase">
                   AUTO
+                </span>
+              </button>
+
+              <button 
+                onClick={() => { setActiveTab('landing_sponsors'); setEditingCourtId(null); setEditingTournamentId(null); setEditingOpenPlayId(null); }}
+                className={`w-full text-left px-3 py-2.5 rounded-xl font-sans font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
+                  activeTab === 'landing_sponsors' 
+                    ? 'bg-brand-red text-white shadow-sm' 
+                    : 'text-brand-dark/80 hover:bg-white hover:text-brand-red'
+                }`}
+              >
+                <Award className="w-4 h-4 flex-shrink-0" />
+                <span>Đồng Hành Chiến Lược</span>
+                <span className="bg-brand-dark/15 text-[10px] px-1.5 py-0.5 rounded ml-auto">{sponsors.length}</span>
+              </button>
+
+              <button 
+                onClick={() => { setActiveTab('landing_promo'); setEditingCourtId(null); setEditingTournamentId(null); setEditingOpenPlayId(null); }}
+                className={`w-full text-left px-3 py-2.5 rounded-xl font-sans font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
+                  activeTab === 'landing_promo' 
+                    ? 'bg-brand-red text-white shadow-sm' 
+                    : 'text-brand-dark/80 hover:bg-white hover:text-brand-red'
+                }`}
+              >
+                <Megaphone className="w-4 h-4 flex-shrink-0" />
+                <span>Quảng Bá Landing Page</span>
+                <span className="bg-amber-500 text-white text-[9px] px-1.5 py-0.5 rounded ml-auto font-black font-sans uppercase">
+                  PROMO
                 </span>
               </button>
             </div>
@@ -3562,6 +3680,467 @@ function fillZero(num) {
                     </div>
                   </div>
 
+                </div>
+              )}
+
+              {/* Landing Page Sponsors Management Tab */}
+              {activeTab === 'landing_sponsors' && (
+                <div className="space-y-6 text-left">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="font-display font-black text-xl text-brand-dark uppercase tracking-tight">
+                        Quản Lý Nhà Đồng Hành Chiến Lược (Landing Page)
+                      </h3>
+                      <p className="font-sans text-xs text-brand-gray mt-1">
+                        Thêm, chỉnh sửa hoặc xóa logo các thương hiệu đối tác đồng hành xuất hiện ở trang chủ.
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={handleResetSponsorsToDefault}
+                      className="px-3.5 py-2 bg-brand-light-gray hover:bg-brand-border/40 text-brand-dark text-xs font-bold rounded-xl border border-brand-border/40 flex items-center gap-1.5 transition-all self-start sm:self-auto cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-brand-gray" />
+                      <span>Khôi Phục Mặc Định</span>
+                    </button>
+                  </div>
+
+                  {/* Form Thêm Đối Tác Mới */}
+                  <div className="bg-brand-light-gray p-5 rounded-2xl border border-brand-border/40 space-y-4">
+                    <h4 className="font-display font-bold text-sm text-brand-dark flex items-center gap-2">
+                      <PlusCircle className="w-4 h-4 text-brand-red" />
+                      <span>Thêm Thương Hiệu / Nhà Tài Trợ Mới</span>
+                    </h4>
+
+                    <form onSubmit={handleAddSponsor} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                      <div>
+                        <label className="block text-[11px] font-bold text-brand-gray uppercase tracking-wider mb-1">
+                          Tên Thương Hiệu / Nhà Tài Trợ *
+                        </label>
+                        <input 
+                          type="text"
+                          required
+                          placeholder="Ví dụ: Joola, Nike, Red Bull..."
+                          value={newSponsorName}
+                          onChange={(e) => setNewSponsorName(e.target.value)}
+                          className="w-full bg-white border border-brand-border/50 rounded-xl px-3 py-2 text-xs text-brand-dark focus:outline-none focus:border-brand-red font-sans"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-brand-gray uppercase tracking-wider mb-1">
+                          Chữ Hiển Thị Hoặc Link Image Logo
+                        </label>
+                        <input 
+                          type="text"
+                          placeholder="Ví dụ: JOOLA hoặc https://.../logo.png"
+                          value={newSponsorLogo}
+                          onChange={(e) => setNewSponsorLogo(e.target.value)}
+                          className="w-full bg-white border border-brand-border/50 rounded-xl px-3 py-2 text-xs text-brand-dark focus:outline-none focus:border-brand-red font-mono"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="bg-brand-red hover:bg-brand-red/90 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Thêm Vào Trang Chủ</span>
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* List of current sponsors */}
+                  <div className="space-y-3">
+                    <h4 className="font-display font-bold text-xs text-brand-gray uppercase tracking-widest">
+                      Danh Sách Hiện Tại ({sponsors.length} Thương Hiệu)
+                    </h4>
+
+                    {sponsors.length === 0 ? (
+                      <div className="bg-white border border-brand-border/40 rounded-2xl p-8 text-center text-xs text-brand-gray">
+                        Chưa có thương hiệu đồng hành nào. Hãy nhập tên và nhấn &quot;Thêm Vào Trang Chủ&quot; ở trên.
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {sponsors.map((sponsor) => {
+                          const isEditing = editingSponsorId === sponsor.id;
+                          const isImageUrl = sponsor.logo && (
+                            sponsor.logo.startsWith('http://') || 
+                            sponsor.logo.startsWith('https://') || 
+                            sponsor.logo.startsWith('data:') ||
+                            sponsor.logo.includes('/')
+                          );
+
+                          return (
+                            <div 
+                              key={sponsor.id} 
+                              className="bg-white border border-brand-border/50 rounded-2xl p-4 shadow-sm space-y-3 flex flex-col justify-between hover:border-brand-red/30 transition-all"
+                            >
+                              {isEditing ? (
+                                <div className="space-y-2">
+                                  <div>
+                                    <label className="text-[10px] text-brand-gray font-bold uppercase">Tên thương hiệu</label>
+                                    <input 
+                                      type="text"
+                                      value={editingSponsorName}
+                                      onChange={(e) => setEditingSponsorName(e.target.value)}
+                                      className="w-full border border-brand-border rounded-lg px-2 py-1 text-xs font-bold text-brand-dark"
+                                      placeholder="Tên thương hiệu"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-[10px] text-brand-gray font-bold uppercase">Logo text / URL</label>
+                                    <input 
+                                      type="text"
+                                      value={editingSponsorLogo}
+                                      onChange={(e) => setEditingSponsorLogo(e.target.value)}
+                                      className="w-full border border-brand-border rounded-lg px-2 py-1 text-xs font-mono text-brand-dark"
+                                      placeholder="Logo text / Image URL"
+                                    />
+                                  </div>
+                                  <div className="flex gap-2 pt-1">
+                                    <button
+                                      onClick={() => handleSaveEditSponsor(sponsor.id)}
+                                      className="flex-1 bg-green-600 text-white text-[11px] font-bold py-1.5 rounded-lg hover:bg-green-700 transition-colors cursor-pointer"
+                                    >
+                                      Lưu
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingSponsorId(null)}
+                                      className="flex-1 bg-gray-200 text-gray-700 text-[11px] font-bold py-1.5 rounded-lg hover:bg-gray-300 transition-colors cursor-pointer"
+                                    >
+                                      Hủy
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="flex items-center gap-3">
+                                    {/* Badge preview */}
+                                    <div className="w-16 h-12 bg-brand-light-gray rounded-xl border border-brand-border/40 flex items-center justify-center p-2 flex-shrink-0">
+                                      {isImageUrl ? (
+                                        <img 
+                                          src={sponsor.logo} 
+                                          alt={sponsor.name} 
+                                          className="max-h-8 max-w-full object-contain"
+                                          referrerPolicy="no-referrer"
+                                        />
+                                      ) : (
+                                        <span className="font-display font-black text-[10px] tracking-wider text-brand-dark/70 truncate">
+                                          {sponsor.logo}
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    <div className="overflow-hidden">
+                                      <h5 className="font-bold text-sm text-brand-dark truncate">{sponsor.name}</h5>
+                                      <p className="text-[10px] font-mono text-brand-gray truncate">
+                                        {isImageUrl ? 'Đường dẫn ảnh' : `Mã logo: ${sponsor.logo}`}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-brand-border/30">
+                                    <button
+                                      onClick={() => handleStartEditSponsor(sponsor)}
+                                      className="p-1.5 rounded-lg text-brand-gray hover:text-brand-dark hover:bg-brand-light-gray transition-all cursor-pointer"
+                                      title="Chỉnh sửa logo"
+                                    >
+                                      <Edit className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteSponsor(sponsor.id)}
+                                      className="p-1.5 rounded-lg text-brand-gray hover:text-brand-red hover:bg-red-50 transition-all cursor-pointer"
+                                      title="Xóa nhà đồng hành"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 10. Landing Page Promo Content Management Tab */}
+              {activeTab === 'landing_promo' && (
+                <div className="space-y-6 text-left">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="font-display font-black text-xl text-brand-dark uppercase tracking-tight flex items-center gap-2">
+                        <Megaphone className="w-5 h-5 text-brand-red" />
+                        <span>Quản Lý Thông Tin Quảng Báo & Banner (Landing Page)</span>
+                      </h3>
+                      <p className="font-sans text-xs text-brand-gray mt-1">
+                        Thay đổi thông điệp banner hero, thanh thông báo ưu đãi nổi bật và các con số ấn tượng hiển thị ngoài trang chủ.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleResetPromoForm}
+                        className="px-3.5 py-2 bg-brand-light-gray hover:bg-brand-border/40 text-brand-dark text-xs font-bold rounded-xl border border-brand-border/40 flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-brand-gray" />
+                        <span>Mặc Định</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {promoSavedNotice && (
+                    <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3.5 rounded-2xl text-xs font-bold flex items-center gap-2 shadow-sm animate-fade-in">
+                      <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                      <span>Đã cập nhật thông tin quảng bá trang chủ thành công! Các thay đổi đã hiển thị ngay lập tức.</span>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleSavePromoForm} className="space-y-6">
+                    {/* Block 1: Top Announcement Bar */}
+                    <div className="bg-white border border-brand-border/60 rounded-2xl p-5 shadow-sm space-y-4">
+                      <div className="flex items-center justify-between border-b border-brand-border/30 pb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 bg-brand-red rounded-full"></span>
+                          <h4 className="font-display font-bold text-sm text-brand-dark uppercase tracking-wide">
+                            1. Thanh Thông Báo / Ưu Đãi Nổi Bật (Notice Bar)
+                          </h4>
+                        </div>
+
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <span className="text-xs font-bold text-brand-gray">
+                            {promoForm.showNoticeBar ? 'Đang bật' : 'Tắt'}
+                          </span>
+                          <input 
+                            type="checkbox"
+                            checked={promoForm.showNoticeBar}
+                            onChange={(e) => setPromoForm({ ...promoForm, showNoticeBar: e.target.checked })}
+                            className="w-4 h-4 accent-brand-red cursor-pointer rounded"
+                          />
+                        </label>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-[11px] font-bold text-brand-gray uppercase tracking-wider mb-1">
+                            Nhãn Ưu Đãi / Badge
+                          </label>
+                          <input 
+                            type="text"
+                            value={promoForm.noticeBadge}
+                            onChange={(e) => setPromoForm({ ...promoForm, noticeBadge: e.target.value })}
+                            placeholder="🔥 KHUYẾN MÃI"
+                            className="w-full bg-brand-light-gray border border-brand-border/50 rounded-xl px-3 py-2 text-xs font-bold text-brand-dark focus:outline-none focus:border-brand-red"
+                          />
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <label className="block text-[11px] font-bold text-brand-gray uppercase tracking-wider mb-1">
+                            Nội Dung Thông Báo Ưu Đãi
+                          </label>
+                          <input 
+                            type="text"
+                            value={promoForm.noticeText}
+                            onChange={(e) => setPromoForm({ ...promoForm, noticeText: e.target.value })}
+                            placeholder="Giảm 20% phí thuê sân giờ vàng từ 08:00 - 16:00..."
+                            className="w-full bg-brand-light-gray border border-brand-border/50 rounded-xl px-3 py-2 text-xs font-medium text-brand-dark focus:outline-none focus:border-brand-red"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Block 2: Hero Banner Content */}
+                    <div className="bg-white border border-brand-border/60 rounded-2xl p-5 shadow-sm space-y-4">
+                      <div className="flex items-center gap-2 border-b border-brand-border/30 pb-3">
+                        <span className="w-2.5 h-2.5 bg-brand-blue rounded-full"></span>
+                        <h4 className="font-display font-bold text-sm text-brand-dark uppercase tracking-wide">
+                          2. Khung Quảng Báo Chính (Hero Banner)
+                        </h4>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[11px] font-bold text-brand-gray uppercase tracking-wider mb-1">
+                            Tag / Nhãn Nhỏ
+                          </label>
+                          <input 
+                            type="text"
+                            value={promoForm.heroTag}
+                            onChange={(e) => setPromoForm({ ...promoForm, heroTag: e.target.value })}
+                            className="w-full bg-brand-light-gray border border-brand-border/50 rounded-xl px-3 py-2 text-xs font-bold text-brand-dark focus:outline-none focus:border-brand-red"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-brand-gray uppercase tracking-wider mb-1">
+                            Tiêu Đề Chính (Headline)
+                          </label>
+                          <input 
+                            type="text"
+                            value={promoForm.heroTitle}
+                            onChange={(e) => setPromoForm({ ...promoForm, heroTitle: e.target.value })}
+                            className="w-full bg-brand-light-gray border border-brand-border/50 rounded-xl px-3 py-2 text-xs font-bold text-brand-dark focus:outline-none focus:border-brand-red"
+                          />
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <label className="block text-[11px] font-bold text-brand-gray uppercase tracking-wider mb-1">
+                            Mô Tả Quảng Báo Phụ (Subtitle)
+                          </label>
+                          <textarea 
+                            rows={2}
+                            value={promoForm.heroSubtitle}
+                            onChange={(e) => setPromoForm({ ...promoForm, heroSubtitle: e.target.value })}
+                            className="w-full bg-brand-light-gray border border-brand-border/50 rounded-xl p-3 text-xs font-medium text-brand-dark focus:outline-none focus:border-brand-red leading-relaxed"
+                          />
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <label className="block text-[11px] font-bold text-brand-gray uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                            <ImageIcon className="w-3.5 h-3.5 text-brand-gray" />
+                            <span>Đường Dẫn Ảnh Nền Banner Hero (URL)</span>
+                          </label>
+                          <input 
+                            type="text"
+                            value={promoForm.heroImgUrl}
+                            onChange={(e) => setPromoForm({ ...promoForm, heroImgUrl: e.target.value })}
+                            placeholder="https://images.unsplash.com/..."
+                            className="w-full bg-brand-light-gray border border-brand-border/50 rounded-xl px-3 py-2 text-xs font-mono text-brand-dark focus:outline-none focus:border-brand-red"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-brand-gray uppercase tracking-wider mb-1">
+                            Tên Nút 1 (Đặt Sân)
+                          </label>
+                          <input 
+                            type="text"
+                            value={promoForm.bookingBtnText}
+                            onChange={(e) => setPromoForm({ ...promoForm, bookingBtnText: e.target.value })}
+                            className="w-full bg-brand-light-gray border border-brand-border/50 rounded-xl px-3 py-2 text-xs font-bold text-brand-dark focus:outline-none focus:border-brand-red"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-brand-gray uppercase tracking-wider mb-1">
+                            Tên Nút 2 (Ghép Trận)
+                          </label>
+                          <input 
+                            type="text"
+                            value={promoForm.matchBtnText}
+                            onChange={(e) => setPromoForm({ ...promoForm, matchBtnText: e.target.value })}
+                            className="w-full bg-brand-light-gray border border-brand-border/50 rounded-xl px-3 py-2 text-xs font-bold text-brand-dark focus:outline-none focus:border-brand-red"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Block 3: Vision & Stats */}
+                    <div className="bg-white border border-brand-border/60 rounded-2xl p-5 shadow-sm space-y-4">
+                      <div className="flex items-center gap-2 border-b border-brand-border/30 pb-3">
+                        <span className="w-2.5 h-2.5 bg-amber-500 rounded-full"></span>
+                        <h4 className="font-display font-bold text-sm text-brand-dark uppercase tracking-wide">
+                          3. Thông Tin Tầm Nhìn & Con Số Ấn Tượng
+                        </h4>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-[11px] font-bold text-brand-gray uppercase tracking-wider mb-1">
+                            Tiêu Đề Tầm Nhìn Cộng Đồng
+                          </label>
+                          <input 
+                            type="text"
+                            value={promoForm.visionTitle}
+                            onChange={(e) => setPromoForm({ ...promoForm, visionTitle: e.target.value })}
+                            className="w-full bg-brand-light-gray border border-brand-border/50 rounded-xl px-3 py-2 text-xs font-bold text-brand-dark focus:outline-none focus:border-brand-red"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[11px] font-bold text-brand-gray uppercase tracking-wider mb-1">
+                              Đoạn Giới Thiệu 1
+                            </label>
+                            <textarea 
+                              rows={3}
+                              value={promoForm.visionDesc1}
+                              onChange={(e) => setPromoForm({ ...promoForm, visionDesc1: e.target.value })}
+                              className="w-full bg-brand-light-gray border border-brand-border/50 rounded-xl p-3 text-xs font-medium text-brand-dark focus:outline-none focus:border-brand-red leading-relaxed"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold text-brand-gray uppercase tracking-wider mb-1">
+                              Đoạn Giới Thiệu 2
+                            </label>
+                            <textarea 
+                              rows={3}
+                              value={promoForm.visionDesc2}
+                              onChange={(e) => setPromoForm({ ...promoForm, visionDesc2: e.target.value })}
+                              className="w-full bg-brand-light-gray border border-brand-border/50 rounded-xl p-3 text-xs font-medium text-brand-dark focus:outline-none focus:border-brand-red leading-relaxed"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-3 pt-2">
+                          <div>
+                            <label className="block text-[11px] font-bold text-brand-gray uppercase tracking-wider mb-1">
+                              Số Hội Viên
+                            </label>
+                            <input 
+                              type="text"
+                              value={promoForm.statMembers}
+                              onChange={(e) => setPromoForm({ ...promoForm, statMembers: e.target.value })}
+                              placeholder="12k+"
+                              className="w-full bg-brand-light-gray border border-brand-border/50 rounded-xl px-3 py-2 text-xs font-black text-brand-red focus:outline-none focus:border-brand-red"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold text-brand-gray uppercase tracking-wider mb-1">
+                              Số Sân Đối Tác
+                            </label>
+                            <input 
+                              type="text"
+                              value={promoForm.statCourts}
+                              onChange={(e) => setPromoForm({ ...promoForm, statCourts: e.target.value })}
+                              placeholder="50+"
+                              className="w-full bg-brand-light-gray border border-brand-border/50 rounded-xl px-3 py-2 text-xs font-black text-brand-red focus:outline-none focus:border-brand-red"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold text-brand-gray uppercase tracking-wider mb-1">
+                              Số Giải Đấu
+                            </label>
+                            <input 
+                              type="text"
+                              value={promoForm.statTournaments}
+                              onChange={(e) => setPromoForm({ ...promoForm, statTournaments: e.target.value })}
+                              placeholder="180+"
+                              className="w-full bg-brand-light-gray border border-brand-border/50 rounded-xl px-3 py-2 text-xs font-black text-brand-red focus:outline-none focus:border-brand-red"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Submit Bar */}
+                    <div className="pt-2 flex justify-end">
+                      <button
+                        type="submit"
+                        className="bg-brand-red hover:bg-brand-red/90 text-white font-bold text-xs py-3 px-6 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Check className="w-4 h-4" />
+                        <span>Lưu Cập Nhật Quảng Báo Trang Chủ</span>
+                      </button>
+                    </div>
+                  </form>
                 </div>
               )}
 

@@ -27,18 +27,35 @@ export default function Sponsors({ sponsors }: SponsorsProps) {
 
         {/* Brand/Sponsor Grid - clean, minimalist grey badges, highlight red on hover */}
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-4 items-center">
-          {sponsors.map((sponsor) => (
-            <div 
-              key={sponsor.id}
-              className="bg-white px-3 py-4 rounded-xl border border-brand-border/40 shadow-sm hover:border-brand-red/30 hover:shadow-md transition-all duration-300 flex flex-col items-center justify-center cursor-pointer group"
-            >
-              {/* Mockup logo placeholder styled with elegant branding */}
-              <div className="text-[11px] font-display font-black tracking-widest text-brand-dark/40 group-hover:text-brand-red transition-colors duration-300">
-                {sponsor.logo}
+          {sponsors.map((sponsor) => {
+            const isImageUrl = sponsor.logo && (
+              sponsor.logo.startsWith('http://') || 
+              sponsor.logo.startsWith('https://') || 
+              sponsor.logo.startsWith('data:') ||
+              sponsor.logo.includes('/')
+            );
+            return (
+              <div 
+                key={sponsor.id}
+                className="bg-white px-3 py-4 rounded-xl border border-brand-border/40 shadow-sm hover:border-brand-red/30 hover:shadow-md transition-all duration-300 flex flex-col items-center justify-center cursor-pointer group h-16"
+                title={sponsor.name}
+              >
+                {isImageUrl ? (
+                  <img 
+                    src={sponsor.logo} 
+                    alt={sponsor.name} 
+                    className="max-h-8 max-w-full object-contain grayscale group-hover:grayscale-0 transition-all duration-300"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="text-[11px] font-display font-black tracking-widest text-brand-dark/40 group-hover:text-brand-red transition-colors duration-300 truncate max-w-full text-center">
+                    {sponsor.logo || sponsor.name}
+                  </div>
+                )}
+                <div className="w-1.5 h-1.5 rounded-full bg-brand-dark/10 group-hover:bg-brand-red mt-1 scale-0 group-hover:scale-100 transition-transform duration-300"></div>
               </div>
-              <div className="w-1.5 h-1.5 rounded-full bg-brand-dark/10 group-hover:bg-brand-red mt-1.5 scale-0 group-hover:scale-100 transition-transform duration-300"></div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
       </div>

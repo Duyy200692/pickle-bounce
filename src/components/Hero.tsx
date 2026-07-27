@@ -1,24 +1,57 @@
 import React from 'react';
-import { Play, Calendar, Users, Trophy } from 'lucide-react';
+import { Play, Calendar, Users, Trophy, Megaphone } from 'lucide-react';
 import { motion } from 'motion/react';
+import { PromoConfig } from '../types';
 
 interface HeroProps {
   onOpenBooking: () => void;
   onOpenMatchLobby: () => void;
+  promoConfig?: PromoConfig;
 }
 
-export default function Hero({ onOpenBooking, onOpenMatchLobby }: HeroProps) {
+export default function Hero({ onOpenBooking, onOpenMatchLobby, promoConfig }: HeroProps) {
+  const tag = promoConfig?.heroTag || 'SPORT PICKLE BOUNCE';
+  const title = promoConfig?.heroTitle || 'Khám phá tính năng';
+  const subtitle = promoConfig?.heroSubtitle || 'Tổ chức buổi chơi chuyên nghiệp. Miễn phí 100%. Đặt sân nhanh chóng, tìm bạn cùng trình, tổ chức giải đấu bùng nổ.';
+  const bgImg = promoConfig?.heroImgUrl || 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&q=80&w=1600';
+  const bookingBtn = promoConfig?.bookingBtnText || 'Đặt Sân Khám Phá';
+  const matchBtn = promoConfig?.matchBtnText || 'Ghép Trận Giao Lưu';
+
   return (
-    <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-12">
-      {/* Tall rounded card for hero section - Match the mockup image's exact structure */}
+    <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-12 space-y-4">
+      {/* Top Promotional Notice Bar */}
+      {promoConfig?.showNoticeBar && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-brand-red via-brand-red/90 to-amber-600 text-white rounded-2xl p-3 px-4 shadow-lg border border-red-400/30 flex flex-col sm:flex-row items-center justify-between gap-3"
+        >
+          <div className="flex items-center gap-2.5 text-xs sm:text-sm font-bold text-center sm:text-left">
+            <span className="bg-white/20 text-white text-[10px] font-black uppercase px-2.5 py-1 rounded-full flex items-center gap-1.5 flex-shrink-0">
+              <Megaphone className="w-3.5 h-3.5 animate-bounce" />
+              {promoConfig.noticeBadge || '🔥 KHUYẾN MÃI'}
+            </span>
+            <span>{promoConfig.noticeText}</span>
+          </div>
+          <button 
+            onClick={onOpenBooking}
+            className="bg-white text-brand-red hover:bg-amber-50 text-xs font-black px-4 py-1.5 rounded-xl shadow-sm transition-all whitespace-nowrap cursor-pointer flex-shrink-0"
+          >
+            ĐẶT SÂN NGAY
+          </button>
+        </motion.div>
+      )}
+
+      {/* Tall rounded card for hero section */}
       <div className="relative h-[480px] sm:h-[550px] md:h-[620px] rounded-[32px] overflow-hidden shadow-2xl">
         
         {/* Background Image with elegant gradient overlays */}
         <div className="absolute inset-0">
           <img 
-            src="https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&q=80&w=1600" 
+            src={bgImg} 
             alt="Pickleball Court and Player" 
             className="w-full h-full object-cover object-center scale-105 transform hover:scale-100 transition-transform duration-10000"
+            referrerPolicy="no-referrer"
           />
           {/* Mockup's distinct blue & dark vignette overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent"></div>
@@ -40,7 +73,7 @@ export default function Hero({ onOpenBooking, onOpenMatchLobby }: HeroProps) {
             >
               <div className="w-2 h-2 bg-brand-red rounded-full animate-ping"></div>
               <span className="font-display font-bold text-xs sm:text-sm tracking-widest text-white uppercase opacity-95">
-                SPORT PICKLE BOUNCE
+                {tag}
               </span>
             </motion.div>
 
@@ -49,9 +82,9 @@ export default function Hero({ onOpenBooking, onOpenMatchLobby }: HeroProps) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.15 }}
-              className="font-display font-black text-4xl sm:text-5xl md:text-6xl tracking-tight leading-none mb-4"
+              className="font-display font-black text-4xl sm:text-5xl md:text-6xl tracking-tight leading-none mb-4 whitespace-pre-line"
             >
-              Khám phá tính năng
+              {title}
             </motion.h1>
 
             {/* Subtitle */}
@@ -61,7 +94,7 @@ export default function Hero({ onOpenBooking, onOpenMatchLobby }: HeroProps) {
               transition={{ duration: 0.6, delay: 0.3 }}
               className="font-sans font-medium text-base sm:text-lg md:text-xl text-white/80 max-w-lg mb-8 leading-relaxed"
             >
-              Tổ chức buổi chơi chuyên nghiệp. Miễn phí 100%. Đặt sân nhanh chóng, tìm bạn cùng trình, tổ chức giải đấu bùng nổ.
+              {subtitle}
             </motion.p>
 
             {/* Call To Actions */}
@@ -76,7 +109,7 @@ export default function Hero({ onOpenBooking, onOpenMatchLobby }: HeroProps) {
                 className="bg-brand-red hover:bg-brand-red-hover text-white px-8 py-4 rounded-full font-sans font-bold text-sm tracking-wide transition-all duration-300 shadow-lg shadow-brand-red/35 flex items-center justify-center gap-2 cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0"
               >
                 <Calendar className="w-5 h-5" />
-                Đặt Sân Khám Phá
+                {bookingBtn}
               </button>
               
               <button 
@@ -84,7 +117,7 @@ export default function Hero({ onOpenBooking, onOpenMatchLobby }: HeroProps) {
                 className="bg-white/15 backdrop-blur-md hover:bg-white/25 text-white border border-white/20 px-8 py-4 rounded-full font-sans font-bold text-sm tracking-wide transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0"
               >
                 <Users className="w-5 h-5" />
-                Ghép Trận Giao Lưu
+                {matchBtn}
               </button>
             </motion.div>
 
@@ -112,3 +145,4 @@ export default function Hero({ onOpenBooking, onOpenMatchLobby }: HeroProps) {
     </div>
   );
 }
+

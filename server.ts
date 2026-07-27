@@ -188,9 +188,9 @@ async function forwardToGoogleSheets(booking: {
   timeSlot: string;
   price: string;
   paymentStatus: string;
-}) {
+}, customWebhookUrl?: string) {
   const config = loadConfig();
-  let webhookUrl = (config.googleSheetWebhookUrl || "").trim();
+  let webhookUrl = (customWebhookUrl || config.googleSheetWebhookUrl || "").trim();
   
   const logEntry = {
     id: "gsl-" + Math.random().toString(36).substr(2, 9),
@@ -436,6 +436,7 @@ app.post("/api/alobo/config/clear-logs", (req, res) => {
 // Test Google Sheets Connection
 app.post("/api/alobo/test-sheet", async (req, res) => {
   try {
+    const { webhookUrl } = req.body || {};
     const testBooking = {
       fullName: "Nguyễn Văn Test",
       phone: "0909888888",
@@ -446,7 +447,7 @@ app.post("/api/alobo/test-sheet", async (req, res) => {
       paymentStatus: "Đã thanh toán (Kiểm tra hệ thống)"
     };
     
-    const result = await forwardToGoogleSheets(testBooking);
+    const result = await forwardToGoogleSheets(testBooking, webhookUrl);
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -580,7 +581,7 @@ Chỉ trả về định dạng JSON duy nhất dạng MẢNG OBJECTS [ { "fullN
 // Batch forward bookings to Google Sheets
 app.post("/api/alobo/batch-forward-sheets", async (req, res) => {
   try {
-    const { bookings } = req.body;
+    const { bookings, webhookUrl } = req.body;
     if (!Array.isArray(bookings) || bookings.length === 0) {
       return res.status(400).json({ success: false, error: "Danh sách ca đặt trống." });
     }
@@ -597,7 +598,7 @@ app.post("/api/alobo/batch-forward-sheets", async (req, res) => {
         timeSlot: b.timeSlot || "09:00 - 10:00",
         price: b.price || "150.000",
         paymentStatus: b.paymentStatus || "Đã thanh toán"
-      });
+      }, webhookUrl);
       if (resSend.success) successCount++;
       results.push({ booking: b, result: resSend });
     }

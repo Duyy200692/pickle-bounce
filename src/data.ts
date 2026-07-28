@@ -1,4 +1,9 @@
-import { Court, OpenPlay, Tournament, Sponsor, CourtBranch, Member, PromoConfig, Booking, SocialRevenue, TeamRegistration } from './types';
+import { Court, OpenPlay, Tournament, Sponsor, CourtBranch, Member, PromoConfig, Booking, SocialRevenue, TeamRegistration, AdminSecurity } from './types';
+
+export const INITIAL_ADMIN_SECURITY: AdminSecurity = {
+  pin: '123456',
+  updatedAt: new Date().toISOString()
+};
 
 export const INITIAL_PROMO_CONFIG: PromoConfig = {
   heroTag: 'SPORT PICKLE BOUNCE',

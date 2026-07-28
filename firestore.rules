@@ -2,9 +2,12 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow public read and write for courts, bookings, open plays, tournaments, registrations, revenues, members, sponsors, appConfig
+    
+    // Cho phép mọi người dùng đọc công khai thông tin (sân, lịch đấu, giải đấu, banner)
     match /{document=**} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if true; // Hoặc thay đổi thành if request.auth != null; khi đã tích hợp Firebase Auth
     }
+    
   }
 }

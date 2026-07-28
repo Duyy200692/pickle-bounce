@@ -28,9 +28,10 @@ import {
   INITIAL_PROMO_CONFIG,
   INITIAL_BOOKINGS,
   INITIAL_SOCIAL_REVENUES,
-  INITIAL_REGISTRATIONS
+  INITIAL_REGISTRATIONS,
+  INITIAL_ADMIN_SECURITY
 } from './data';
-import { Booking, OpenPlay, Tournament, TeamRegistration, Court, SocialRevenue, CourtBranch, Member, Sponsor, PromoConfig } from './types';
+import { Booking, OpenPlay, Tournament, TeamRegistration, Court, SocialRevenue, CourtBranch, Member, Sponsor, PromoConfig, AdminSecurity } from './types';
 import { 
   subscribeToCollection, 
   subscribeToDoc, 
@@ -50,6 +51,7 @@ export default function App() {
 
   // App Core States initialized with Firebase
   const [promoConfig, setPromoConfig] = useState<PromoConfig>(INITIAL_PROMO_CONFIG);
+  const [adminSecurity, setAdminSecurity] = useState<AdminSecurity>(INITIAL_ADMIN_SECURITY);
   const [sponsors, setSponsors] = useState<Sponsor[]>(SPONSORS);
   const [branch, setBranch] = useState<CourtBranch>(PICKLE_BOUNCE_BRANCH);
   const [bookings, setBookings] = useState<Booking[]>(INITIAL_BOOKINGS);
@@ -72,6 +74,7 @@ export default function App() {
     const unsubSponsors = subscribeToCollection('sponsors', setSponsors, SPONSORS);
     const unsubBranch = subscribeToDoc('appConfig', 'branch', setBranch, PICKLE_BOUNCE_BRANCH);
     const unsubPromo = subscribeToDoc('appConfig', 'promoConfig', setPromoConfig, INITIAL_PROMO_CONFIG);
+    const unsubSecurity = subscribeToDoc('appConfig', 'adminSecurity', setAdminSecurity, INITIAL_ADMIN_SECURITY);
 
     return () => {
       unsubCourts();
@@ -84,8 +87,14 @@ export default function App() {
       unsubSponsors();
       unsubBranch();
       unsubPromo();
+      unsubSecurity();
     };
   }, []);
+
+  const handleSaveAdminSecurity = (newSec: AdminSecurity) => {
+    setAdminSecurity(newSec);
+    saveSingleDoc('appConfig', 'adminSecurity', newSec);
+  };
 
   // Handlers to sync Admin Panel changes to Firebase
   const handleSaveCourts = (newCourts: Court[]) => {
@@ -383,6 +392,8 @@ export default function App() {
         onSaveSponsors={handleSaveSponsors}
         promoConfig={promoConfig}
         onSavePromoConfig={handleSavePromoConfig}
+        adminSecurity={adminSecurity}
+        onSaveAdminSecurity={handleSaveAdminSecurity}
       />
 
     </div>

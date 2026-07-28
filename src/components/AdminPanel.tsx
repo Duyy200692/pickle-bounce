@@ -6,8 +6,8 @@ import {
   DollarSign, TrendingUp, BarChart3, PieChart, PlusCircle, CalendarDays,
   Copy, ExternalLink, Database, AlertTriangle, Search, UserCheck, UserPlus, Phone, Mail, Award, Filter, RotateCcw, Megaphone, Image as ImageIcon
 } from 'lucide-react';
-import { Court, Booking, OpenPlay, Tournament, TeamRegistration, SocialRevenue, CourtBranch, Member, Sponsor, PromoConfig } from '../types';
-import { SPONSORS as DEFAULT_SPONSORS, INITIAL_PROMO_CONFIG } from '../data';
+import { Court, Booking, OpenPlay, Tournament, TeamRegistration, SocialRevenue, CourtBranch, Member, Sponsor, PromoConfig, AdminSecurity } from '../types';
+import { SPONSORS as DEFAULT_SPONSORS, INITIAL_PROMO_CONFIG, INITIAL_ADMIN_SECURITY } from '../data';
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -32,9 +32,11 @@ interface AdminPanelProps {
   onSaveSponsors?: (sponsors: Sponsor[]) => void;
   promoConfig?: PromoConfig;
   onSavePromoConfig?: (config: PromoConfig) => void;
+  adminSecurity?: AdminSecurity;
+  onSaveAdminSecurity?: (sec: AdminSecurity) => void;
 }
 
-type AdminTab = 'dashboard' | 'courts' | 'members' | 'bookings' | 'openplays' | 'tournaments' | 'registrations' | 'revenue' | 'alobo_sync' | 'landing_sponsors' | 'landing_promo';
+type AdminTab = 'dashboard' | 'courts' | 'members' | 'bookings' | 'openplays' | 'tournaments' | 'registrations' | 'revenue' | 'alobo_sync' | 'landing_sponsors' | 'landing_promo' | 'security';
 
 export default function AdminPanel({
   isOpen,
@@ -58,7 +60,9 @@ export default function AdminPanel({
   sponsors = [],
   onSaveSponsors,
   promoConfig = INITIAL_PROMO_CONFIG,
-  onSavePromoConfig
+  onSavePromoConfig,
+  adminSecurity = INITIAL_ADMIN_SECURITY,
+  onSaveAdminSecurity
 }: AdminPanelProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
@@ -623,15 +627,50 @@ export default function AdminPanel({
     }
   };
 
+  // Security form state
+  const [pinCurrentInput, setPinCurrentInput] = useState('');
+  const [pinNewInput, setPinNewInput] = useState('');
+  const [pinConfirmInput, setPinConfirmInput] = useState('');
+  const [pinNotice, setPinNotice] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+
   if (!isOpen) return null;
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === '8888' || password.toLowerCase() === 'admin') {
+    const activePin = adminSecurity?.pin || '123456';
+    if (password === activePin) {
       setIsAuthenticated(true);
       setAuthError('');
     } else {
-      setAuthError('Mã bảo mật không đúng! Vui lòng thử lại.');
+      setAuthError('Mã bảo mật không đúng! Vui lòng kiểm tra lại.');
+    }
+  };
+
+  const handleChangePin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const activePin = adminSecurity?.pin || '123456';
+    if (pinCurrentInput !== activePin) {
+      setPinNotice({ type: 'error', msg: 'Mã PIN hiện tại không chính xác!' });
+      return;
+    }
+    if (pinNewInput.length < 4) {
+      setPinNotice({ type: 'error', msg: 'Mã PIN mới phải từ 4 ký tự trở lên!' });
+      return;
+    }
+    if (pinNewInput !== pinConfirmInput) {
+      setPinNotice({ type: 'error', msg: 'Xác nhận mã PIN mới không khớp!' });
+      return;
+    }
+
+    if (onSaveAdminSecurity) {
+      onSaveAdminSecurity({
+        pin: pinNewInput,
+        updatedAt: new Date().toISOString()
+      });
+      setPinNotice({ type: 'success', msg: 'Cập nhật mã PIN quản trị thành công lên Firebase!' });
+      setPinCurrentInput('');
+      setPinNewInput('');
+      setPinConfirmInput('');
     }
   };
 
@@ -971,18 +1010,14 @@ export default function AdminPanel({
               Xác Minh Quyền Quản Trị Viên
             </h3>
             <p className="font-sans text-xs text-brand-gray mb-6 leading-relaxed">
-              Vui lòng nhập mã PIN bảo mật để truy cập bảng quản lý và điều chỉnh thông tin cụm sân, kèo đấu, giải đấu, và người đăng ký.
-              <br />
-              <span className="inline-block bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded mt-2">
-                MÃ PIN DEMO: <strong className="font-mono">8888</strong> hoặc <strong className="font-mono">admin</strong>
-              </span>
+              Vui lòng nhập mã PIN bảo mật quản trị viên để truy cập hệ thống điều hành.
             </p>
 
             <form onSubmit={handleLogin} className="w-full space-y-4">
               <input 
                 type="password"
                 required
-                placeholder="Nhập mã bảo mật (e.g. 8888)"
+                placeholder="Nhập mã PIN bảo mật quản trị..."
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full text-center bg-brand-light-gray border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-4 py-3 text-sm text-brand-dark font-black tracking-widest outline-none transition-all"
@@ -1139,6 +1174,21 @@ export default function AdminPanel({
                 <span>Quảng Bá Landing Page</span>
                 <span className="bg-amber-500 text-white text-[9px] px-1.5 py-0.5 rounded ml-auto font-black font-sans uppercase">
                   PROMO
+                </span>
+              </button>
+
+              <button 
+                onClick={() => { setActiveTab('security'); setEditingCourtId(null); setEditingTournamentId(null); setEditingOpenPlayId(null); }}
+                className={`w-full text-left px-3 py-2.5 rounded-xl font-sans font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
+                  activeTab === 'security' 
+                    ? 'bg-brand-red text-white shadow-sm' 
+                    : 'text-brand-dark/80 hover:bg-white hover:text-brand-red'
+                }`}
+              >
+                <Lock className="w-4 h-4 flex-shrink-0" />
+                <span>Bảo Mật & Mã PIN</span>
+                <span className="bg-emerald-600 text-white text-[9px] px-1.5 py-0.5 rounded ml-auto font-black font-sans uppercase">
+                  FIREBASE
                 </span>
               </button>
             </div>
@@ -4141,6 +4191,151 @@ function fillZero(num) {
                       </button>
                     </div>
                   </form>
+                </div>
+              )}
+
+              {/* SECURITY & PIN TAB */}
+              {activeTab === 'security' && (
+                <div className="space-y-6">
+                  {/* Top Banner */}
+                  <div className="bg-gradient-to-r from-brand-dark via-gray-900 to-brand-dark p-6 rounded-2xl text-white shadow-xl relative overflow-hidden border border-white/10">
+                    <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 flex-shrink-0">
+                          <Lock className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h3 className="font-display font-black text-lg tracking-tight flex items-center gap-2">
+                            Quản Lý Bảo Mật & Mã PIN Quản Trị
+                          </h3>
+                          <p className="text-xs text-gray-300 font-sans mt-0.5">
+                            Mã PIN được lưu trữ và đồng bộ thời gian thực (Real-time) trên Firebase Firestore database.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-3 py-1.5 rounded-xl text-xs font-bold font-mono flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                        <span>Firestore Doc: appConfig/adminSecurity</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Change PIN Form */}
+                  <div className="bg-white rounded-2xl p-6 border border-brand-border/60 shadow-sm space-y-4">
+                    <div className="border-b border-brand-border/40 pb-4">
+                      <h4 className="font-display font-black text-sm text-brand-dark flex items-center gap-2">
+                        <ShieldCheck className="w-4 h-4 text-brand-red" />
+                        Đổi Mã PIN Truy Cập Quản Trị Viên
+                      </h4>
+                      <p className="text-xs text-brand-gray mt-1">
+                        Thay đổi mã PIN truy cập vào cổng quản trị này. Mã PIN mới sẽ có hiệu lực ngay lập tức.
+                      </p>
+                    </div>
+
+                    {pinNotice && (
+                      <div className={`p-4 rounded-xl text-xs font-bold flex items-center gap-2 ${
+                        pinNotice.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-red-50 text-red-800 border border-red-200'
+                      }`}>
+                        {pinNotice.type === 'success' ? <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" /> : <AlertTriangle className="w-4 h-4 text-red-600 flex-shrink-0" />}
+                        <span>{pinNotice.msg}</span>
+                      </div>
+                    )}
+
+                    <form onSubmit={handleChangePin} className="space-y-4 max-w-md">
+                      <div>
+                        <label className="block text-[11px] font-bold text-brand-gray uppercase tracking-wider mb-1">
+                          Mã PIN Hiện Tại
+                        </label>
+                        <input 
+                          type="password"
+                          required
+                          placeholder="Nhập mã PIN hiện tại..."
+                          value={pinCurrentInput}
+                          onChange={(e) => setPinCurrentInput(e.target.value)}
+                          className="w-full bg-brand-light-gray border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-4 py-2.5 text-xs text-brand-dark font-black tracking-widest outline-none"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[11px] font-bold text-brand-gray uppercase tracking-wider mb-1">
+                            Mã PIN Mới
+                          </label>
+                          <input 
+                            type="password"
+                            required
+                            placeholder="Nhập mã PIN mới..."
+                            value={pinNewInput}
+                            onChange={(e) => setPinNewInput(e.target.value)}
+                            className="w-full bg-brand-light-gray border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-4 py-2.5 text-xs text-brand-dark font-black tracking-widest outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-brand-gray uppercase tracking-wider mb-1">
+                            Xác Nhận Mã PIN Mới
+                          </label>
+                          <input 
+                            type="password"
+                            required
+                            placeholder="Nhập lại mã PIN mới..."
+                            value={pinConfirmInput}
+                            onChange={(e) => setPinConfirmInput(e.target.value)}
+                            className="w-full bg-brand-light-gray border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-4 py-2.5 text-xs text-brand-dark font-black tracking-widest outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <button 
+                        type="submit"
+                        className="bg-brand-red hover:bg-brand-red/90 text-white font-bold text-xs py-3 px-6 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer uppercase tracking-wider"
+                      >
+                        <Check className="w-4 h-4" />
+                        <span>Cập Nhật Mã PIN Trên Firebase</span>
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Firebase Security & Access Control Guide */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-4">
+                    <h4 className="font-display font-black text-sm text-slate-800 flex items-center gap-2">
+                      <Database className="w-4 h-4 text-indigo-600" />
+                      Hướng Dẫn Cấu Hình Bảo Mật & Cấp Quyền Trên Firebase Console
+                    </h4>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                      <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                        <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                          <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-black">1</span>
+                          <span>Đồng Bộ PIN Firestore</span>
+                        </div>
+                        <p className="text-slate-600 leading-relaxed">
+                          Mã PIN được lưu tại tài liệu <code className="bg-slate-100 text-pink-600 px-1 py-0.5 rounded font-mono text-[10px]">appConfig/adminSecurity</code> trong database Firestore của dự án.
+                        </p>
+                      </div>
+
+                      <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                        <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                          <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-black">2</span>
+                          <span>Firebase Authentication</span>
+                        </div>
+                        <p className="text-slate-600 leading-relaxed">
+                          Truy cập Firebase Console &gt; <strong>Authentication</strong> &gt; <strong>Sign-in method</strong> &gt; Bật Email/Password để quản lý tài khoản admin chính thức.
+                        </p>
+                      </div>
+
+                      <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                        <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                          <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-black">3</span>
+                          <span>Quy Tắc Firestore Rules</span>
+                        </div>
+                        <p className="text-slate-600 leading-relaxed">
+                          Cấu hình Rules trên Firestore để kiểm soát quyền ghi dữ liệu: <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded font-mono text-[10px]">allow write: if request.auth != null;</code>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 

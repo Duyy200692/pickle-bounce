@@ -115,6 +115,11 @@ export interface SocialRevenue {
   createdAt: string;
 }
 
+export interface AdminSecurity {
+  pin: string;
+  updatedAt?: string;
+}
+
 export interface PromoConfig {
   heroTag: string;
   heroTitle: string;

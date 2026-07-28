@@ -29,12 +29,12 @@ export function subscribeToCollection<T extends { id: string }>(
   initialSeedData?: T[]
 ) {
   const colRef = collection(db, collectionName);
+  const seedKey = `seeded_${collectionName}`;
   let isSeeding = false;
 
   const unsubscribe = onSnapshot(colRef, (snapshot) => {
-    if (snapshot.empty && initialSeedData && initialSeedData.length > 0 && !isSeeding) {
-      const seedKey = `seeded_${collectionName}`;
-      if (!localStorage.getItem(seedKey)) {
+    if (snapshot.empty) {
+      if (initialSeedData && initialSeedData.length > 0 && !isSeeding && !localStorage.getItem(seedKey)) {
         isSeeding = true;
         localStorage.setItem(seedKey, 'true');
         console.log(`[Firebase] Initializing default seed data for ${collectionName}...`);
@@ -47,7 +47,12 @@ export function subscribeToCollection<T extends { id: string }>(
         onData(initialSeedData);
         return;
       }
+      onData([]);
+      return;
     }
+
+    // Collection contains data, mark as seeded so future deletions to empty don't re-seed
+    localStorage.setItem(seedKey, 'true');
 
     const items: T[] = [];
     snapshot.forEach((document) => {
@@ -69,6 +74,7 @@ export async function saveFirebaseDoc<T extends { id: string }>(
   data: T
 ) {
   try {
+    localStorage.setItem(`seeded_${collectionName}`, 'true');
     const docRef = doc(db, collectionName, data.id);
     await setDoc(docRef, data, { merge: true });
   } catch (error) {
@@ -82,6 +88,7 @@ export async function saveFirebaseDoc<T extends { id: string }>(
  */
 export async function deleteFirebaseDoc(collectionName: string, docId: string) {
   try {
+    localStorage.setItem(`seeded_${collectionName}`, 'true');
     const docRef = doc(db, collectionName, docId);
     await deleteDoc(docRef);
   } catch (error) {
@@ -98,6 +105,7 @@ export async function saveFirebaseCollection<T extends { id: string }>(
   items: T[]
 ) {
   try {
+    localStorage.setItem(`seeded_${collectionName}`, 'true');
     const colRef = collection(db, collectionName);
     const existingSnap = await getDocs(colRef);
     

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Court, Booking, OpenPlay, Tournament, TeamRegistration, SocialRevenue, CourtBranch, Member, Sponsor, PromoConfig, AdminSecurity } from '../types';
 import { SPONSORS as DEFAULT_SPONSORS, INITIAL_PROMO_CONFIG, INITIAL_ADMIN_SECURITY } from '../data';
+import { deleteFirebaseDoc } from '../lib/firebase';
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -155,6 +156,7 @@ export default function AdminPanel({
   const [deletingCourtId, setDeletingCourtId] = useState<string | null>(null);
   const [editingTournamentId, setEditingTournamentId] = useState<string | null>(null);
   const [editingOpenPlayId, setEditingOpenPlayId] = useState<string | null>(null);
+  const [deletingBookingId, setDeletingBookingId] = useState<string | null>(null);
   const [isEditingBranch, setIsEditingBranch] = useState(false);
 
   // Member management state
@@ -736,6 +738,7 @@ export default function AdminPanel({
 
   const deleteCourt = (id: string) => {
     onSaveCourts(courts.filter(c => c.id !== id));
+    deleteFirebaseDoc('courts', id);
     setDeletingCourtId(null);
   };
 
@@ -797,6 +800,7 @@ export default function AdminPanel({
     if (onSaveMembers) {
       onSaveMembers(members.filter(m => m.id !== id));
     }
+    deleteFirebaseDoc('members', id);
     setDeletingMemberId(null);
   };
 
@@ -846,6 +850,7 @@ export default function AdminPanel({
 
   const deleteTournament = (id: string) => {
     onSaveTournaments(tournaments.filter(t => t.id !== id));
+    deleteFirebaseDoc('tournaments', id);
   };
 
   // Open Plays CRUD
@@ -887,6 +892,7 @@ export default function AdminPanel({
 
   const deleteOpenPlay = (id: string) => {
     onSaveOpenPlays(openPlays.filter(op => op.id !== id));
+    deleteFirebaseDoc('openPlays', id);
   };
 
   // Booking log updates
@@ -899,6 +905,8 @@ export default function AdminPanel({
 
   const deleteBooking = (id: string) => {
     onSaveBookings(bookings.filter(b => b.id !== id));
+    deleteFirebaseDoc('bookings', id);
+    setDeletingBookingId(null);
   };
 
   // Registrations updates
@@ -911,6 +919,7 @@ export default function AdminPanel({
 
   const deleteReg = (id: string) => {
     onSaveTeamRegistrations(teamRegistrations.filter(r => r.id !== id));
+    deleteFirebaseDoc('registrations', id);
   };
 
   // Social revenues CRUD
@@ -955,6 +964,7 @@ export default function AdminPanel({
 
   const deleteSocial = (id: string) => {
     onSaveSocialRevenues(socialRevenues.filter(s => s.id !== id));
+    deleteFirebaseDoc('socialRevenues', id);
   };
 
   return (
@@ -2021,7 +2031,7 @@ export default function AdminPanel({
                                 <div className="text-[10px] text-brand-red font-semibold">{booking.timeSlot}</div>
                               </td>
                               <td className="p-3 font-bold text-brand-dark">{booking.totalPrice.toLocaleString('vi-VN')}đ</td>
-                              <td className="p-3">
+                              <td className="p-3 relative">
                                 <div className="flex items-center justify-center gap-1.5">
                                   <button 
                                     onClick={() => toggleBookingStatus(booking.id)}
@@ -2034,13 +2044,33 @@ export default function AdminPanel({
                                     {booking.status === 'confirmed' ? 'Duyệt xong' : 'Ấn Duyệt'}
                                   </button>
                                   <button 
-                                    onClick={() => deleteBooking(booking.id)}
+                                    onClick={() => setDeletingBookingId(booking.id)}
                                     className="p-1.5 hover:bg-brand-red-light hover:text-brand-red rounded text-brand-gray/50 transition-all cursor-pointer"
                                     title="Xoá đơn"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
                                   </button>
                                 </div>
+
+                                {deletingBookingId === booking.id && (
+                                  <div className="absolute inset-0 bg-brand-dark/95 text-white rounded-xl p-2 flex items-center justify-between z-20 backdrop-blur-xs px-3">
+                                    <p className="text-[11px] font-bold text-white">Xoá đơn <span className="font-mono text-brand-red">{booking.id}</span>?</p>
+                                    <div className="flex items-center gap-1.5">
+                                      <button 
+                                        onClick={() => deleteBooking(booking.id)}
+                                        className="bg-brand-red text-white px-2.5 py-1 rounded-lg text-[10px] font-bold hover:bg-brand-red-hover transition-all cursor-pointer shadow-sm"
+                                      >
+                                        Xoá ngay
+                                      </button>
+                                      <button 
+                                        onClick={() => setDeletingBookingId(null)}
+                                        className="bg-white/20 text-white px-2 py-1 rounded-lg text-[10px] font-bold hover:bg-white/30 transition-all cursor-pointer"
+                                      >
+                                        Hủy
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
                               </td>
                             </tr>
                           ))

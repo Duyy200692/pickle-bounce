@@ -3,6 +3,7 @@ import {
   getFirestore, 
   collection, 
   doc, 
+  getDoc,
   getDocs, 
   setDoc, 
   deleteDoc, 
@@ -21,7 +22,7 @@ export const db = firebaseConfig.firestoreDatabaseId
 
 /**
  * Subscribe to a Firestore collection in real-time.
- * If the collection is completely empty, automatically seed it with initial default data.
+ * If the collection is completely empty and hasn't been initialized yet, seed it with initial default data.
  */
 export function subscribeToCollection<T extends { id: string }>(
   collectionName: string,
@@ -32,14 +33,24 @@ export function subscribeToCollection<T extends { id: string }>(
 
   const unsubscribe = onSnapshot(colRef, async (snapshot) => {
     if (snapshot.empty && initialSeedData && initialSeedData.length > 0) {
-      console.log(`[Firebase] Seeding initial data for ${collectionName}...`);
-      const batch = writeBatch(db);
-      initialSeedData.forEach((item) => {
-        const itemRef = doc(db, collectionName, item.id);
-        batch.set(itemRef, item);
-      });
-      await batch.commit();
-      return; // Snapshot listener will trigger again after batch write
+      // Check if this collection has already been initialized/seeded
+      try {
+        const markerRef = doc(db, 'appConfig', `seeded_${collectionName}`);
+        const markerSnap = await getDoc(markerRef);
+        if (!markerSnap.exists()) {
+          console.log(`[Firebase] Initializing seed data for ${collectionName}...`);
+          const batch = writeBatch(db);
+          initialSeedData.forEach((item) => {
+            const itemRef = doc(db, collectionName, item.id);
+            batch.set(itemRef, item);
+          });
+          batch.set(markerRef, { seeded: true, timestamp: new Date().toISOString() });
+          await batch.commit();
+          return; // Listener will trigger again after batch write
+        }
+      } catch (err) {
+        console.error(`[Firebase] Error checking seed marker for ${collectionName}:`, err);
+      }
     }
 
     const items: T[] = [];
@@ -84,18 +95,36 @@ export async function deleteFirebaseDoc(collectionName: string, docId: string) {
 }
 
 /**
- * Save an entire collection (batch set)
+ * Save an entire collection (batch set + delete removed documents)
  */
 export async function saveFirebaseCollection<T extends { id: string }>(
   collectionName: string,
   items: T[]
 ) {
   try {
+    const colRef = collection(db, collectionName);
+    const existingSnap = await getDocs(colRef);
+    
     const batch = writeBatch(db);
+    const newItemIds = new Set(items.map((i) => i.id));
+
+    // Delete any documents that are no longer in the updated items list
+    existingSnap.forEach((documentSnap) => {
+      if (!newItemIds.has(documentSnap.id)) {
+        batch.delete(doc(db, collectionName, documentSnap.id));
+      }
+    });
+
+    // Write / update all current items
     items.forEach((item) => {
       const itemRef = doc(db, collectionName, item.id);
       batch.set(itemRef, item, { merge: true });
     });
+
+    // Mark collection as initialized/seeded in Firestore
+    const markerRef = doc(db, 'appConfig', `seeded_${collectionName}`);
+    batch.set(markerRef, { seeded: true, timestamp: new Date().toISOString() });
+
     await batch.commit();
   } catch (error) {
     console.error(`[Firebase] Error saving batch collection to ${collectionName}:`, error);

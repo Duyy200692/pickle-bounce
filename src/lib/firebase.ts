@@ -3,7 +3,6 @@ import {
   getFirestore, 
   collection, 
   doc, 
-  getDoc,
   getDocs, 
   setDoc, 
   deleteDoc, 
@@ -22,7 +21,7 @@ export const db = firebaseConfig.firestoreDatabaseId
 
 /**
  * Subscribe to a Firestore collection in real-time.
- * If the collection is completely empty and hasn't been initialized yet, seed it with initial default data.
+ * Synchronous snapshot listener to prevent state flickering and race conditions.
  */
 export function subscribeToCollection<T extends { id: string }>(
   collectionName: string,
@@ -30,26 +29,23 @@ export function subscribeToCollection<T extends { id: string }>(
   initialSeedData?: T[]
 ) {
   const colRef = collection(db, collectionName);
+  let isSeeding = false;
 
-  const unsubscribe = onSnapshot(colRef, async (snapshot) => {
-    if (snapshot.empty && initialSeedData && initialSeedData.length > 0) {
-      // Check if this collection has already been initialized/seeded
-      try {
-        const markerRef = doc(db, 'appConfig', `seeded_${collectionName}`);
-        const markerSnap = await getDoc(markerRef);
-        if (!markerSnap.exists()) {
-          console.log(`[Firebase] Initializing seed data for ${collectionName}...`);
-          const batch = writeBatch(db);
-          initialSeedData.forEach((item) => {
-            const itemRef = doc(db, collectionName, item.id);
-            batch.set(itemRef, item);
-          });
-          batch.set(markerRef, { seeded: true, timestamp: new Date().toISOString() });
-          await batch.commit();
-          return; // Listener will trigger again after batch write
-        }
-      } catch (err) {
-        console.error(`[Firebase] Error checking seed marker for ${collectionName}:`, err);
+  const unsubscribe = onSnapshot(colRef, (snapshot) => {
+    if (snapshot.empty && initialSeedData && initialSeedData.length > 0 && !isSeeding) {
+      const seedKey = `seeded_${collectionName}`;
+      if (!localStorage.getItem(seedKey)) {
+        isSeeding = true;
+        localStorage.setItem(seedKey, 'true');
+        console.log(`[Firebase] Initializing default seed data for ${collectionName}...`);
+        const batch = writeBatch(db);
+        initialSeedData.forEach((item) => {
+          const itemRef = doc(db, collectionName, item.id);
+          batch.set(itemRef, item);
+        });
+        batch.commit().catch((err) => console.error(`[Firebase] Error seeding ${collectionName}:`, err));
+        onData(initialSeedData);
+        return;
       }
     }
 
@@ -121,10 +117,6 @@ export async function saveFirebaseCollection<T extends { id: string }>(
       batch.set(itemRef, item, { merge: true });
     });
 
-    // Mark collection as initialized/seeded in Firestore
-    const markerRef = doc(db, 'appConfig', `seeded_${collectionName}`);
-    batch.set(markerRef, { seeded: true, timestamp: new Date().toISOString() });
-
     await batch.commit();
   } catch (error) {
     console.error(`[Firebase] Error saving batch collection to ${collectionName}:`, error);
@@ -141,12 +133,19 @@ export function subscribeToDoc<T>(
   initialSeedData?: T
 ) {
   const docRef = doc(db, collectionName, docId);
+  let isSeeding = false;
 
-  const unsubscribe = onSnapshot(docRef, async (docSnap) => {
-    if (!docSnap.exists() && initialSeedData) {
-      console.log(`[Firebase] Seeding initial doc for ${collectionName}/${docId}...`);
-      await setDoc(docRef, initialSeedData);
-      return;
+  const unsubscribe = onSnapshot(docRef, (docSnap) => {
+    if (!docSnap.exists() && initialSeedData && !isSeeding) {
+      const seedKey = `seeded_${collectionName}_${docId}`;
+      if (!localStorage.getItem(seedKey)) {
+        isSeeding = true;
+        localStorage.setItem(seedKey, 'true');
+        console.log(`[Firebase] Seeding initial doc for ${collectionName}/${docId}...`);
+        setDoc(docRef, initialSeedData).catch((err) => console.error(`[Firebase] Error seeding doc ${collectionName}/${docId}:`, err));
+        onData(initialSeedData);
+        return;
+      }
     }
 
     if (docSnap.exists()) {

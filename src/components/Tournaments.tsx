@@ -1,158 +1,143 @@
 import React from 'react';
-import { Trophy, ArrowRight, Sparkles, Star } from 'lucide-react';
+import { Trophy, ArrowRight, Calendar, Users, Tag, FileText, Image as ImageIcon } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Tournament } from '../types';
 
 interface TournamentsProps {
   tournaments: Tournament[];
-  onRegisterTournament: (tournament: Tournament) => void;
+  onRegisterTournament: (tournament: Tournament, initialTab?: 'register' | 'rules' | 'gallery') => void;
 }
 
-export default function Tournaments({ tournaments, onRegisterTournament }: TournamentsProps) {
+export default function Tournaments({ tournaments = [], onRegisterTournament }: TournamentsProps) {
   return (
-    <section className="py-20 bg-white">
+    <section id="tournaments" className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header Section */}
-        <div className="mb-12">
-          <span className="font-display font-bold text-xs sm:text-sm tracking-widest text-brand-red uppercase block mb-3">
-            Tournament Experience
-          </span>
-          <h2 className="font-display font-black text-3xl sm:text-4xl md:text-5xl text-brand-dark tracking-tight leading-none">
-            Bounce Cup & Signature Series
-          </h2>
+        <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <span className="font-display font-bold text-xs sm:text-sm tracking-widest text-brand-red uppercase block mb-3">
+              Tournament Experience
+            </span>
+            <h2 className="font-display font-black text-3xl sm:text-4xl md:text-5xl text-brand-dark tracking-tight leading-none">
+              Giải Đấu & Sự Kiện Pickleball
+            </h2>
+          </div>
+          <p className="font-sans text-sm text-brand-gray max-w-md">
+            Hệ thống giải đấu chuyên nghiệp và phong trào quy tụ các vận động viên xuất sắc toàn quốc. Xem điều lệ và thư viện hình ảnh công khai.
+          </p>
         </div>
 
-        {/* Bento Grid layout with 2 high-impact image cards side by side */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          
-          {/* Card 1 - The League / Bounce Cup */}
-          <motion.div 
-            initial={{ opacity: 0, x: -30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: '-100px' }}
-            transition={{ duration: 0.6 }}
-            className="relative h-[400px] sm:h-[450px] rounded-[32px] overflow-hidden group shadow-lg"
-          >
-            {/* Background image & rich overlay */}
-            <div className="absolute inset-0">
-              <img 
-                src="https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&q=80&w=800" 
-                alt="Bounce Cup" 
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent"></div>
-              <div className="absolute inset-0 bg-brand-red/10 group-hover:bg-brand-red/0 transition-colors duration-500"></div>
-            </div>
-
-            {/* Inner Content */}
-            <div className="absolute inset-0 flex flex-col justify-end p-8 sm:p-12 text-white">
-              <div className="flex items-center gap-2 mb-3 bg-brand-red/90 text-white font-mono text-[10px] font-black tracking-widest uppercase w-fit px-3 py-1 rounded-full">
-                <Trophy className="w-3.5 h-3.5" />
-                BOUNCE CUP
-              </div>
-
-              <h3 className="font-display font-black text-2xl sm:text-3xl tracking-tight mb-2 leading-none">
-                THE LEAGUE
-              </h3>
+        {/* Dynamic List of Tournaments */}
+        {tournaments.length === 0 ? (
+          <div className="bg-brand-light-gray rounded-[24px] p-12 text-center border border-brand-border/40">
+            <Trophy className="w-12 h-12 text-brand-gray mx-auto mb-3 opacity-50" />
+            <p className="font-sans text-sm text-brand-gray font-medium">Hiện chưa có giải đấu nào được khởi tạo.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {tournaments.map((tournament, index) => {
+              const defaultImage = index % 2 === 0 
+                ? "https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&q=80&w=800"
+                : "https://images.unsplash.com/photo-1599447421416-3414500d18a5?auto=format&fit=crop&q=80&w=800";
               
-              <p className="font-sans text-sm text-white/70 max-w-md mb-6">
-                Giải đấu chính quy tìm kiếm và vinh danh những tài năng Pickleball xuất sắc nhất trong cộng đồng toàn quốc.
-              </p>
+              const imageUrl = tournament.image || defaultImage;
+              const hasGallery = tournament.gallery && tournament.gallery.length > 0;
 
-              <div className="flex items-center justify-between pt-4 border-t border-white/15">
-                <div className="text-white/60 font-sans text-xs">
-                  <span>Khởi tranh: </span>
-                  <span className="text-white font-semibold">25/08/2026</span>
-                </div>
-                
-                <button 
-                  onClick={() => onRegisterTournament(tournaments[0] || {
-                    id: 'tour-1',
-                    name: 'Bounce Cup 2026 - The League',
-                    description: '',
-                    tag: 'BOUNCE CUP',
-                    image: '',
-                    date: '25/08/2026',
-                    registrationFee: 500000,
-                    teamsRegistered: 28,
-                    maxTeams: 32,
-                    category: 'Đôi Nam / Đôi Nữ / Đôi Nam Nữ',
-                    status: 'Đang mở'
-                  })}
-                  className="bg-white text-brand-dark hover:bg-brand-red hover:text-white px-5 py-2.5 rounded-full font-sans font-bold text-xs transition-all duration-300 flex items-center gap-1.5 cursor-pointer transform group-hover:translate-x-1"
+              return (
+                <motion.div 
+                  key={tournament.id || index}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-50px' }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  className="relative min-h-[440px] rounded-[32px] overflow-hidden group shadow-lg flex flex-col justify-end"
                 >
-                  Đăng ký thi đấu
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          </motion.div>
+                  {/* Background image & rich overlay */}
+                  <div className="absolute inset-0">
+                    <img 
+                      src={imageUrl} 
+                      alt={tournament.name} 
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/55 to-black/20"></div>
+                  </div>
 
-          {/* Card 2 - Signature Series */}
-          <motion.div 
-            initial={{ opacity: 0, x: 30 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, margin: '-100px' }}
-            transition={{ duration: 0.6 }}
-            className="relative h-[400px] sm:h-[450px] rounded-[32px] overflow-hidden group shadow-lg"
-          >
-            {/* Background image & rich overlay */}
-            <div className="absolute inset-0">
-              <img 
-                src="https://images.unsplash.com/photo-1599447421416-3414500d18a5?auto=format&fit=crop&q=80&w=800" 
-                alt="Signature Series" 
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent"></div>
-              <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors duration-500"></div>
-            </div>
+                  {/* Inner Content */}
+                  <div className="relative z-10 p-6 sm:p-10 text-white flex flex-col justify-end h-full">
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                      <div className="flex items-center gap-1.5 bg-brand-red/90 text-white font-mono text-[10px] font-black tracking-widest uppercase px-3 py-1 rounded-full shadow-sm">
+                        <Trophy className="w-3.5 h-3.5" />
+                        {tournament.tag || 'BOUNCE CUP'}
+                      </div>
+                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                        tournament.status === 'Đang mở' ? 'bg-emerald-500/90 text-white' :
+                        tournament.status === 'Sắp diễn ra' ? 'bg-amber-500/90 text-white' :
+                        'bg-slate-700/90 text-white'
+                      }`}>
+                        {tournament.status || 'Đang mở'}
+                      </span>
+                    </div>
 
-            {/* Inner Content */}
-            <div className="absolute inset-0 flex flex-col justify-end p-8 sm:p-12 text-white">
-              <div className="flex items-center gap-2 mb-3 bg-white/15 backdrop-blur-md text-white font-mono text-[10px] font-black tracking-widest uppercase w-fit px-3 py-1 rounded-full border border-white/10">
-                <Star className="w-3.5 h-3.5 text-yellow-400" />
-                SIGNATURE SERIES
-              </div>
+                    <h3 className="font-display font-black text-2xl sm:text-3xl tracking-tight mb-2 leading-tight uppercase">
+                      {tournament.name}
+                    </h3>
+                    
+                    {tournament.description && (
+                      <p className="font-sans text-xs sm:text-sm text-white/80 line-clamp-2 mb-3">
+                        {tournament.description}
+                      </p>
+                    )}
 
-              <h3 className="font-display font-black text-2xl sm:text-3xl tracking-tight mb-2 leading-none">
-                SIGNATURE SERIES
-              </h3>
-              
-              <p className="font-sans text-sm text-white/70 max-w-md mb-6">
-                Các sự kiện tranh tài độc quyền, thiết kế may đo cao cấp dành riêng cho các doanh nghiệp và thương hiệu hàng đầu.
-              </p>
+                    <div className="grid grid-cols-2 gap-3 py-3 my-2 border-y border-white/15 text-xs text-white/80">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-brand-red" />
+                        <span>Khởi tranh: <strong className="text-white">{tournament.date}</strong></span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-brand-red" />
+                        <span>Đã ĐK: <strong className="text-white">{tournament.teamsRegistered || 0}/{tournament.maxTeams || 32} đội</strong></span>
+                      </div>
+                      {tournament.category && (
+                        <div className="flex items-center gap-1.5 col-span-2">
+                          <Tag className="w-3.5 h-3.5 text-brand-red" />
+                          <span>Hạng mục: <strong className="text-white">{tournament.category}</strong></span>
+                        </div>
+                      )}
+                    </div>
 
-              <div className="flex items-center justify-between pt-4 border-t border-white/15">
-                <div className="text-white/60 font-sans text-xs">
-                  <span>Khởi tranh: </span>
-                  <span className="text-white font-semibold">12/09/2026</span>
-                </div>
-                
-                <button 
-                  onClick={() => onRegisterTournament(tournaments[1] || {
-                    id: 'tour-2',
-                    name: 'Signature Corporate Series',
-                    description: '',
-                    tag: 'SIGNATURE SERIES',
-                    image: '',
-                    date: '12/09/2026',
-                    registrationFee: 1000000,
-                    teamsRegistered: 12,
-                    maxTeams: 16,
-                    category: 'Đôi Doanh Nhân / Đôi Đại Diện Thương Hiệu',
-                    status: 'Đang mở'
-                  })}
-                  className="bg-brand-red text-white hover:bg-brand-red-hover px-5 py-2.5 rounded-full font-sans font-bold text-xs transition-all duration-300 flex items-center gap-1.5 cursor-pointer transform group-hover:translate-x-1"
-                >
-                  Đăng ký thi đấu
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          </motion.div>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
+                      <div className="text-xs">
+                        <span className="text-white/60 block text-[10px] uppercase font-mono">Lệ phí đăng ký</span>
+                        <span className="text-white font-bold text-base font-mono">
+                          {tournament.registrationFee ? `${tournament.registrationFee.toLocaleString('vi-VN')} VNĐ` : 'Miễn phí'}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                        <button 
+                          onClick={() => onRegisterTournament(tournament, 'rules')}
+                          className="bg-white/15 hover:bg-white/25 text-white backdrop-blur-md px-4 py-2.5 rounded-full font-sans font-semibold text-xs transition-all duration-300 flex items-center gap-1.5 cursor-pointer border border-white/20"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          Điều lệ & Ảnh {hasGallery ? `(${tournament.gallery?.length})` : ''}
+                        </button>
 
-        </div>
+                        <button 
+                          onClick={() => onRegisterTournament(tournament, 'register')}
+                          className="bg-brand-red hover:bg-brand-red-hover text-white px-5 py-2.5 rounded-full font-sans font-bold text-xs transition-all duration-300 flex items-center gap-1.5 cursor-pointer shadow-md shadow-brand-red/30 transform group-hover:translate-x-0.5"
+                        >
+                          Đăng ký
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
 
       </div>
     </section>

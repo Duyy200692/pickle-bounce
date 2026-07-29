@@ -188,7 +188,15 @@ export const INITIAL_TOURNAMENTS: Tournament[] = [
     teamsRegistered: 28,
     maxTeams: 32,
     category: 'Đôi Nam / Đôi Nữ / Đôi Nam Nữ',
-    status: 'Đang mở'
+    status: 'Đang mở',
+    rules: `1. ĐIỀU KIỆN THAM GIA: Vận động viên phong trào có tổng điểm DUPR cặp đôi ≤ 7.0.\n2. THỂ THỨC THI ĐẤU: Vòng bảng thi đấu gỡ điểm Play-off chọn 2 đội nhất nhì mỗi bảng vào Vòng Tứ kết. Mỗi trận thi đấu 1 hiệp 15 điểm (Chạm 15 đổi sân ở 8 điểm, cách 2 điểm).\n3. TRANG PHỤC & VỢT: Trang phục thể thao tiêu chuẩn, sử dụng bóng thi đấu Franklin X-40 chính hãng.\n4. CƠ CẤU GIẢI THƯỞNG:\n- Giải Nhất: 10.000.000 VNĐ + Cúp Vô Địch + Bộ Vợt Joola\n- Giải Nhì: 5.000.000 VNĐ + Huy Chương Bạc\n- Đồng Giải Ba: 2.000.000 VNĐ + Cờ lưu niệm.`,
+    gallery: [
+      'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1599447421416-3414500d18a5?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1613918431208-6752fe243c5e?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1541252260730-0412e8e2108e?auto=format&fit=crop&q=80&w=800'
+    ],
+    albumUrl: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea'
   },
   {
     id: 'tour-2',
@@ -201,7 +209,13 @@ export const INITIAL_TOURNAMENTS: Tournament[] = [
     teamsRegistered: 12,
     maxTeams: 16,
     category: 'Đôi Doanh Nhân / Đôi Đại Diện Thương Hiệu',
-    status: 'Đang mở'
+    status: 'Đang mở',
+    rules: `1. THÀNH PHẦN THAM GIA: Đại diện các doanh nghiệp, đối tác và nhà tài trợ đồng hành.\n2. THỂ THỨC: Thi đấu loại trực tiếp (Single Elimination) best of 3 set, mỗi set 11 điểm.\n3. QUYỀN LỢI THƯƠNG HIỆU: Được đặt banner, standee và truyền thông logo trên toàn bộ kênh truyền thông chính thức của Pickle Bounce.`,
+    gallery: [
+      'https://images.unsplash.com/photo-1599447421416-3414500d18a5?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?auto=format&fit=crop&q=80&w=800'
+    ],
+    albumUrl: 'https://images.unsplash.com/photo-1599447421416-3414500d18a5'
   }
 ];
 

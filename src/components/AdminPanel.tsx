@@ -2219,8 +2219,44 @@ export default function AdminPanel({
                           value={tournamentForm.description || ''}
                           onChange={(e) => setTournamentForm({...tournamentForm, description: e.target.value})}
                           className="w-full bg-white border border-brand-border/40 rounded-xl px-3 py-2 text-xs text-brand-dark outline-none h-16 resize-none"
-                          placeholder="Mô tả giải đấu..."
+                          placeholder="Mô tả tóm tắt giải đấu..."
                         />
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1">Điều lệ giải đấu (Thể thức, quy định, giải thưởng)</label>
+                        <textarea 
+                          value={tournamentForm.rules || ''}
+                          onChange={(e) => setTournamentForm({...tournamentForm, rules: e.target.value})}
+                          className="w-full bg-white border border-brand-border/40 rounded-xl px-3 py-2 text-xs text-brand-dark outline-none h-24 resize-y"
+                          placeholder="Nhập chi tiết điều lệ giải đấu, luật chơi, quy định trang phục & cơ cấu giải thưởng..."
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1">Thư viện hình ảnh (URL phân cách bởi xuống dòng hoặc phẩy)</label>
+                          <textarea 
+                            value={Array.isArray(tournamentForm.gallery) ? tournamentForm.gallery.join('\n') : (tournamentForm.gallery || '')}
+                            onChange={(e) => {
+                              const urls = e.target.value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+                              setTournamentForm({...tournamentForm, gallery: urls});
+                            }}
+                            className="w-full bg-white border border-brand-border/40 rounded-xl px-3 py-2 text-xs text-brand-dark outline-none h-20 resize-y font-mono"
+                            placeholder="https://images.unsplash.com/photo-1...\nhttps://images.unsplash.com/photo-2..."
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1">Link Album ảnh gốc chất lượng cao (Google Drive / Photos)</label>
+                          <input 
+                            type="text"
+                            value={tournamentForm.albumUrl || ''}
+                            onChange={(e) => setTournamentForm({...tournamentForm, albumUrl: e.target.value})}
+                            className="w-full bg-white border border-brand-border/40 rounded-xl px-3 py-2 text-xs text-brand-dark outline-none font-mono"
+                            placeholder="https://drive.google.com/drive/folders/..."
+                          />
+                          <span className="text-[10px] text-brand-gray mt-1 block">Cho phép vận động viên truy cập và tải hình ảnh chất lượng cao sau khi kết thúc giải.</span>
+                        </div>
                       </div>
 
                       <div className="flex justify-end gap-2 pt-2 border-t border-brand-border/40">

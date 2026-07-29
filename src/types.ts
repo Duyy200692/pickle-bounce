@@ -69,6 +69,9 @@ export interface Tournament {
   maxTeams: number;
   category: string;
   status: 'Đang mở' | 'Sắp diễn ra' | 'Đã kết thúc';
+  rules?: string;
+  gallery?: string[];
+  albumUrl?: string;
 }
 
 export interface TeamRegistration {

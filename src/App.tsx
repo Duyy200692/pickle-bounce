@@ -48,6 +48,7 @@ export default function App() {
   const [isMyScheduleOpen, setIsMyScheduleOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
+  const [tournamentModalTab, setTournamentModalTab] = useState<'register' | 'rules' | 'gallery'>('register');
 
   // App Core States initialized with Firebase
   const [promoConfig, setPromoConfig] = useState<PromoConfig>(INITIAL_PROMO_CONFIG);
@@ -308,7 +309,10 @@ export default function App() {
         {/* 5. Tournament Experience */}
         <Tournaments 
           tournaments={tournaments}
-          onRegisterTournament={(tour) => setSelectedTournament(tour)}
+          onRegisterTournament={(tour, tab = 'register') => {
+            setSelectedTournament(tour);
+            setTournamentModalTab(tab);
+          }}
         />
 
         {/* 6. Community, Social & Partners */}
@@ -352,12 +356,13 @@ export default function App() {
         onPostOpenPlay={handlePostOpenPlay}
       />
 
-      {/* 3. Tournament Registration Form */}
+      {/* 3. Tournament Registration Form & Rules/Gallery Viewer */}
       <TournamentModal 
         isOpen={selectedTournament !== null}
         onClose={() => setSelectedTournament(null)}
         tournament={selectedTournament}
         onRegisterTeam={handleRegisterTeam}
+        initialTab={tournamentModalTab}
       />
 
       {/* 4. My Bookings / Schedule Manager */}

@@ -20,6 +20,28 @@ export const db = firebaseConfig.firestoreDatabaseId
   : getFirestore(app);
 
 /**
+ * Recursively remove `undefined` values from objects/arrays so Firestore doesn't reject writes.
+ */
+export function sanitizeForFirestore<T>(data: T): T {
+  if (data === null || data === undefined) {
+    return data;
+  }
+  if (Array.isArray(data)) {
+    return data.map((item) => sanitizeForFirestore(item)) as unknown as T;
+  }
+  if (typeof data === 'object' && !(data instanceof Date)) {
+    const cleaned: Record<string, any> = {};
+    for (const [key, value] of Object.entries(data)) {
+      if (value !== undefined) {
+        cleaned[key] = sanitizeForFirestore(value);
+      }
+    }
+    return cleaned as T;
+  }
+  return data;
+}
+
+/**
  * Subscribe to a Firestore collection in real-time.
  * Synchronous snapshot listener to prevent state flickering and race conditions.
  */
@@ -41,7 +63,7 @@ export function subscribeToCollection<T extends { id: string }>(
         const batch = writeBatch(db);
         initialSeedData.forEach((item) => {
           const itemRef = doc(db, collectionName, item.id);
-          batch.set(itemRef, item);
+          batch.set(itemRef, sanitizeForFirestore(item));
         });
         batch.commit().catch((err) => console.error(`[Firebase] Error seeding ${collectionName}:`, err));
         onData(initialSeedData);
@@ -76,7 +98,9 @@ export async function saveFirebaseDoc<T extends { id: string }>(
   try {
     localStorage.setItem(`seeded_${collectionName}`, 'true');
     const docRef = doc(db, collectionName, data.id);
-    await setDoc(docRef, data, { merge: true });
+    const cleanedData = sanitizeForFirestore(data);
+    await setDoc(docRef, cleanedData, { merge: true });
+    console.log(`[Firebase] Saved doc ${data.id} to ${collectionName}`);
   } catch (error) {
     console.error(`[Firebase] Error saving doc to ${collectionName}:`, error);
     throw error;
@@ -91,6 +115,7 @@ export async function deleteFirebaseDoc(collectionName: string, docId: string) {
     localStorage.setItem(`seeded_${collectionName}`, 'true');
     const docRef = doc(db, collectionName, docId);
     await deleteDoc(docRef);
+    console.log(`[Firebase] Deleted doc ${docId} from ${collectionName}`);
   } catch (error) {
     console.error(`[Firebase] Error deleting doc ${docId} from ${collectionName}:`, error);
     throw error;
@@ -122,12 +147,15 @@ export async function saveFirebaseCollection<T extends { id: string }>(
     // Write / update all current items
     items.forEach((item) => {
       const itemRef = doc(db, collectionName, item.id);
-      batch.set(itemRef, item, { merge: true });
+      const cleanedItem = sanitizeForFirestore(item);
+      batch.set(itemRef, cleanedItem, { merge: true });
     });
 
     await batch.commit();
+    console.log(`[Firebase] Saved batch collection ${collectionName} with ${items.length} items`);
   } catch (error) {
     console.error(`[Firebase] Error saving batch collection to ${collectionName}:`, error);
+    throw error;
   }
 }
 
@@ -150,7 +178,7 @@ export function subscribeToDoc<T>(
         isSeeding = true;
         localStorage.setItem(seedKey, 'true');
         console.log(`[Firebase] Seeding initial doc for ${collectionName}/${docId}...`);
-        setDoc(docRef, initialSeedData).catch((err) => console.error(`[Firebase] Error seeding doc ${collectionName}/${docId}:`, err));
+        setDoc(docRef, sanitizeForFirestore(initialSeedData)).catch((err) => console.error(`[Firebase] Error seeding doc ${collectionName}/${docId}:`, err));
         onData(initialSeedData);
         return;
       }
@@ -176,8 +204,11 @@ export async function saveSingleDoc<T extends object>(
 ) {
   try {
     const docRef = doc(db, collectionName, docId);
-    await setDoc(docRef, data, { merge: true });
+    const cleanedData = sanitizeForFirestore(data);
+    await setDoc(docRef, cleanedData, { merge: true });
+    console.log(`[Firebase] Saved single doc ${collectionName}/${docId}`);
   } catch (error) {
     console.error(`[Firebase] Error saving single doc ${collectionName}/${docId}:`, error);
+    throw error;
   }
 }

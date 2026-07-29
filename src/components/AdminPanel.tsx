@@ -4,7 +4,8 @@ import {
   Trash2, Edit, Check, Lock, Plus, LogOut, Clock, Sparkles, 
   ShieldCheck, RefreshCw, FileText, CheckCircle,
   DollarSign, TrendingUp, BarChart3, PieChart, PlusCircle, CalendarDays,
-  Copy, ExternalLink, Database, AlertTriangle, Search, UserCheck, UserPlus, Phone, Mail, Award, Filter, RotateCcw, Megaphone, Image as ImageIcon
+  Copy, ExternalLink, Database, AlertTriangle, Search, UserCheck, UserPlus, Phone, Mail, Award, Filter, RotateCcw, Megaphone, Image as ImageIcon,
+  Globe, ArrowLeft
 } from 'lucide-react';
 import { Court, Booking, OpenPlay, Tournament, TeamRegistration, SocialRevenue, CourtBranch, Member, Sponsor, PromoConfig, AdminSecurity } from '../types';
 import { SPONSORS as DEFAULT_SPONSORS, INITIAL_PROMO_CONFIG, INITIAL_ADMIN_SECURITY } from '../data';
@@ -968,25 +969,25 @@ export default function AdminPanel({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-[24px] sm:rounded-[32px] w-full max-w-5xl h-[92vh] shadow-2xl border border-brand-border/40 overflow-hidden relative flex flex-col my-auto">
+    <div className="fixed inset-0 z-50 bg-slate-950 text-slate-100 flex flex-col w-screen h-screen overflow-hidden">
+      <div className="bg-slate-900 w-full h-full flex flex-col overflow-hidden relative">
         
-        {/* Header Block */}
-        <div className="bg-brand-dark p-5 text-white flex justify-between items-center relative overflow-hidden flex-shrink-0">
+        {/* Full Header Block */}
+        <div className="bg-slate-950 border-b border-slate-800 px-6 py-4 text-white flex justify-between items-center relative overflow-hidden flex-shrink-0 shadow-lg z-10">
           <div className="absolute right-0 top-0 text-white/5 font-display font-black text-9xl transform translate-x-12 -translate-y-8 pointer-events-none">
             A
           </div>
           
           <div className="relative z-10 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-brand-red flex items-center justify-center text-white">
-              <ShieldCheck className="w-5.5 h-5.5" />
+            <div className="w-10 h-10 rounded-xl bg-brand-red flex items-center justify-center text-white shadow-md shadow-brand-red/20">
+              <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
               <span className="font-display font-bold text-[10px] tracking-widest text-brand-red uppercase">
-                HỆ THỐNG ĐIỀU HÀNH
+                HỆ THỐNG QUẢN TRỊ ĐỘC LẬP
               </span>
-              <h2 className="font-display font-black text-xl tracking-tight mt-0.5 flex items-center gap-2">
-                Cổng Quản Trị Pickle Bounce
+              <h2 className="font-display font-black text-lg sm:text-xl tracking-tight mt-0.5 flex items-center gap-2 text-white">
+                Trang Quản Trị Hệ Thống Pickle Bounce
               </h2>
             </div>
           </div>
@@ -995,216 +996,235 @@ export default function AdminPanel({
             {isAuthenticated && (
               <button 
                 onClick={() => setIsAuthenticated(false)}
-                className="text-white/70 hover:text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer"
               >
-                <LogOut className="w-3.5 h-3.5" />
-                Đăng xuất
+                <LogOut className="w-4 h-4 text-brand-red" />
+                <span>Đăng xuất</span>
               </button>
             )}
             <button 
               onClick={onClose}
-              className="text-white/80 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors cursor-pointer"
+              className="text-white bg-brand-red hover:bg-brand-red-hover px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-md shadow-brand-red/20"
+              title="Về Trang Chủ Người Dùng"
             >
-              <X className="w-5 h-5" />
+              <Globe className="w-4 h-4" />
+              <span>Thoát / Về Trang Chủ</span>
             </button>
           </div>
         </div>
 
         {/* Authentication Form */}
         {!isAuthenticated ? (
-          <div className="flex-grow flex flex-col items-center justify-center p-8 text-center max-w-md mx-auto">
-            <div className="w-14 h-14 bg-brand-red-light rounded-full flex items-center justify-center text-brand-red mb-6 animate-pulse">
-              <Lock className="w-7 h-7" />
-            </div>
-            <h3 className="font-display font-black text-xl text-brand-dark mb-2">
-              Xác Minh Quyền Quản Trị Viên
-            </h3>
-            <p className="font-sans text-xs text-brand-gray mb-6 leading-relaxed">
-              Vui lòng nhập mã PIN bảo mật quản trị viên để truy cập hệ thống điều hành.
-            </p>
+          <div className="flex-grow flex flex-col items-center justify-center p-6 sm:p-12 text-center bg-slate-950 text-white relative overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:20px_20px] opacity-10 pointer-events-none" />
+            <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-8 sm:p-10 max-w-md w-full shadow-2xl backdrop-blur-xl relative z-10">
+              <div className="w-16 h-16 bg-brand-red/20 rounded-2xl flex items-center justify-center text-brand-red mx-auto mb-6 border border-brand-red/30 shadow-inner">
+                <Lock className="w-8 h-8" />
+              </div>
+              <h3 className="font-display font-black text-2xl text-white mb-2">
+                Trang Quản Trị Hệ Thống
+              </h3>
+              <p className="font-sans text-xs text-slate-400 mb-8 leading-relaxed">
+                Hệ thống điều hành độc lập Pickle Bounce. Vui lòng nhập mã PIN bảo mật quản trị viên để truy cập.
+              </p>
 
-            <form onSubmit={handleLogin} className="w-full space-y-4">
-              <input 
-                type="password"
-                required
-                placeholder="Nhập mã PIN bảo mật quản trị..."
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full text-center bg-brand-light-gray border border-brand-border/60 focus:border-brand-red focus:ring-1 focus:ring-brand-red rounded-xl px-4 py-3 text-sm text-brand-dark font-black tracking-widest outline-none transition-all"
-              />
-              {authError && (
-                <p className="text-brand-red text-xs font-semibold">{authError}</p>
-              )}
-              <button 
-                type="submit"
-                className="w-full bg-brand-red hover:bg-brand-red-hover text-white font-sans font-bold text-xs py-3 rounded-full transition-colors cursor-pointer shadow-lg shadow-brand-red/10 uppercase tracking-wider"
-              >
-                Truy Cập Hệ Thống
-              </button>
-            </form>
+              <form onSubmit={handleLogin} className="w-full space-y-4">
+                <input 
+                  type="password"
+                  required
+                  placeholder="Nhập mã PIN bảo mật..."
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setAuthError('');
+                  }}
+                  className={`w-full bg-slate-950 border ${authError ? 'border-brand-red' : 'border-slate-700'} rounded-2xl px-4 py-3.5 text-center text-lg tracking-widest text-white focus:outline-none focus:border-brand-red transition-all`}
+                  autoFocus
+                />
+                {authError && (
+                  <p className="text-brand-red text-xs font-bold animate-bounce">{authError}</p>
+                )}
+                <button 
+                  type="submit"
+                  className="w-full bg-brand-red hover:bg-brand-red-hover text-white font-sans font-bold text-sm py-3.5 rounded-2xl transition-all cursor-pointer shadow-lg shadow-brand-red/20 uppercase tracking-wider"
+                >
+                  Truy Cập Hệ Thống
+                </button>
+              </form>
+
+              <div className="mt-8 pt-6 border-t border-slate-800">
+                <button
+                  onClick={onClose}
+                  className="text-slate-400 hover:text-white text-xs font-medium flex items-center justify-center gap-2 mx-auto transition-colors cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Về trang chủ người dùng</span>
+                </button>
+              </div>
+            </div>
           </div>
         ) : (
           /* Main Dashboard layout */
-          <div className="flex-grow flex flex-col md:flex-row overflow-hidden">
+          <div className="flex-grow flex flex-col md:flex-row overflow-hidden w-full h-full bg-slate-50">
             
             {/* Sidebar Navigation */}
-            <div className="w-full md:w-64 bg-brand-light-gray border-b md:border-b-0 md:border-r border-brand-border/40 p-4 space-y-1 overflow-y-auto flex-shrink-0 flex md:block flex-nowrap whitespace-nowrap md:whitespace-normal gap-2">
-              <div className="hidden md:block text-[9px] font-bold text-brand-gray uppercase tracking-widest px-3 mb-2">
-                Hệ điều hành
+            <div className="w-full md:w-72 bg-slate-900 text-slate-300 border-b md:border-b-0 md:border-r border-slate-800 p-3 sm:p-5 md:space-y-1.5 overflow-x-auto md:overflow-y-auto flex-shrink-0 flex md:block flex-nowrap whitespace-nowrap md:whitespace-normal gap-2 shadow-inner touch-pan-x scrollbar-thin">
+              <div className="hidden md:block text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-3">
+                Hệ điều hành độc lập
               </div>
               <button 
                 onClick={() => { setActiveTab('dashboard'); setEditingCourtId(null); setEditingTournamentId(null); setEditingOpenPlayId(null); }}
-                className={`w-full text-left px-3 py-2.5 rounded-xl font-sans font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
+                className={`w-auto md:w-full flex-shrink-0 text-left px-3.5 py-2.5 sm:py-3 rounded-xl font-sans font-bold text-xs flex items-center gap-2.5 transition-all cursor-pointer ${
                   activeTab === 'dashboard' 
-                    ? 'bg-brand-red text-white shadow-sm' 
-                    : 'text-brand-dark/80 hover:bg-white hover:text-brand-red'
+                    ? 'bg-brand-red text-white shadow-md shadow-brand-red/20' 
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white bg-slate-800/50 md:bg-transparent'
                 }`}
               >
-                <LayoutDashboard className="w-4 h-4 flex-shrink-0" />
+                <LayoutDashboard className="w-4.5 h-4.5 flex-shrink-0" />
                 <span>Dashboard Tổng Quan</span>
               </button>
 
               <button 
                 onClick={() => { setActiveTab('courts'); setEditingCourtId(null); setEditingTournamentId(null); setEditingOpenPlayId(null); }}
-                className={`w-full text-left px-3 py-2.5 rounded-xl font-sans font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
+                className={`w-auto md:w-full flex-shrink-0 text-left px-3.5 py-2.5 sm:py-3 rounded-xl font-sans font-bold text-xs flex items-center gap-2.5 transition-all cursor-pointer ${
                   activeTab === 'courts' 
-                    ? 'bg-brand-red text-white shadow-sm' 
-                    : 'text-brand-dark/80 hover:bg-white hover:text-brand-red'
+                    ? 'bg-brand-red text-white shadow-md shadow-brand-red/20' 
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white bg-slate-800/50 md:bg-transparent'
                 }`}
               >
-                <MapPin className="w-4 h-4 flex-shrink-0" />
+                <MapPin className="w-4.5 h-4.5 flex-shrink-0" />
                 <span>Quản Lý Cụm Sân</span>
-                <span className="bg-brand-dark/15 text-[10px] px-1.5 py-0.5 rounded ml-auto">{courts.length}</span>
+                <span className="bg-slate-800 text-slate-300 border border-slate-700 text-[10px] px-2 py-0.5 rounded-full ml-auto font-mono">{courts.length}</span>
               </button>
 
               <button 
                 onClick={() => { setActiveTab('members'); setEditingCourtId(null); setEditingTournamentId(null); setEditingOpenPlayId(null); setEditingMemberId(null); }}
-                className={`w-full text-left px-3 py-2.5 rounded-xl font-sans font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
+                className={`w-auto md:w-full flex-shrink-0 text-left px-3.5 py-2.5 sm:py-3 rounded-xl font-sans font-bold text-xs flex items-center gap-2.5 transition-all cursor-pointer ${
                   activeTab === 'members' 
-                    ? 'bg-brand-red text-white shadow-sm' 
-                    : 'text-brand-dark/80 hover:bg-white hover:text-brand-red'
+                    ? 'bg-brand-red text-white shadow-md shadow-brand-red/20' 
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white bg-slate-800/50 md:bg-transparent'
                 }`}
               >
-                <Users className="w-4 h-4 flex-shrink-0" />
+                <Users className="w-4.5 h-4.5 flex-shrink-0" />
                 <span>Quản Lý Thành Viên</span>
-                <span className="bg-brand-dark/15 text-[10px] px-1.5 py-0.5 rounded ml-auto">{members.length}</span>
+                <span className="bg-slate-800 text-slate-300 border border-slate-700 text-[10px] px-2 py-0.5 rounded-full ml-auto font-mono">{members.length}</span>
               </button>
 
               <button 
                 onClick={() => { setActiveTab('bookings'); setEditingCourtId(null); setEditingTournamentId(null); setEditingOpenPlayId(null); }}
-                className={`w-full text-left px-3 py-2.5 rounded-xl font-sans font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
+                className={`w-auto md:w-full flex-shrink-0 text-left px-3.5 py-2.5 sm:py-3 rounded-xl font-sans font-bold text-xs flex items-center gap-2.5 transition-all cursor-pointer ${
                   activeTab === 'bookings' 
-                    ? 'bg-brand-red text-white shadow-sm' 
-                    : 'text-brand-dark/80 hover:bg-white hover:text-brand-red'
+                    ? 'bg-brand-red text-white shadow-md shadow-brand-red/20' 
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white bg-slate-800/50 md:bg-transparent'
                 }`}
               >
-                <FileText className="w-4 h-4 flex-shrink-0" />
+                <FileText className="w-4.5 h-4.5 flex-shrink-0" />
                 <span>Đơn Đặt Sân Chơi</span>
-                <span className="bg-brand-dark/15 text-[10px] px-1.5 py-0.5 rounded ml-auto">{bookings.length}</span>
+                <span className="bg-slate-800 text-slate-300 border border-slate-700 text-[10px] px-2 py-0.5 rounded-full ml-auto font-mono">{bookings.length}</span>
               </button>
 
               <button 
                 onClick={() => { setActiveTab('tournaments'); setEditingCourtId(null); setEditingTournamentId(null); setEditingOpenPlayId(null); }}
-                className={`w-full text-left px-3 py-2.5 rounded-xl font-sans font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
+                className={`w-auto md:w-full flex-shrink-0 text-left px-3.5 py-2.5 sm:py-3 rounded-xl font-sans font-bold text-xs flex items-center gap-2.5 transition-all cursor-pointer ${
                   activeTab === 'tournaments' 
-                    ? 'bg-brand-red text-white shadow-sm' 
-                    : 'text-brand-dark/80 hover:bg-white hover:text-brand-red'
+                    ? 'bg-brand-red text-white shadow-md shadow-brand-red/20' 
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white bg-slate-800/50 md:bg-transparent'
                 }`}
               >
-                <Trophy className="w-4 h-4 flex-shrink-0" />
+                <Trophy className="w-4.5 h-4.5 flex-shrink-0" />
                 <span>Quản Lý Giải Đấu</span>
-                <span className="bg-brand-dark/15 text-[10px] px-1.5 py-0.5 rounded ml-auto">{tournaments.length}</span>
+                <span className="bg-slate-800 text-slate-300 border border-slate-700 text-[10px] px-2 py-0.5 rounded-full ml-auto font-mono">{tournaments.length}</span>
               </button>
 
               <button 
                 onClick={() => { setActiveTab('registrations'); setEditingCourtId(null); setEditingTournamentId(null); setEditingOpenPlayId(null); }}
-                className={`w-full text-left px-3 py-2.5 rounded-xl font-sans font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
+                className={`w-auto md:w-full flex-shrink-0 text-left px-3.5 py-2.5 sm:py-3 rounded-xl font-sans font-bold text-xs flex items-center gap-2.5 transition-all cursor-pointer ${
                   activeTab === 'registrations' 
-                    ? 'bg-brand-red text-white shadow-sm' 
-                    : 'text-brand-dark/80 hover:bg-white hover:text-brand-red'
+                    ? 'bg-brand-red text-white shadow-md shadow-brand-red/20' 
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white bg-slate-800/50 md:bg-transparent'
                 }`}
               >
-                <ShieldCheck className="w-4 h-4 flex-shrink-0" />
+                <ShieldCheck className="w-4.5 h-4.5 flex-shrink-0" />
                 <span>Danh Sách Đăng Ký Giải</span>
-                <span className="bg-brand-dark/15 text-[10px] px-1.5 py-0.5 rounded ml-auto">{teamRegistrations.length}</span>
+                <span className="bg-slate-800 text-slate-300 border border-slate-700 text-[10px] px-2 py-0.5 rounded-full ml-auto font-mono">{teamRegistrations.length}</span>
               </button>
 
               <button 
                 onClick={() => { setActiveTab('revenue'); setEditingCourtId(null); setEditingTournamentId(null); setEditingOpenPlayId(null); }}
-                className={`w-full text-left px-3 py-2.5 rounded-xl font-sans font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
+                className={`w-auto md:w-full flex-shrink-0 text-left px-3.5 py-2.5 sm:py-3 rounded-xl font-sans font-bold text-xs flex items-center gap-2.5 transition-all cursor-pointer ${
                   activeTab === 'revenue' 
-                    ? 'bg-brand-red text-white shadow-sm' 
-                    : 'text-brand-dark/80 hover:bg-white hover:text-brand-red'
+                    ? 'bg-brand-red text-white shadow-md shadow-brand-red/20' 
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white bg-slate-800/50 md:bg-transparent'
                 }`}
               >
-                <DollarSign className="w-4 h-4 flex-shrink-0" />
+                <DollarSign className="w-4.5 h-4.5 flex-shrink-0 text-emerald-400" />
                 <span>Doanh Thu Thực Tế</span>
-                <span className="bg-green-600 text-white text-[9px] px-1.5 py-0.5 rounded ml-auto font-black font-sans uppercase">
+                <span className="bg-emerald-950 text-emerald-400 border border-emerald-800/60 text-[9px] px-2 py-0.5 rounded-md ml-auto font-black font-mono">
                   VND
                 </span>
               </button>
 
               <button 
                 onClick={() => { setActiveTab('alobo_sync'); setEditingCourtId(null); setEditingTournamentId(null); setEditingOpenPlayId(null); }}
-                className={`w-full text-left px-3 py-2.5 rounded-xl font-sans font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
+                className={`w-auto md:w-full flex-shrink-0 text-left px-3.5 py-2.5 sm:py-3 rounded-xl font-sans font-bold text-xs flex items-center gap-2.5 transition-all cursor-pointer ${
                   activeTab === 'alobo_sync' 
-                    ? 'bg-brand-red text-white shadow-sm' 
-                    : 'text-brand-dark/80 hover:bg-white hover:text-brand-red'
+                    ? 'bg-brand-red text-white shadow-md shadow-brand-red/20' 
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white bg-slate-800/50 md:bg-transparent'
                 }`}
               >
-                <RefreshCw className="w-4 h-4 flex-shrink-0" />
+                <RefreshCw className="w-4.5 h-4.5 flex-shrink-0 text-blue-400" />
                 <span>Đồng Bộ Alobo & Sheets</span>
-                <span className="bg-[#4285F4] text-white text-[9px] px-1.5 py-0.5 rounded ml-auto font-black font-sans uppercase">
+                <span className="bg-blue-950 text-blue-400 border border-blue-800/60 text-[9px] px-2 py-0.5 rounded-md ml-auto font-black font-mono">
                   AUTO
                 </span>
               </button>
 
               <button 
                 onClick={() => { setActiveTab('landing_sponsors'); setEditingCourtId(null); setEditingTournamentId(null); setEditingOpenPlayId(null); }}
-                className={`w-full text-left px-3 py-2.5 rounded-xl font-sans font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
+                className={`w-auto md:w-full flex-shrink-0 text-left px-3.5 py-2.5 sm:py-3 rounded-xl font-sans font-bold text-xs flex items-center gap-2.5 transition-all cursor-pointer ${
                   activeTab === 'landing_sponsors' 
-                    ? 'bg-brand-red text-white shadow-sm' 
-                    : 'text-brand-dark/80 hover:bg-white hover:text-brand-red'
+                    ? 'bg-brand-red text-white shadow-md shadow-brand-red/20' 
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white bg-slate-800/50 md:bg-transparent'
                 }`}
               >
-                <Award className="w-4 h-4 flex-shrink-0" />
+                <Award className="w-4.5 h-4.5 flex-shrink-0" />
                 <span>Đồng Hành Chiến Lược</span>
-                <span className="bg-brand-dark/15 text-[10px] px-1.5 py-0.5 rounded ml-auto">{sponsors.length}</span>
+                <span className="bg-slate-800 text-slate-300 border border-slate-700 text-[10px] px-2 py-0.5 rounded-full ml-auto font-mono">{sponsors.length}</span>
               </button>
 
               <button 
                 onClick={() => { setActiveTab('landing_promo'); setEditingCourtId(null); setEditingTournamentId(null); setEditingOpenPlayId(null); }}
-                className={`w-full text-left px-3 py-2.5 rounded-xl font-sans font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
+                className={`w-auto md:w-full flex-shrink-0 text-left px-3.5 py-2.5 sm:py-3 rounded-xl font-sans font-bold text-xs flex items-center gap-2.5 transition-all cursor-pointer ${
                   activeTab === 'landing_promo' 
-                    ? 'bg-brand-red text-white shadow-sm' 
-                    : 'text-brand-dark/80 hover:bg-white hover:text-brand-red'
+                    ? 'bg-brand-red text-white shadow-md shadow-brand-red/20' 
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white bg-slate-800/50 md:bg-transparent'
                 }`}
               >
-                <Megaphone className="w-4 h-4 flex-shrink-0" />
+                <Megaphone className="w-4.5 h-4.5 flex-shrink-0 text-amber-400" />
                 <span>Quảng Bá Landing Page</span>
-                <span className="bg-amber-500 text-white text-[9px] px-1.5 py-0.5 rounded ml-auto font-black font-sans uppercase">
+                <span className="bg-amber-950 text-amber-400 border border-amber-800/60 text-[9px] px-2 py-0.5 rounded-md ml-auto font-black font-mono">
                   PROMO
                 </span>
               </button>
 
               <button 
                 onClick={() => { setActiveTab('security'); setEditingCourtId(null); setEditingTournamentId(null); setEditingOpenPlayId(null); }}
-                className={`w-full text-left px-3 py-2.5 rounded-xl font-sans font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
+                className={`w-auto md:w-full flex-shrink-0 text-left px-3.5 py-2.5 sm:py-3 rounded-xl font-sans font-bold text-xs flex items-center gap-2.5 transition-all cursor-pointer ${
                   activeTab === 'security' 
-                    ? 'bg-brand-red text-white shadow-sm' 
-                    : 'text-brand-dark/80 hover:bg-white hover:text-brand-red'
+                    ? 'bg-brand-red text-white shadow-md shadow-brand-red/20' 
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white bg-slate-800/50 md:bg-transparent'
                 }`}
               >
-                <Lock className="w-4 h-4 flex-shrink-0" />
+                <Lock className="w-4.5 h-4.5 flex-shrink-0 text-emerald-400" />
                 <span>Bảo Mật & Mã PIN</span>
-                <span className="bg-emerald-600 text-white text-[9px] px-1.5 py-0.5 rounded ml-auto font-black font-sans uppercase">
+                <span className="bg-emerald-950 text-emerald-400 border border-emerald-800/60 text-[9px] px-2 py-0.5 rounded-md ml-auto font-black font-mono">
                   FIREBASE
                 </span>
               </button>
             </div>
 
             {/* Main Tab Content Panel */}
-            <div className="flex-grow p-6 overflow-y-auto bg-white dark-scroll">
+            <div className="flex-grow p-6 sm:p-8 overflow-y-auto bg-slate-50 dark-scroll w-full">
 
               {/* 1. Dashboard Tab */}
               {activeTab === 'dashboard' && (

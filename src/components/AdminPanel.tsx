@@ -5,11 +5,12 @@ import {
   ShieldCheck, RefreshCw, FileText, CheckCircle,
   DollarSign, TrendingUp, BarChart3, PieChart, PlusCircle, CalendarDays,
   Copy, ExternalLink, Database, AlertTriangle, Search, UserCheck, UserPlus, Phone, Mail, Award, Filter, RotateCcw, Megaphone, Image as ImageIcon,
-  Globe, ArrowLeft
+  Globe, ArrowLeft, Upload
 } from 'lucide-react';
 import { Court, Booking, OpenPlay, Tournament, TeamRegistration, SocialRevenue, CourtBranch, Member, Sponsor, PromoConfig, AdminSecurity } from '../types';
 import { SPONSORS as DEFAULT_SPONSORS, INITIAL_PROMO_CONFIG, INITIAL_ADMIN_SECURITY } from '../data';
 import { deleteFirebaseDoc } from '../lib/firebase';
+import { convertToWebP, getImageSizeInKB } from '../utils/imageCompressor';
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -636,6 +637,9 @@ export default function AdminPanel({
   const [pinConfirmInput, setPinConfirmInput] = useState('');
   const [pinNotice, setPinNotice] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
+  // Tournaments CRUD state
+  const [isCompressingWebp, setIsCompressingWebp] = useState(false);
+
   if (!isOpen) return null;
 
   const handleLogin = (e: React.FormEvent) => {
@@ -813,6 +817,35 @@ export default function AdminPanel({
   };
 
   // Tournaments CRUD
+  const handleTournamentImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsCompressingWebp(true);
+    try {
+      const newWebpImages: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        // Convert any .jpg, .jpeg, .png to lightweight .webp Data URL
+        const webpUrl = await convertToWebP(file, 1400, 1400, 0.8);
+        newWebpImages.push(webpUrl);
+      }
+
+      const existingGallery = Array.isArray(tournamentForm.gallery) ? tournamentForm.gallery : [];
+      setTournamentForm({
+        ...tournamentForm,
+        gallery: [...existingGallery, ...newWebpImages]
+      });
+    } catch (err) {
+      console.error('Error compressing image to webp:', err);
+      alert('Đã có lỗi xảy ra khi nén hình ảnh WebP!');
+    } finally {
+      setIsCompressingWebp(false);
+      // Reset file input
+      e.target.value = '';
+    }
+  };
+
   const startEditTournament = (tour: Tournament) => {
     setEditingTournamentId(tour.id);
     setTournamentForm(tour);
@@ -2233,21 +2266,96 @@ export default function AdminPanel({
                         />
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-4">
                         <div>
-                          <label className="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1">Thư viện hình ảnh (URL phân cách bởi xuống dòng hoặc phẩy)</label>
-                          <textarea 
-                            value={Array.isArray(tournamentForm.gallery) ? tournamentForm.gallery.join('\n') : (tournamentForm.gallery || '')}
-                            onChange={(e) => {
-                              const urls = e.target.value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
-                              setTournamentForm({...tournamentForm, gallery: urls});
-                            }}
-                            className="w-full bg-white border border-brand-border/40 rounded-xl px-3 py-2 text-xs text-brand-dark outline-none h-20 resize-y font-mono"
-                            placeholder="https://images.unsplash.com/photo-1...\nhttps://images.unsplash.com/photo-2..."
-                          />
+                          <div className="flex justify-between items-center mb-1.5">
+                            <label className="block text-[10px] font-bold text-brand-dark uppercase tracking-wider">
+                              Thư viện hình ảnh giải đấu (Tự động nén .WebP siêu nhẹ)
+                            </label>
+                            <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
+                              <Sparkles className="w-3 h-3" /> Chuẩn WebP trực tiếp trên web
+                            </span>
+                          </div>
+
+                          {/* Image Upload Dropzone */}
+                          <div className="border-2 border-dashed border-brand-red/30 hover:border-brand-red bg-red-50/30 rounded-2xl p-4 transition-all text-center">
+                            <input 
+                              type="file" 
+                              id="tournament-image-upload" 
+                              multiple 
+                              accept="image/jpeg,image/jpg,image/png,image/webp" 
+                              onChange={handleTournamentImageFileUpload} 
+                              className="hidden" 
+                            />
+                            <label 
+                              htmlFor="tournament-image-upload" 
+                              className="cursor-pointer flex flex-col items-center justify-center gap-2"
+                            >
+                              <div className="w-10 h-10 rounded-full bg-brand-red/10 text-brand-red flex items-center justify-center">
+                                {isCompressingWebp ? (
+                                  <RefreshCw className="w-5 h-5 animate-spin" />
+                                ) : (
+                                  <Upload className="w-5 h-5" />
+                                )}
+                              </div>
+                              <div>
+                                <span className="text-xs font-bold text-brand-dark block">
+                                  {isCompressingWebp ? 'Đang nén & chuyển đổi hình ảnh sang .WebP...' : 'Tải hình ảnh giải đấu từ máy tính (.jpg, .png...)'}
+                                </span>
+                                <span className="text-[10px] text-brand-gray block mt-0.5">
+                                  Hệ thống tự động chuyển đổi file ảnh sang định dạng <strong>.WEBP</strong> siêu rõ nét & tải cực nhanh!
+                                </span>
+                              </div>
+                            </label>
+                          </div>
+
+                          {/* Image Thumbnails list */}
+                          {Array.isArray(tournamentForm.gallery) && tournamentForm.gallery.length > 0 && (
+                            <div className="mt-3">
+                              <span className="text-[10px] font-bold text-brand-gray uppercase block mb-2">
+                                Các ảnh đã tải lên ({tournamentForm.gallery.length} ảnh):
+                              </span>
+                              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2.5 max-h-48 overflow-y-auto p-1">
+                                {tournamentForm.gallery.map((img, idx) => (
+                                  <div key={idx} className="relative rounded-xl overflow-hidden border border-brand-border/40 group bg-slate-100 aspect-video">
+                                    <img src={img} alt={`Uploaded ${idx + 1}`} className="w-full h-full object-cover" />
+                                    <div className="absolute bottom-1 left-1 bg-black/70 text-white font-mono text-[8px] px-1.5 py-0.5 rounded font-semibold backdrop-blur-sm">
+                                      {getImageSizeInKB(img)}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const updated = tournamentForm.gallery?.filter((_, i) => i !== idx);
+                                        setTournamentForm({ ...tournamentForm, gallery: updated });
+                                      }}
+                                      className="absolute top-1 right-1 bg-red-600/90 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-sm"
+                                      title="Xóa ảnh"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Textarea Fallback for image URLs */}
+                          <div className="mt-3">
+                            <label className="block text-[10px] font-bold text-brand-gray uppercase mb-1">Hoặc dán thêm URL hình ảnh ngoài (Mỗi link 1 dòng):</label>
+                            <textarea 
+                              value={Array.isArray(tournamentForm.gallery) ? tournamentForm.gallery.join('\n') : (tournamentForm.gallery || '')}
+                              onChange={(e) => {
+                                const urls = e.target.value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+                                setTournamentForm({...tournamentForm, gallery: urls});
+                              }}
+                              className="w-full bg-white border border-brand-border/40 rounded-xl px-3 py-2 text-xs text-brand-dark outline-none h-16 resize-y font-mono"
+                              placeholder="https://..."
+                            />
+                          </div>
                         </div>
+
                         <div>
-                          <label className="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1">Link Album ảnh gốc chất lượng cao (Google Drive / Photos)</label>
+                          <label className="block text-[10px] font-bold text-brand-dark uppercase tracking-wider mb-1">Link Album ảnh dự phòng (Google Drive / Photos - Không bắt buộc)</label>
                           <input 
                             type="text"
                             value={tournamentForm.albumUrl || ''}
@@ -2255,7 +2363,6 @@ export default function AdminPanel({
                             className="w-full bg-white border border-brand-border/40 rounded-xl px-3 py-2 text-xs text-brand-dark outline-none font-mono"
                             placeholder="https://drive.google.com/drive/folders/..."
                           />
-                          <span className="text-[10px] text-brand-gray mt-1 block">Cho phép vận động viên truy cập và tải hình ảnh chất lượng cao sau khi kết thúc giải.</span>
                         </div>
                       </div>
 

@@ -374,32 +374,34 @@ export default function App() {
       />
 
       {/* 5. Admin Panel Operator Dashboard */}
-      <AdminPanel 
-        isOpen={isAdminOpen}
-        onClose={() => setIsAdminOpen(false)}
-        branch={branch}
-        onSaveBranch={handleSaveBranch}
-        courts={courts}
-        onSaveCourts={handleSaveCourts}
-        bookings={bookings}
-        onSaveBookings={(newBookings) => { setBookings(newBookings); saveFirebaseCollection('bookings', newBookings); }}
-        openPlays={openPlays}
-        onSaveOpenPlays={handleSaveOpenPlays}
-        tournaments={tournaments}
-        onSaveTournaments={handleSaveTournaments}
-        teamRegistrations={teamRegistrations}
-        onSaveTeamRegistrations={handleSaveRegistrations}
-        socialRevenues={socialRevenues}
-        onSaveSocialRevenues={handleSaveSocialRevenues}
-        members={members}
-        onSaveMembers={handleSaveMembers}
-        sponsors={sponsors}
-        onSaveSponsors={handleSaveSponsors}
-        promoConfig={promoConfig}
-        onSavePromoConfig={handleSavePromoConfig}
-        adminSecurity={adminSecurity}
-        onSaveAdminSecurity={handleSaveAdminSecurity}
-      />
+      {isAdminOpen && (
+        <AdminPanel 
+          isOpen={isAdminOpen}
+          onClose={() => setIsAdminOpen(false)}
+          branch={branch}
+          onSaveBranch={handleSaveBranch}
+          courts={courts}
+          onSaveCourts={handleSaveCourts}
+          bookings={bookings}
+          onSaveBookings={(newBookings) => { setBookings(newBookings); saveFirebaseCollection('bookings', newBookings); }}
+          openPlays={openPlays}
+          onSaveOpenPlays={handleSaveOpenPlays}
+          tournaments={tournaments}
+          onSaveTournaments={handleSaveTournaments}
+          teamRegistrations={teamRegistrations}
+          onSaveTeamRegistrations={handleSaveRegistrations}
+          socialRevenues={socialRevenues}
+          onSaveSocialRevenues={handleSaveSocialRevenues}
+          members={members}
+          onSaveMembers={handleSaveMembers}
+          sponsors={sponsors}
+          onSaveSponsors={handleSaveSponsors}
+          promoConfig={promoConfig}
+          onSavePromoConfig={handleSavePromoConfig}
+          adminSecurity={adminSecurity}
+          onSaveAdminSecurity={handleSaveAdminSecurity}
+        />
+      )}
 
     </div>
   );

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Trophy, Star, CheckCircle, FileText, Image as ImageIcon, Download, ExternalLink, Calendar, Users, Tag, DollarSign, Sparkles } from 'lucide-react';
 import { Tournament, TeamRegistration } from '../types';
+import { getImageSizeInKB } from '../utils/imageCompressor';
 
 interface TournamentModalProps {
   isOpen: boolean;
@@ -27,12 +28,14 @@ export default function TournamentModal({
   const [email, setEmail] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [regDetails, setRegDetails] = useState<TeamRegistration | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<{ url: string; index: number } | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setActiveTab(initialTab);
       setIsSuccess(false);
       setRegDetails(null);
+      setLightboxImage(null);
     }
   }, [isOpen, initialTab, tournament]);
 
@@ -71,10 +74,14 @@ export default function TournamentModal({
   };
 
   const handleDownloadImage = (imgUrl: string, idx: number) => {
+    const isWebP = imgUrl.startsWith('data:image/webp') || imgUrl.endsWith('.webp');
+    const ext = isWebP ? 'webp' : 'jpg';
+    const filename = `${tournament.name.toLowerCase().replace(/\s+/g, '-')}-hinh-${idx + 1}.${ext}`;
+
     const a = document.createElement('a');
     a.href = imgUrl;
+    a.download = filename;
     a.target = '_blank';
-    a.download = `${tournament.name.toLowerCase().replace(/\s+/g, '-')}-hinh-${idx + 1}.jpg`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -458,7 +465,7 @@ export default function TournamentModal({
                     <ImageIcon className="w-4 h-4 text-brand-red" />
                     Hình Ảnh Tiêu Biểu ({galleryList.length})
                   </h4>
-                  <span className="text-[11px] text-brand-gray">Nhấn vào ảnh để tải về</span>
+                  <span className="text-[11px] text-brand-gray">Nhấp chọn ảnh để phóng to & tải file .WebP</span>
                 </div>
 
                 {galleryList.length === 0 ? (
@@ -467,25 +474,43 @@ export default function TournamentModal({
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {galleryList.map((imgUrl, idx) => (
-                      <div key={idx} className="relative rounded-2xl overflow-hidden group border border-brand-border/40 bg-slate-100 shadow-sm">
-                        <img 
-                          src={imgUrl} 
-                          alt={`Tournament photo ${idx + 1}`}
-                          className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-between p-3">
-                          <span className="text-[10px] text-white/80 font-mono">Ảnh #{idx + 1}</span>
-                          <button
-                            onClick={() => handleDownloadImage(imgUrl, idx)}
-                            className="bg-brand-red hover:bg-brand-red-hover text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md"
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                            Tải Ảnh
-                          </button>
+                    {galleryList.map((imgUrl, idx) => {
+                      const isWebpFormat = imgUrl.startsWith('data:image/webp') || imgUrl.endsWith('.webp');
+
+                      return (
+                        <div 
+                          key={idx} 
+                          onClick={() => setLightboxImage({ url: imgUrl, index: idx })}
+                          className="relative rounded-2xl overflow-hidden group border border-brand-border/40 bg-slate-100 shadow-sm cursor-pointer"
+                        >
+                          <img 
+                            src={imgUrl} 
+                            alt={`Tournament photo ${idx + 1}`}
+                            className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                          
+                          {/* Format badge */}
+                          <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-md text-white text-[9px] font-mono px-2 py-0.5 rounded-md font-bold flex items-center gap-1">
+                            <span>{isWebpFormat ? 'WEBP' : 'PHOTO'}</span>
+                            <span className="text-emerald-400">({getImageSizeInKB(imgUrl)})</span>
+                          </div>
+
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-between p-3">
+                            <span className="text-[10px] text-white/80 font-mono">Ảnh #{idx + 1} (Nhấp xem)</span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDownloadImage(imgUrl, idx);
+                              }}
+                              className="bg-brand-red hover:bg-brand-red-hover text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              Tải về
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -496,6 +521,50 @@ export default function TournamentModal({
         </div>
 
       </div>
+
+      {/* Lightbox Image Preview Modal */}
+      {lightboxImage && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex items-center justify-center p-4"
+          onClick={() => setLightboxImage(null)}
+        >
+          <div 
+            className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setLightboxImage(null)}
+              className="absolute -top-12 right-0 text-white/80 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full cursor-pointer"
+            >
+              <X className="w-6 h-6" />
+            </button>
+
+            <img 
+              src={lightboxImage.url} 
+              alt={`Tournament large preview ${lightboxImage.index + 1}`} 
+              className="max-w-full max-h-[75vh] object-contain rounded-2xl border border-white/10 shadow-2xl"
+            />
+
+            <div className="mt-4 flex items-center justify-between w-full max-w-lg bg-slate-900/90 text-white p-4 rounded-2xl border border-white/10">
+              <div>
+                <span className="text-xs font-bold block">{tournament.name}</span>
+                <span className="text-[10px] text-emerald-400 font-mono">
+                  {lightboxImage.url.startsWith('data:image/webp') ? 'Định dạng .WEBP nén trực tiếp' : 'Hình ảnh thi đấu'}
+                </span>
+              </div>
+
+              <button
+                onClick={() => handleDownloadImage(lightboxImage.url, lightboxImage.index)}
+                className="bg-brand-red hover:bg-brand-red-hover text-white px-5 py-2.5 rounded-full font-bold text-xs flex items-center gap-2 shadow-lg cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+                Tải ảnh chất lượng cao
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
